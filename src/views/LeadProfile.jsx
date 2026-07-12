@@ -2247,7 +2247,8 @@ export default function LeadProfile({
 
         .meta-details-row {
           display: flex;
-          gap: 16px;
+          flex-wrap: wrap;
+          gap: 8px 16px;
           font-size: 13px;
           color: var(--text-secondary);
         }
@@ -2580,9 +2581,59 @@ export default function LeadProfile({
           color: #D46B08;
         }
 
-        @media (max-width: 992px) {
+        .empty-activities-timeline,
+        .empty-sub-panel {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 8px;
+          padding: 40px 20px;
+          text-align: center;
+          color: var(--text-secondary);
+          font-size: 13px;
+        }
+
+        .timeline-placeholder-icon {
+          color: var(--text-placeholder);
+        }
+
+        .badge-hollow {
+          background-color: transparent;
+          border: 1px solid var(--border-color);
+          color: var(--text-secondary);
+        }
+
+        .lead-profile-error {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 12px;
+          padding: 48px 24px;
+        }
+
+        @media (max-width: 1024px) {
           .profile-body-row {
             grid-template-columns: 1fr;
+          }
+        }
+
+        @media (max-width: 640px) {
+          .next-action-prompt-card {
+            grid-template-columns: 1fr;
+          }
+          .profile-header-card {
+            flex-direction: column;
+            align-items: stretch;
+            gap: 20px;
+          }
+          .profile-header-right {
+            flex-wrap: wrap;
+          }
+          .profile-header-right .btn {
+            flex: 1;
+          }
+          .print-document-container {
+            padding: 20px !important;
           }
         }
       `}</style>

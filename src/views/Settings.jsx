@@ -471,7 +471,7 @@ export default function Settings({ currentUser, onUserChange }) {
           margin-bottom: 16px;
         }
 
-        @media (max-width: 768px) {
+        @media (max-width: 1024px) {
           .settings-layout-grid {
             grid-template-columns: 1fr;
           }

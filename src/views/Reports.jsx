@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line } from 'recharts';
-import { Download, Mail, Calendar, BarChart3, PieChart } from 'lucide-react';
+import { Download, Mail, Calendar, BarChart3, PieChart, X } from 'lucide-react';
 import { db } from '../data/mockData';
 
 export default function Reports({ currentUser }) {
@@ -140,26 +140,28 @@ export default function Reports({ currentUser }) {
           </div>
         </div>
 
-        <table className="closers-table" style={{ marginTop: '24px' }}>
-          <thead>
-            <tr>
-              <th>Pipeline Stage</th>
-              <th>Leads Entered</th>
-              <th>Leads Exited</th>
-              <th>Average Days Spent</th>
-            </tr>
-          </thead>
-          <tbody>
-            {chartData.map((d, i) => (
-              <tr key={i}>
-                <td style={{ fontWeight: '600' }}>{d.name}</td>
-                <td>{d.Entered} leads</td>
-                <td>{d.Exited} leads</td>
-                <td>{d.AvgDays} Days</td>
+        <div className="table-container" style={{ marginTop: '24px' }}>
+          <table className="closers-table">
+            <thead>
+              <tr>
+                <th>Pipeline Stage</th>
+                <th>Leads Entered</th>
+                <th>Leads Exited</th>
+                <th>Average Days Spent</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {chartData.map((d, i) => (
+                <tr key={i}>
+                  <td style={{ fontWeight: '600' }}>{d.name}</td>
+                  <td>{d.Entered} leads</td>
+                  <td>{d.Exited} leads</td>
+                  <td>{d.AvgDays} Days</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     );
   };
@@ -282,26 +284,28 @@ export default function Reports({ currentUser }) {
           </div>
         </div>
 
-        <table className="closers-table" style={{ marginTop: '24px' }}>
-          <thead>
-            <tr>
-              <th>Closer Name</th>
-              <th>Leads Assigned</th>
-              <th>Sales Converted</th>
-              <th>Conversion Rate (%)</th>
-            </tr>
-          </thead>
-          <tbody>
-            {data.map((c, i) => (
-              <tr key={i}>
-                <td style={{ fontWeight: '600' }}>{c.name}</td>
-                <td>{c.Assigned} leads</td>
-                <td>{c.Converted} sales</td>
-                <td style={{ fontWeight: '700', color: 'var(--primary-red)' }}>{c.Rate}%</td>
+        <div className="table-container" style={{ marginTop: '24px' }}>
+          <table className="closers-table">
+            <thead>
+              <tr>
+                <th>Closer Name</th>
+                <th>Leads Assigned</th>
+                <th>Sales Converted</th>
+                <th>Conversion Rate (%)</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {data.map((c, i) => (
+                <tr key={i}>
+                  <td style={{ fontWeight: '600' }}>{c.name}</td>
+                  <td>{c.Assigned} leads</td>
+                  <td>{c.Converted} sales</td>
+                  <td style={{ fontWeight: '700', color: 'var(--primary-red)' }}>{c.Rate}%</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     );
   };
@@ -548,7 +552,7 @@ export default function Reports({ currentUser }) {
           font-weight: 600;
         }
 
-        @media (max-width: 768px) {
+        @media (max-width: 1024px) {
           .reports-selection-panel {
             flex-direction: column;
             align-items: flex-start;

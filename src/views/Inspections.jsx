@@ -326,7 +326,7 @@ export default function Inspections({
           <span>Back to Inspections List</span>
         </button>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1.8fr', gap: '24px' }} className="responsive-details-grid">
+        <div style={{ display: 'grid', gap: '24px' }} className="responsive-details-grid">
           {/* Left Column: Client & Property Details */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
             {/* Client Info Card */}
@@ -972,6 +972,16 @@ export default function Inspections({
           gap: 6px;
         }
 
+        .responsive-details-grid {
+          grid-template-columns: 1.2fr 1.8fr;
+        }
+
+        @media (max-width: 1024px) {
+          .responsive-details-grid {
+            grid-template-columns: 1fr;
+          }
+        }
+
         @media (max-width: 768px) {
           .inspections-toolbar {
             flex-direction: column;
@@ -980,6 +990,14 @@ export default function Inspections({
           .toolbar-filters {
             width: 100%;
             justify-content: space-between;
+          }
+          .calendar-grid-body {
+            grid-auto-rows: minmax(60px, auto);
+            gap: 2px;
+          }
+          .calendar-grid-cell {
+            padding: 4px;
+            font-size: 11px;
           }
         }
       `}</style>

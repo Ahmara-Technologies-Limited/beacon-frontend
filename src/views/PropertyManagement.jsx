@@ -220,7 +220,7 @@ export default function PropertyManagement({ currentUser }) {
               </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '32px' }} className="responsive-details-grid">
+            <div style={{ display: 'grid', gap: '32px' }} className="responsive-details-grid">
               <div>
                 <h4 style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-placeholder)', textTransform: 'uppercase', marginBottom: '8px' }}>Property Description</h4>
                 <p style={{ fontSize: '14px', color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: '24px' }}>{selectedProperty.description || 'No description provided.'}</p>
@@ -459,8 +459,7 @@ export default function PropertyManagement({ currentUser }) {
                   <label className="form-label">Status</label>
                   <select 
                     className="form-control" 
-                    value={modalData.status} 
-                    onChange={e => setFormData({ ...modalData, status: e.target.value })}
+                    value={modalData.status}
                     onChange={e => setModalData({ ...modalData, status: e.target.value })}
                   >
                     <option value="Selling">Selling</option>
@@ -548,6 +547,18 @@ export default function PropertyManagement({ currentUser }) {
           </div>
         </div>
       )}
+
+      <style>{`
+        .responsive-details-grid {
+          grid-template-columns: 2fr 1fr;
+        }
+
+        @media (max-width: 1024px) {
+          .responsive-details-grid {
+            grid-template-columns: 1fr;
+          }
+        }
+      `}</style>
     </div>
   );
 }

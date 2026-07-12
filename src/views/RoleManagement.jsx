@@ -623,6 +623,21 @@ export default function RoleManagement() {
           accent-color: var(--primary-red);
           flex-shrink: 0;
         }
+
+        @media (max-width: 1024px) {
+          .role-mgmt-layout {
+            flex-direction: column;
+          }
+          .role-list-panel {
+            width: 100%;
+          }
+        }
+
+        @media (max-width: 480px) {
+          .perm-items {
+            grid-template-columns: 1fr;
+          }
+        }
       `}</style>
     </div>
   );

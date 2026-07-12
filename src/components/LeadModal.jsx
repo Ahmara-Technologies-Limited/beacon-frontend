@@ -357,7 +357,7 @@ export default function LeadModal({ leadId, isOpen, onClose, onSaveComplete, onS
             {(formData.stage === 'Client/Investor' || formData.stage === 'Repeat Purchase') && (
               <div className="form-group full-width client-mgmt-section" style={{ borderTop: '1px solid var(--border-color)', paddingTop: '16px', marginTop: '8px' }}>
                 <h4 style={{ fontSize: '13px', fontWeight: '700', marginBottom: '12px', color: 'var(--primary-red)' }}>Client Relationship Settings</h4>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                <div style={{ display: 'grid', gap: '16px' }} className="modal-subgrid-2col">
                   
                   {/* Relationship Status */}
                   <div className="form-group">
@@ -560,12 +560,19 @@ export default function LeadModal({ leadId, isOpen, onClose, onSaveComplete, onS
           gap: 8px;
         }
 
+        .modal-subgrid-2col {
+          grid-template-columns: 1fr 1fr;
+        }
+
         @media (max-width: 768px) {
           .lead-form-grid {
             grid-template-columns: 1fr;
           }
           .form-group.full-width {
             grid-column: span 1;
+          }
+          .modal-subgrid-2col {
+            grid-template-columns: 1fr;
           }
         }
       `}</style>

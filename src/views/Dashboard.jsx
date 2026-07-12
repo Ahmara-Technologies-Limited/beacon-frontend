@@ -1128,7 +1128,7 @@ export default function Dashboard({ currentUser, setCurrentTab, setViewingLeadId
         <WelcomeBanner subtitle="Client Engagement Hub — Convert leads, generate referrals, and drive repeat purchases." />
         
         {/* Metric Cards */}
-        <div className="dashboard-stats-grid grid-4" style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '16px', margin: '24px 0' }}>
+        <div className="dashboard-stats-grid">
           <div className="stat-card card">
             <span className="stat-label">Referrals Generated</span>
             <span className="stat-value text-blue">{referrals.length}</span>
@@ -1160,7 +1160,7 @@ export default function Dashboard({ currentUser, setCurrentTab, setViewingLeadId
         {nonNegotiableViolations.length > 0 && (
           <div className="card" style={{ borderLeft: '4px solid var(--primary-red)', background: 'rgba(212,38,42,0.02)', marginBottom: '24px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-              <AlertTriangle size={18} className="primary-text" />
+              <AlertTriangle size={18} className="alert-icon" />
               <h3 className="section-title" style={{ margin: 0, fontSize: '15px', color: 'var(--primary-red)' }}>Client Compliance Breaches ({nonNegotiableViolations.length})</h3>
             </div>
             <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '12px' }}>
@@ -1205,8 +1205,8 @@ export default function Dashboard({ currentUser, setCurrentTab, setViewingLeadId
             {rmTab === 'clients' && (
               <div>
                 <h3 className="section-title">Client Portfolio Overview</h3>
-                <div className="table-responsive">
-                  <table className="leads-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <div className="table-container">
+                  <table className="custom-table">
                     <thead>
                       <tr style={{ background: 'var(--table-header-bg)', borderBottom: '1px solid var(--border-color)', textAlign: 'left' }}>
                         <th style={{ padding: '12px' }}>Client</th>
@@ -1315,8 +1315,8 @@ export default function Dashboard({ currentUser, setCurrentTab, setViewingLeadId
 
                 <div style={{ flex: '2 1 450px' }} className="card">
                   <h3 className="section-title">Referred Leads Tracker</h3>
-                  <div className="table-responsive">
-                    <table className="leads-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <div className="table-container">
+                    <table className="custom-table">
                       <thead>
                         <tr style={{ background: 'var(--table-header-bg)', borderBottom: '1px solid var(--border-color)', textAlign: 'left' }}>
                           <th style={{ padding: '12px' }}>Referral Lead</th>
@@ -1380,7 +1380,7 @@ export default function Dashboard({ currentUser, setCurrentTab, setViewingLeadId
                 <div className="card">
                   <h3 className="section-title">Complaints & Experience Monitoring</h3>
                   <div style={{ padding: '14px', background: 'var(--color-grey-bg)', border: '1px solid var(--border-color)', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <AlertCircle size={20} className="primary-text" />
+                    <AlertCircle size={20} className="alert-icon" />
                     <div>
                       <h4 style={{ margin: 0, fontSize: '13px', fontWeight: '700' }}>No Unresolved Client Complaints</h4>
                       <p style={{ margin: '2px 0 0 0', fontSize: '12px', color: 'var(--text-secondary)' }}>All feedback scores are currently positive (&gt;3 stars).</p>
@@ -1452,7 +1452,7 @@ export default function Dashboard({ currentUser, setCurrentTab, setViewingLeadId
         <WelcomeBanner subtitle="Operations Command — Keep pipelines running smoothly, audits secure, and allocations verified." />
 
         {/* Metric Cards */}
-        <div className="dashboard-stats-grid grid-4" style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '16px', margin: '24px 0' }}>
+        <div className="dashboard-stats-grid">
           <div className="stat-card card">
             <span className="stat-label">Unassigned Leads</span>
             <span className="stat-value text-red">{unassignedLeads.length}</span>
@@ -1484,7 +1484,7 @@ export default function Dashboard({ currentUser, setCurrentTab, setViewingLeadId
         {operationsBreaches.length > 0 && (
           <div className="card" style={{ borderLeft: '4px solid var(--primary-red)', background: 'rgba(212,38,42,0.02)', marginBottom: '24px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-              <ShieldAlert size={18} className="primary-text" />
+              <ShieldAlert size={18} className="alert-icon" />
               <h3 className="section-title" style={{ margin: 0, fontSize: '15px', color: 'var(--primary-red)' }}>Critical Operations Breaches ({operationsBreaches.length})</h3>
             </div>
             <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '12px' }}>
@@ -1543,8 +1543,8 @@ export default function Dashboard({ currentUser, setCurrentTab, setViewingLeadId
                 {unassignedLeads.length === 0 ? (
                   <div className="empty-table-state" style={{ padding: '40px', textAlign: 'center' }}>No unassigned leads in the system! Good job.</div>
                 ) : (
-                  <div className="table-responsive">
-                    <table className="leads-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <div className="table-container">
+                    <table className="custom-table">
                       <thead>
                         <tr style={{ background: 'var(--table-header-bg)', borderBottom: '1px solid var(--border-color)', textAlign: 'left' }}>
                           <th style={{ padding: '12px' }}>Lead Name</th>
@@ -1589,8 +1589,8 @@ export default function Dashboard({ currentUser, setCurrentTab, setViewingLeadId
             {opsTab === 'inspections' && (
               <div>
                 <h3 className="section-title">Operations Inspection Control</h3>
-                <div className="table-responsive">
-                  <table className="leads-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <div className="table-container">
+                  <table className="custom-table">
                     <thead>
                       <tr style={{ background: 'var(--table-header-bg)', borderBottom: '1px solid var(--border-color)', textAlign: 'left' }}>
                         <th style={{ padding: '12px' }}>Client</th>
@@ -1628,8 +1628,8 @@ export default function Dashboard({ currentUser, setCurrentTab, setViewingLeadId
             {opsTab === 'docs' && (
               <div>
                 <h3 className="section-title">Documentation Pipeline & Allocation Milestones</h3>
-                <div className="table-responsive">
-                  <table className="leads-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <div className="table-container">
+                  <table className="custom-table">
                     <thead>
                       <tr style={{ background: 'var(--table-header-bg)', borderBottom: '1px solid var(--border-color)', textAlign: 'left' }}>
                         <th style={{ padding: '12px' }}>Client</th>
@@ -1777,7 +1777,7 @@ export default function Dashboard({ currentUser, setCurrentTab, setViewingLeadId
         <WelcomeBanner subtitle={`Branch Performance — Managing closers, monitoring tours, and tracking revenue for ${myBranchName}.`} />
 
         {/* Metric Cards */}
-        <div className="dashboard-stats-grid grid-4" style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '16px', margin: '24px 0' }}>
+        <div className="dashboard-stats-grid">
           <div className="stat-card card">
             <span className="stat-label">Branch Revenue</span>
             <span className="stat-value text-red">₦{branchRevenue.toLocaleString()}</span>
@@ -1811,8 +1811,8 @@ export default function Dashboard({ currentUser, setCurrentTab, setViewingLeadId
           <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '12px' }}>
             Auditing daily CRM updates, uncontacted leads, and scheduled next actions for your branch sales closers.
           </p>
-          <div className="table-responsive">
-            <table className="leads-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <div className="table-container">
+            <table className="custom-table">
               <thead>
                 <tr style={{ background: 'var(--table-header-bg)', borderBottom: '1px solid var(--border-color)', textAlign: 'left' }}>
                   <th style={{ padding: '12px' }}>Closer</th>
@@ -1897,8 +1897,8 @@ export default function Dashboard({ currentUser, setCurrentTab, setViewingLeadId
             {bmTab === 'inspections' && (
               <div>
                 <h3 className="section-title">Branch Site Inspection Bookings</h3>
-                <div className="table-responsive">
-                  <table className="leads-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <div className="table-container">
+                  <table className="custom-table">
                     <thead>
                       <tr style={{ background: 'var(--table-header-bg)', borderBottom: '1px solid var(--border-color)', textAlign: 'left' }}>
                         <th style={{ padding: '12px' }}>Client</th>
@@ -2044,7 +2044,7 @@ export default function Dashboard({ currentUser, setCurrentTab, setViewingLeadId
         <WelcomeBanner subtitle="General Manager Command Center — Corporate pipelines, forecasts, branch performance, and executive metrics." />
 
         {/* GM Command Center: 6 Mandatory Numbers */}
-        <div className="dashboard-stats-grid grid-4" style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '12px', margin: '24px 0' }}>
+        <div className="dashboard-stats-grid">
           <div className="stat-card card" style={{ borderTop: '4px solid var(--primary-red)' }}>
             <span className="stat-label">Total Leads</span>
             <span className="stat-value">{totalLeads}</span>
@@ -2083,7 +2083,7 @@ export default function Dashboard({ currentUser, setCurrentTab, setViewingLeadId
         {atRiskOpportunities.length > 0 && (
           <div className="card" style={{ borderLeft: '4px solid var(--primary-red)', background: 'rgba(212,38,42,0.02)', marginBottom: '24px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-              <AlertTriangle size={18} className="primary-text" />
+              <AlertTriangle size={18} className="alert-icon" />
               <h3 className="section-title" style={{ margin: 0, fontSize: '15px', color: 'var(--primary-red)' }}>Executive At-Risk Alert ({atRiskOpportunities.length} High-Value Leads)</h3>
             </div>
             <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '12px' }}>
@@ -2140,8 +2140,8 @@ export default function Dashboard({ currentUser, setCurrentTab, setViewingLeadId
             {gmTab === 'branches' && (
               <div>
                 <h3 className="section-title">Branch Performance Overview</h3>
-                <div className="table-responsive">
-                  <table className="leads-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <div className="table-container">
+                  <table className="custom-table">
                     <thead>
                       <tr style={{ background: 'var(--table-header-bg)', borderBottom: '1px solid var(--border-color)', textAlign: 'left' }}>
                         <th style={{ padding: '12px' }}>Branch Name</th>
@@ -2170,8 +2170,8 @@ export default function Dashboard({ currentUser, setCurrentTab, setViewingLeadId
             {gmTab === 'marketing' && (
               <div>
                 <h3 className="section-title">Marketing Channels Conversion Performance</h3>
-                <div className="table-responsive">
-                  <table className="leads-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <div className="table-container">
+                  <table className="custom-table">
                     <thead>
                       <tr style={{ background: 'var(--table-header-bg)', borderBottom: '1px solid var(--border-color)', textAlign: 'left' }}>
                         <th style={{ padding: '12px' }}>Lead Source</th>
@@ -2202,8 +2202,8 @@ export default function Dashboard({ currentUser, setCurrentTab, setViewingLeadId
             {gmTab === 'leaderboard' && (
               <div>
                 <h3 className="section-title">Closers Performance Ranking</h3>
-                <div className="table-responsive">
-                  <table className="leads-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <div className="table-container">
+                  <table className="custom-table">
                     <thead>
                       <tr style={{ background: 'var(--table-header-bg)', borderBottom: '1px solid var(--border-color)', textAlign: 'left' }}>
                         <th style={{ padding: '12px' }}>Rank</th>

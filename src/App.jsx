@@ -1,22 +1,24 @@
+'use client';
+
 import React, { useState, useEffect } from 'react';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
-import Dashboard from './pages/Dashboard';
-import LeadManagement from './pages/LeadManagement';
-import LeadProfile from './pages/LeadProfile';
-import UserManagement from './pages/UserManagement';
-import FollowUp from './pages/FollowUp';
-import Inspections from './pages/Inspections';
-import PipelineTracker from './pages/PipelineTracker';
-import Reports from './pages/Reports';
-import Settings from './pages/Settings';
+import Dashboard from './views/Dashboard';
+import LeadManagement from './views/LeadManagement';
+import LeadProfile from './views/LeadProfile';
+import UserManagement from './views/UserManagement';
+import FollowUp from './views/FollowUp';
+import Inspections from './views/Inspections';
+import PipelineTracker from './views/PipelineTracker';
+import Reports from './views/Reports';
+import Settings from './views/Settings';
 import LeadModal from './components/LeadModal';
 import LogActivityModal from './components/LogActivityModal';
 import InspectionModal from './components/InspectionModal';
-import RoleManagement from './pages/RoleManagement';
-import AuditLogs from './pages/AuditLogs';
-import PropertyManagement from './pages/PropertyManagement';
-import DocOfficerHub from './pages/DocOfficerHub';
+import RoleManagement from './views/RoleManagement';
+import AuditLogs from './views/AuditLogs';
+import PropertyManagement from './views/PropertyManagement';
+import DocOfficerHub from './views/DocOfficerHub';
 import { initializeDB, db } from './data/mockData';
 import { Lock, Mail, Eye, EyeOff, AlertTriangle, Sun, Moon, Building2 } from 'lucide-react';
 
@@ -26,6 +28,7 @@ export default function App() {
   const [searchTerm, setSearchTerm] = useState('');
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [darkMode, setDarkMode] = useState(() => {
+    if (typeof window === 'undefined') return false;
     return localStorage.getItem('beacon_dark_mode') === 'true';
   });
 

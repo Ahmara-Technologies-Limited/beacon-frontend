@@ -206,6 +206,7 @@ export default function Header({ currentUser, onUserChange, onSearch, currentTab
           display: flex;
           align-items: center;
           justify-content: space-between;
+          gap: 12px;
           padding: 0 32px;
           position: sticky;
           top: 0;
@@ -236,6 +237,8 @@ export default function Header({ currentUser, onUserChange, onSearch, currentTab
         .header-left {
           display: flex;
           align-items: center;
+          min-width: 0;
+          flex-shrink: 1;
         }
 
         .role-switcher-container {
@@ -246,12 +249,14 @@ export default function Header({ currentUser, onUserChange, onSearch, currentTab
           padding: 6px 12px;
           border-radius: var(--radius-sm);
           border: 1px solid var(--border-color);
+          min-width: 0;
         }
 
         .role-switcher-label {
           font-size: 13px;
           font-weight: 600;
           color: var(--text-secondary);
+          white-space: nowrap;
         }
 
         .role-switcher-select {
@@ -262,17 +267,22 @@ export default function Header({ currentUser, onUserChange, onSearch, currentTab
           font-weight: 700;
           color: var(--primary-red);
           cursor: pointer;
+          min-width: 0;
+          max-width: 220px;
+          text-overflow: ellipsis;
         }
 
         .header-right {
           display: flex;
           align-items: center;
           gap: 20px;
+          flex-shrink: 0;
         }
 
         .search-container {
           position: relative;
           width: 320px;
+          max-width: 100%;
         }
 
         .search-icon {
@@ -478,6 +488,37 @@ export default function Header({ currentUser, onUserChange, onSearch, currentTab
         .notification-dismiss:hover {
           background-color: var(--border-color);
           color: var(--text-primary);
+        }
+
+        @media (max-width: 1024px) {
+          .app-header {
+            padding: 0 16px;
+          }
+          .role-switcher-label {
+            display: none;
+          }
+          .search-container {
+            width: 220px;
+          }
+        }
+
+        @media (max-width: 640px) {
+          .app-header {
+            gap: 8px;
+          }
+          .header-right {
+            gap: 10px;
+          }
+          .search-container {
+            width: 120px;
+          }
+          .search-input {
+            padding-left: 34px;
+          }
+          .notifications-dropdown {
+            width: calc(100vw - 24px);
+            right: -12px;
+          }
         }
       `}</style>
     </header>

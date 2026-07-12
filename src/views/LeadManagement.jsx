@@ -1025,7 +1025,7 @@ export default function LeadManagement({
           color: var(--text-placeholder);
         }
 
-        @media (max-width: 768px) {
+        @media (max-width: 1024px) {
           .page-header-row {
             flex-direction: column;
             gap: 16px;
@@ -1033,6 +1033,15 @@ export default function LeadManagement({
           .header-actions-group {
             width: 100%;
             justify-content: space-between;
+            flex-wrap: wrap;
+          }
+        }
+
+        @media (max-width: 768px) {
+          .filter-controls-row {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 10px;
           }
         }
       `}</style>

@@ -201,7 +201,7 @@ export default function InspectionModal({ leadId, inspectionId, isOpen, onClose,
                 <h4 style={{ fontSize: '12px', fontWeight: '800', color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '12px', letterSpacing: '0.5px' }}>
                   Inspection Assignment Details
                 </h4>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px 24px', fontSize: '13px' }}>
+                <div style={{ display: 'grid', gap: '12px 24px', fontSize: '13px' }} className="modal-subgrid-2col">
                   <div><strong>Client/Lead:</strong> <span style={{ color: 'var(--text-primary)', fontWeight: '600' }}>{selectedLeadDetails?.name || "N/A"}</span></div>
                   <div><strong>Estate / Property:</strong> <span style={{ color: 'var(--text-primary)', fontWeight: '600' }}>{formData.estate}</span></div>
                   <div><strong>Scheduled Date & Time:</strong> <span style={{ color: 'var(--text-primary)', fontWeight: '600' }}>{formData.date} @ {formData.time}</span></div>
@@ -235,7 +235,7 @@ export default function InspectionModal({ leadId, inspectionId, isOpen, onClose,
 
                 {/* Conditional Reschedule Fields inside Log Outcome Form */}
                 {formData.status === 'Rescheduled' && (
-                  <div className="inspection-report-section animate-slide" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', background: 'rgba(212,38,42,0.02)', border: '1px solid var(--border-color)', padding: '16px', borderRadius: '8px' }}>
+                  <div className="inspection-report-section animate-slide modal-subgrid-2col" style={{ display: 'grid', gap: '16px', background: 'rgba(212,38,42,0.02)', border: '1px solid var(--border-color)', padding: '16px', borderRadius: '8px' }}>
                     <div className="form-group">
                       <label className="form-label">New Inspection Date *</label>
                       <input 
@@ -560,6 +560,35 @@ export default function InspectionModal({ leadId, inspectionId, isOpen, onClose,
       </div>
 
       <style>{`
+        .duplicate-alert-banner {
+          display: flex;
+          align-items: flex-start;
+          gap: 12px;
+          background-color: #FFFAEB;
+          border: 1px solid #FEC84B;
+          border-radius: var(--radius-md);
+          padding: 16px;
+          margin-bottom: 20px;
+          color: #B54708;
+        }
+
+        .duplicate-alert-icon {
+          flex-shrink: 0;
+          margin-top: 2px;
+        }
+
+        .duplicate-alert-text p {
+          font-size: 13px;
+          line-height: 1.5;
+          margin-bottom: 8px;
+        }
+
+        .duplicate-alert-buttons {
+          display: flex;
+          gap: 8px;
+          margin-top: 8px;
+        }
+
         .inspection-form-grid {
           display: grid;
           grid-template-columns: repeat(2, 1fr);
@@ -587,12 +616,19 @@ export default function InspectionModal({ leadId, inspectionId, isOpen, onClose,
           padding-bottom: 8px;
         }
 
+        .modal-subgrid-2col {
+          grid-template-columns: 1fr 1fr;
+        }
+
         @media (max-width: 768px) {
           .inspection-form-grid {
             grid-template-columns: 1fr;
           }
           .inspection-form-grid .form-group.full-width {
             grid-column: span 1;
+          }
+          .modal-subgrid-2col {
+            grid-template-columns: 1fr;
           }
         }
       `}</style>

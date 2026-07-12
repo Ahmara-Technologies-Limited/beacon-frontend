@@ -330,11 +330,12 @@ export default function Sidebar({ currentUser, currentTab, setCurrentTab, onSign
           color: #FFFFFF;
         }
 
-        @media (max-width: 768px) {
+        @media (max-width: 1024px) {
           .sidebar {
             transform: translateX(-100%);
             transition: transform 0.25s ease-in-out;
             box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
+            z-index: 1100;
           }
           .sidebar.mobile-open {
             transform: translateX(0);

@@ -247,6 +247,23 @@ a { text-decoration: none; color: inherit; }
   margin-bottom: 24px;
 }
 
+/* Used by the RM / Head of Operations / Branch Manager / GM dashboards */
+.dashboard-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 16px;
+  margin: 24px 0;
+}
+.stat-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+.stat-subtext {
+  font-size: 12px;
+  color: var(--text-placeholder);
+}
+
 .stat-card {
   background-color: var(--card-bg);
   border: 1px solid var(--border-color);
@@ -603,6 +620,10 @@ a { text-decoration: none; color: inherit; }
 }
 .text-center { text-align: center; }
 .text-red { color: var(--primary-red); }
+.text-blue { color: var(--color-cold-text); }
+.text-green { color: var(--color-success-text); }
+.text-purple { color: #7C3AED; }
+.text-yellow { color: var(--color-warm-text); }
 .font-red { color: var(--primary-red); }
 .success-icon { color: var(--color-success-text); }
 .alert-icon { color: var(--primary-red); }
@@ -875,16 +896,9 @@ a { text-decoration: none; color: inherit; }
   background-color: var(--color-grey-bg);
 }
 
-@media (max-width: 768px) {
-  .sidebar {
-    transform: translateX(-100%);
-    transition: transform 0.25s ease-in-out;
-    box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
-    z-index: 1100;
-  }
-  .sidebar.mobile-open {
-    transform: translateX(0);
-  }
+/* Tablet tier: no room for a permanent 260px sidebar or side-by-side
+   multi-column layouts, but still enough width for two-up grids/forms. */
+@media (max-width: 1024px) {
   .main-content {
     margin-left: 0 !important;
   }
@@ -892,7 +906,7 @@ a { text-decoration: none; color: inherit; }
     display: flex;
   }
   .page-wrapper {
-    padding: 16px;
+    padding: 20px;
   }
   .page-header-row {
     flex-direction: column;
@@ -916,6 +930,13 @@ a { text-decoration: none; color: inherit; }
   }
   .profile-body-row {
     flex-direction: column;
+  }
+}
+
+/* Mobile tier: phone-width refinements on top of the tablet tier above. */
+@media (max-width: 768px) {
+  .page-wrapper {
+    padding: 16px;
   }
   .stat-grid {
     grid-template-columns: 1fr;

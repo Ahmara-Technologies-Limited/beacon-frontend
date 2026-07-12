@@ -609,6 +609,11 @@ export default function FollowUp({ currentUser, setViewingLeadId, setCurrentTab 
           font-weight: 600;
           font-size: 13px;
         }
+
+        .overdue-text-red {
+          color: var(--primary-red);
+          font-weight: 600;
+        }
       `}</style>
     </div>
   );
