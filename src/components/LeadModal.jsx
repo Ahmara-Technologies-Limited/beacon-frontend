@@ -274,7 +274,7 @@ export default function LeadModal({ leadId, isOpen, onClose, onSaveComplete, onS
                 value={formData.category}
                 onChange={e => setFormData({ ...formData, category: e.target.value })}
               >
-                {['Incoming', 'Active', 'Inspection', 'Investor', 'Revival', 'Reserved', 'Market', 'Untapped Wealth'].map(c => (
+                {['Incoming Wealth', 'Active Wealth', 'Investor Wealth', 'Revival Wealth', 'Reserved Wealth', 'Market Wealth', 'Untapped Wealth'].map(c => (
                   <option key={c} value={c}>{c}</option>
                 ))}
               </select>

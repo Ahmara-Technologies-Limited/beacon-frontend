@@ -1,21 +1,30 @@
+'use client';
+
 import React from 'react';
-import { 
-  LayoutDashboard, 
-  Users, 
-  ClipboardList, 
-  PhoneCall, 
-  CalendarRange, 
-  LayoutGrid, 
-  BarChart3, 
-  ShieldAlert, 
-  Settings, 
+import { usePathname, useRouter } from 'next/navigation';
+import {
+  LayoutDashboard,
+  Users,
+  ClipboardList,
+  PhoneCall,
+  CalendarRange,
+  LayoutGrid,
+  BarChart3,
+  ShieldAlert,
+  Settings,
   LogOut,
   X,
   Building2,
   DollarSign
 } from 'lucide-react';
+import { TAB_ROUTES } from '../lib/routes';
+import { useCrmUI } from '../context/CrmUIContext';
 
-export default function Sidebar({ currentUser, currentTab, setCurrentTab, onSignOut, mobileOpen, setMobileOpen }) {
+export default function Sidebar({ currentUser, onSignOut }) {
+  const pathname = usePathname();
+  const router = useRouter();
+  const { mobileSidebarOpen: mobileOpen, setMobileSidebarOpen: setMobileOpen } = useCrmUI();
+
   if (!currentUser) return null;
 
   // Determine available tabs based on role
@@ -100,13 +109,14 @@ export default function Sidebar({ currentUser, currentTab, setCurrentTab, onSign
             <div className="sidebar-group-items">
               {section.items.map(item => {
                 const Icon = item.icon;
-                const isActive = currentTab === item.id;
+                const itemPath = TAB_ROUTES[item.id];
+                const isActive = pathname === itemPath || pathname.startsWith(`${itemPath}/`);
                 return (
                   <button
                     key={item.id}
                     className={`sidebar-nav-item ${isActive ? 'active' : ''}`}
                     onClick={() => {
-                      setCurrentTab(item.id);
+                      router.push(itemPath);
                       if (setMobileOpen) setMobileOpen(false);
                     }}
                   >

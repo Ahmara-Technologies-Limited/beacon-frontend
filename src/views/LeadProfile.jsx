@@ -6,14 +6,25 @@ import {
 } from 'lucide-react';
 import { db } from '../data/mockData';
 
-export default function LeadProfile({ 
-  leadId, 
+/**
+ * @param {{
+ *   leadId: string,
+ *   inspectionId?: string | null,
+ *   onBack: () => void,
+ *   currentUser: object | null,
+ *   onLogActivityClick: (leadId: string) => void,
+ *   onBookInspectionClick: (leadId?: string | null, inspectionId?: string | null) => void,
+ *   onEditLeadClick: (leadId?: string | null) => void,
+ * }} props
+ */
+export default function LeadProfile({
+  leadId,
   inspectionId = null,
-  onBack, 
-  currentUser, 
-  onLogActivityClick, 
-  onBookInspectionClick, 
-  onEditLeadClick 
+  onBack,
+  currentUser,
+  onLogActivityClick,
+  onBookInspectionClick,
+  onEditLeadClick
 }) {
   const [lead, setLead] = useState(null);
   const [activities, setActivities] = useState([]);

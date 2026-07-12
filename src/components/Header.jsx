@@ -1,8 +1,16 @@
+'use client';
+
 import React, { useState, useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { Bell, Search, X, Check, Eye, Sun, Moon, Menu } from 'lucide-react';
 import { db } from '../data/mockData';
+import { useAuth } from '../context/AuthContext';
+import { useCrmUI } from '../context/CrmUIContext';
 
-export default function Header({ currentUser, onUserChange, onSearch, currentTab, setCurrentTab, setViewingLeadId, darkMode, onToggleDarkMode, onMenuToggle }) {
+export default function Header() {
+  const router = useRouter();
+  const { currentUser, login } = useAuth();
+  const { darkMode, toggleDarkMode, mobileSidebarOpen, setMobileSidebarOpen, setSearchTerm } = useCrmUI();
   const [notifications, setNotifications] = useState([]);
   const [showNotifications, setShowNotifications] = useState(false);
   const [users, setUsers] = useState([]);
@@ -52,10 +60,9 @@ export default function Header({ currentUser, onUserChange, onSearch, currentTab
     if (n.link) {
       if (n.link.startsWith('/leads/')) {
         const leadId = n.link.split('/').pop();
-        setViewingLeadId(leadId);
-        setCurrentTab('leads');
+        router.push(`/leads/${leadId}`);
       } else if (n.link === '/follow-ups') {
-        setCurrentTab('followup');
+        router.push('/followup');
       }
     }
   };
@@ -80,19 +87,18 @@ export default function Header({ currentUser, onUserChange, onSearch, currentTab
     const selectedUserId = e.target.value;
     const selectedUser = users.find(u => u.id === selectedUserId);
     if (selectedUser) {
-      db.setCurrentUser(selectedUser);
-      onUserChange(selectedUser);
-      // Reset layout tabs to 'dashboard' to avoid permission mismatch on role switch
-      setCurrentTab('dashboard');
+      login(selectedUser);
+      // Reset to dashboard to avoid permission mismatch on role switch
+      router.push('/dashboard');
     }
   };
 
   return (
     <header className="app-header">
       <div className="header-left">
-        <button 
-          className="mobile-menu-trigger" 
-          onClick={onMenuToggle}
+        <button
+          className="mobile-menu-trigger"
+          onClick={() => setMobileSidebarOpen(!mobileSidebarOpen)}
           title="Open Menu"
         >
           <Menu size={20} />
@@ -121,16 +127,16 @@ export default function Header({ currentUser, onUserChange, onSearch, currentTab
           <Search size={18} className="search-icon" />
           <input 
             type="text" 
-            placeholder="Search leads by name, phone..." 
+            placeholder="Search leads by name, phone..."
             className="search-input"
-            onChange={(e) => onSearch(e.target.value)}
+            onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
 
         {/* Dark Mode Toggle */}
         <button
           className="dark-mode-toggle-btn"
-          onClick={onToggleDarkMode}
+          onClick={toggleDarkMode}
           title={darkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
         >
           {darkMode ? <Sun size={18} /> : <Moon size={18} />}

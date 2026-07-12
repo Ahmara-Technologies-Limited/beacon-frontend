@@ -54,6 +54,30 @@ const DEFAULT_ROLES = [
     isSystem: false,
     permissions: ['view_leads', 'edit_leads', 'view_pipeline', 'update_pipeline_stage', 'view_inspections'],
   },
+  {
+    id: 'r6',
+    name: 'Relationship Manager',
+    description: 'Manages client relationships, referrals, and repeat purchase engagement.',
+    color: '#3498DB',
+    isSystem: false,
+    permissions: ['view_leads', 'create_leads', 'edit_leads', 'view_followups', 'manage_followups', 'view_pipeline', 'update_pipeline_stage'],
+  },
+  {
+    id: 'r7',
+    name: 'Head of Operations',
+    description: 'Oversees pipeline health, inspections, and allocation verification across branches.',
+    color: '#E67E22',
+    isSystem: false,
+    permissions: ['view_leads', 'edit_leads', 'view_pipeline', 'update_pipeline_stage', 'view_inspections', 'edit_inspections', 'cancel_inspections', 'complete_inspections', 'view_reports', 'export_reports'],
+  },
+  {
+    id: 'r8',
+    name: 'Branch Manager',
+    description: 'Manages closers and branch performance, inspections, and revenue tracking.',
+    color: '#1ABC9C',
+    isSystem: false,
+    permissions: ['view_leads', 'edit_leads', 'view_pipeline', 'update_pipeline_stage', 'view_inspections', 'view_reports', 'export_reports'],
+  },
 ];
 
 const STORAGE_KEY = 'beacon_roles';

@@ -684,7 +684,7 @@ export default function LeadManagement({
                 <label className="form-label">Category</label>
                 <select className="form-control" value={pendingFilterCategory} onChange={e => setPendingFilterCategory(e.target.value)}>
                   <option value="All">All Categories</option>
-                  {['Incoming', 'Active', 'Inspection', 'Investor', 'Revival', 'Reserved', 'Market', 'Untapped Wealth'].map(c => (
+                  {['Incoming Wealth', 'Active Wealth', 'Investor Wealth', 'Revival Wealth', 'Reserved Wealth', 'Market Wealth', 'Untapped Wealth'].map(c => (
                     <option key={c} value={c}>{c}</option>
                   ))}
                 </select>
