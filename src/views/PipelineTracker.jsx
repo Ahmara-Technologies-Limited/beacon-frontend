@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../data/mockData';
+import { dataService } from '../data/dataService';
 import { AlertCircle, Calendar } from 'lucide-react';
 
 export default function PipelineTracker({ currentUser, setViewingLeadId, setCurrentTab }) {
@@ -24,9 +25,9 @@ export default function PipelineTracker({ currentUser, setViewingLeadId, setCurr
     "Repeat Purchase"
   ];
 
-  const loadPipelineData = () => {
-    setLeads(db.getLeads());
-    setClosers(db.getUsers().filter(u => u.role === 'Sales Closer' && u.status === 'Active'));
+  const loadPipelineData = async () => {
+    setLeads(await dataService.getLeads());
+    setClosers((await dataService.getUsers()).filter(u => u.role === 'Sales Closer' && u.status === 'Active'));
   };
 
   useEffect(() => {
@@ -65,13 +66,13 @@ export default function PipelineTracker({ currentUser, setViewingLeadId, setCurr
     e.preventDefault(); // Required to allow dropping!
   };
 
-  const handleDrop = (e, targetStage) => {
+  const handleDrop = async (e, targetStage) => {
     e.preventDefault();
     const leadId = e.dataTransfer.getData("text/plain");
-    
+
     const leadToMove = leads.find(l => l.id === leadId);
     if (leadToMove && leadToMove.stage !== targetStage) {
-      db.saveLead({
+      await dataService.saveLead({
         ...leadToMove,
         stage: targetStage
       });

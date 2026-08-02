@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Save, Check, ShieldAlert } from 'lucide-react';
+import { Save, Check, ShieldAlert, Wifi, WifiOff } from 'lucide-react';
 import { db } from '../data/mockData';
+import { dataService } from '../data/dataService';
+import { useDemoMode } from '../lib/demoMode';
 
 export default function Settings({ currentUser, onUserChange }) {
   const [passwordData, setPasswordData] = useState({
@@ -28,18 +30,20 @@ export default function Settings({ currentUser, onUserChange }) {
 
   const [errors, setErrors] = useState({});
   const [successToast, setSuccessToast] = useState(false);
+  const [demoMode, setDemoMode] = useDemoMode();
 
   useEffect(() => {
-    // Load settings from DB
-    const currentSettings = db.getSettings();
-    if (currentSettings) {
-      setFormData({
-        contactHoursLimit: currentSettings.contactHoursLimit || 24,
-        dormancyDaysThreshold: currentSettings.dormancyDaysThreshold || 7,
-        inspectionConfirmationHours: currentSettings.inspectionConfirmationHours || 24,
-        remindersTiming: currentSettings.remindersTiming || "1 hour before"
-      });
-    }
+    // Load settings from the data layer (demo db.* or live backend)
+    dataService.getSettings().then(currentSettings => {
+      if (currentSettings) {
+        setFormData({
+          contactHoursLimit: currentSettings.contactHoursLimit || 24,
+          dormancyDaysThreshold: currentSettings.dormancyDaysThreshold || 7,
+          inspectionConfirmationHours: currentSettings.inspectionConfirmationHours || 24,
+          remindersTiming: currentSettings.remindersTiming || "1 hour before"
+        });
+      }
+    });
   }, []);
 
   const validate = () => {
@@ -61,10 +65,10 @@ export default function Settings({ currentUser, onUserChange }) {
     return Object.keys(err).length === 0;
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!validate()) return;
 
-    db.saveSettings({
+    await dataService.saveSettings({
       contactHoursLimit: parseInt(formData.contactHoursLimit, 10),
       dormancyDaysThreshold: parseInt(formData.dormancyDaysThreshold, 10),
       inspectionConfirmationHours: parseInt(formData.inspectionConfirmationHours, 10),
@@ -112,6 +116,35 @@ export default function Settings({ currentUser, onUserChange }) {
         {/* Left Side: System Thresholds (Super Admin only) */}
         <div className="settings-column">
           <div className="card">
+            <h3 className="section-title">Data Source</h3>
+            <p className="section-desc">
+              Toggle between Demo Mode (local mock data, no backend required) and Live Mode
+              (real Beacon backend via {`NEXT_PUBLIC_API_URL`}). Reports and the discounts/commissions
+              ledgers still use local demo data in both modes pending further backend work.
+            </p>
+            <div className="toggle-setting-row" style={{ borderBottom: 'none', paddingBottom: 0 }}>
+              <div className="toggle-text-col">
+                <strong>{demoMode ? 'Demo Mode' : 'Live Mode'}</strong>
+                <span>
+                  {demoMode
+                    ? 'Using local mock data stored in your browser.'
+                    : 'Using the live backend API for leads, users, inspections, and activities.'}
+                </span>
+              </div>
+              <button
+                type="button"
+                className="btn btn-sm"
+                onClick={() => setDemoMode(!demoMode)}
+                title={demoMode ? 'Switch to Live Mode' : 'Switch to Demo Mode'}
+                style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+              >
+                {demoMode ? <WifiOff size={14} /> : <Wifi size={14} />}
+                <span>Switch to {demoMode ? 'Live Mode' : 'Demo Mode'}</span>
+              </button>
+            </div>
+          </div>
+
+          <div className="card" style={{ marginTop: '24px' }}>
             <h3 className="section-title">System Alert Thresholds</h3>
             <p className="section-desc">These options configure background alert metrics used across the entire company portfolio.</p>
             

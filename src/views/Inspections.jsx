@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Download, LayoutList, Calendar as CalendarIcon, X, Check, AlertCircle, Filter, ArrowLeft, Phone, Mail, MessageSquare, MapPin } from 'lucide-react';
 import { db } from '../data/mockData';
+import { dataService } from '../data/dataService';
 
 export default function Inspections({ 
   currentUser, 
@@ -14,6 +15,7 @@ export default function Inspections({
   const [users, setUsers] = useState([]);
   const [properties, setProperties] = useState([]);
   const [viewingInspectionId, setViewingInspectionId] = useState(null);
+  const [leadActivities, setLeadActivities] = useState([]);
 
   const [reportStatus, setReportStatus] = useState('Completed');
   const [reportText, setReportText] = useState('');
@@ -52,11 +54,11 @@ export default function Inspections({
     'Beacon Palms, Maitama'
   ];
 
-  const loadInspectionData = () => {
-    setInspections(db.getInspections());
-    setLeads(db.getLeads());
-    setUsers(db.getUsers());
-    setProperties(db.getProperties());
+  const loadInspectionData = async () => {
+    setInspections(await dataService.getInspections());
+    setLeads(await dataService.getLeads());
+    setUsers(await dataService.getUsers());
+    setProperties(await dataService.getProperties());
   };
 
   useEffect(() => {
@@ -84,6 +86,15 @@ export default function Inspections({
     const interval = setInterval(loadInspectionData, 2000);
     return () => clearInterval(interval);
   }, []);
+
+  useEffect(() => {
+    if (viewingInspectionId) {
+      const selected = inspections.find(i => i.id === viewingInspectionId);
+      if (selected) {
+        dataService.getActivities(selected.leadId).then(setLeadActivities);
+      }
+    }
+  }, [viewingInspectionId, inspections]);
 
   const isUserRelevantForInspection = (inspection) => {
     if (['Super Admin', 'General Manager', 'Head of Operations', 'Branch Manager'].includes(currentUser.role)) {
@@ -282,11 +293,9 @@ export default function Inspections({
       amenities: []
     };
 
-    const leadActivities = db.getActivities().filter(a => a.leadId === lead.id);
-
-    const handleSubmitReport = (e) => {
+    const handleSubmitReport = async (e) => {
       e.preventDefault();
-      
+
       const updatedInspection = {
         ...selectedInspection,
         status: reportStatus,
@@ -306,7 +315,7 @@ export default function Inspections({
         updatedInspection.internalNotes = cancellationReason;
       }
 
-      db.saveInspection(updatedInspection);
+      await dataService.saveInspection(updatedInspection);
       loadInspectionData();
       setViewingInspectionId(null);
     };

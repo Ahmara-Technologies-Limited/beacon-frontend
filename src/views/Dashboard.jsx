@@ -8,6 +8,7 @@ import {
   Clock, DollarSign, Users, ShieldAlert, Plus, Check, AlertTriangle 
 } from 'lucide-react';
 import { db } from '../data/mockData';
+import { dataService } from '../data/dataService';
 
 export default function Dashboard({ currentUser, setCurrentTab, setViewingLeadId, onAddLeadClick, onLogActivityClick, onBookInspectionClick, onEditLeadClick }) {
   const [leads, setLeads] = useState([]);
@@ -54,20 +55,19 @@ export default function Dashboard({ currentUser, setCurrentTab, setViewingLeadId
     </div>
   );
 
+  const loadDashboardData = () => {
+    dataService.getLeads().then(setLeads);
+    dataService.getInspections().then(setInspections);
+    dataService.getActivities().then(setActivities);
+    dataService.getUsers().then(setUsers);
+  };
+
   useEffect(() => {
-    // Load data from db
-    setLeads(db.getLeads());
-    setInspections(db.getInspections());
-    setActivities(db.getActivities());
-    setUsers(db.getUsers());
+    // Load data from the data service
+    loadDashboardData();
     setSettings(db.getSettings());
 
-    const interval = setInterval(() => {
-      setLeads(db.getLeads());
-      setInspections(db.getInspections());
-      setActivities(db.getActivities());
-      setUsers(db.getUsers());
-    }, 1500);
+    const interval = setInterval(loadDashboardData, 1500);
 
     return () => clearInterval(interval);
   }, [])  // Filter Helper for dates
@@ -782,16 +782,16 @@ export default function Dashboard({ currentUser, setCurrentTab, setViewingLeadId
       });
     }
 
-    const handleQuickStatusUpdate = (id, newStatus) => {
-      const list = db.getInspections();
+    const handleQuickStatusUpdate = async (id, newStatus) => {
+      const list = await dataService.getInspections();
       const ins = list.find(i => i.id === id);
       if (ins) {
         if (newStatus === 'Completed' || newStatus === 'No-Show') {
           // Open the inspection details screen to fill the report fields
           onBookInspectionClick(ins.leadId, ins.id);
         } else {
-          db.saveInspection({ ...ins, status: newStatus });
-          setInspections(db.getInspections());
+          await dataService.saveInspection({ ...ins, status: newStatus });
+          setInspections(await dataService.getInspections());
         }
       }
     };
@@ -1105,12 +1105,12 @@ export default function Dashboard({ currentUser, setCurrentTab, setViewingLeadId
         referredById: refClientSource
       };
 
-      db.saveLead(payload);
+      dataService.saveLead(payload);
       
       // Update client referral count
       const referrer = clients.find(c => c.id === refClientSource);
       if (referrer) {
-        db.saveLead({
+        dataService.saveLead({
           ...referrer,
           referralCount: (referrer.referralCount || 0) + 1,
           referralStatus: "Generated Referral"
@@ -1255,9 +1255,9 @@ export default function Dashboard({ currentUser, setCurrentTab, setViewingLeadId
                                   lastContactDate: todayStr,
                                   followUpDate: new Date(Date.now() + 30*24*60*60*1000).toISOString().slice(0, 16) // next contact in 30 days
                                 };
-                                db.saveLead(updated);
+                                dataService.saveLead(updated);
                                 alert(`Quick call logged for ${c.name}! Next contact set to 30 days.`);
-                                db.saveActivity({
+                                dataService.saveActivity({
                                   leadId: c.id,
                                   type: "Call",
                                   summary: "Completed monthly relationship and experience call.",
@@ -1436,7 +1436,7 @@ export default function Dashboard({ currentUser, setCurrentTab, setViewingLeadId
           assignedCloserId: closerId,
           branch: closer.branch || "Lekki Branch"
         };
-        db.saveLead(updated);
+        dataService.saveLead(updated);
         alert(`Lead ${lead.name} successfully assigned to closer ${closer.name} (${closer.branch || 'No Branch'}).`);
         db.addNotification({
           type: "Lead Assigned",
@@ -1665,13 +1665,13 @@ export default function Dashboard({ currentUser, setCurrentTab, setViewingLeadId
                             <div style={{ display: 'flex', gap: '6px' }}>
                               {l.applicationFormStatus === 'Submitted' && (
                                 <button className="btn btn-xs btn-primary" onClick={() => {
-                                  db.saveLead({ ...l, applicationFormStatus: 'Approved' });
+                                  dataService.saveLead({ ...l, applicationFormStatus: 'Approved' });
                                   alert(`Application approved for ${l.name}.`);
                                 }}>Approve App</button>
                               )}
                               {l.offerLetterStatus === 'Sent' && (
                                 <button className="btn btn-xs" onClick={() => {
-                                  db.saveLead({ ...l, offerLetterStatus: 'Accepted', offerLetterSignature: 'E-SIGNED', offerLetterSignedDate: new Date().toISOString().split('T')[0] });
+                                  dataService.saveLead({ ...l, offerLetterStatus: 'Accepted', offerLetterSignature: 'E-SIGNED', offerLetterSignedDate: new Date().toISOString().split('T')[0] });
                                   alert(`Simulated client signature acceptance for ${l.name}!`);
                                 }}>Accept Offer</button>
                               )}

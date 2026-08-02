@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Bell, Search, X, Check, Eye, Sun, Moon, Menu } from 'lucide-react';
 import { db } from '../data/mockData';
+import { dataService } from '../data/dataService';
 import { useAuth } from '../context/AuthContext';
 import { useCrmUI } from '../context/CrmUIContext';
 
@@ -18,17 +19,17 @@ export default function Header() {
 
   useEffect(() => {
     // Get notifications and all users for role switcher
-    setNotifications(db.getNotifications());
+    dataService.getNotifications().then(setNotifications);
     setUsers(db.getUsers());
 
     // Listen for custom database changes (like added activity logs or reassigned leads)
     const handleStorageChange = () => {
-      setNotifications(db.getNotifications());
+      dataService.getNotifications().then(setNotifications);
     };
     window.addEventListener('storage', handleStorageChange);
     // Custom check timer for updates within same window
     const interval = setInterval(() => {
-      setNotifications(db.getNotifications());
+      dataService.getNotifications().then(setNotifications);
     }, 1000);
 
     return () => {
@@ -51,11 +52,11 @@ export default function Header() {
   const visibleNotifications = notifications.filter(n => !n.recipientId || n.recipientId === currentUser?.id);
   const unreadCount = visibleNotifications.filter(n => !n.read).length;
 
-  const handleNotificationClick = (n) => {
-    db.markNotificationRead(n.id);
-    setNotifications(db.getNotifications());
+  const handleNotificationClick = async (n) => {
+    await dataService.markNotificationRead(n.id);
+    setNotifications(await dataService.getNotifications());
     setShowNotifications(false);
-    
+
     // Parse link and redirect
     if (n.link) {
       if (n.link.startsWith('/leads/')) {
@@ -67,20 +68,20 @@ export default function Header() {
     }
   };
 
-  const handleMarkAllRead = () => {
-    db.markAllNotificationsRead();
-    setNotifications(db.getNotifications());
+  const handleMarkAllRead = async () => {
+    await dataService.markAllNotificationsRead();
+    setNotifications(await dataService.getNotifications());
   };
 
-  const handleDismissAll = () => {
-    db.dismissAllNotifications();
+  const handleDismissAll = async () => {
+    await dataService.dismissAllNotifications();
     setNotifications([]);
   };
 
-  const handleDismiss = (e, id) => {
+  const handleDismiss = async (e, id) => {
     e.stopPropagation();
-    db.dismissNotification(id);
-    setNotifications(db.getNotifications());
+    await dataService.dismissNotification(id);
+    setNotifications(await dataService.getNotifications());
   };
 
   const handleRoleChange = (e) => {

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, AlertTriangle } from 'lucide-react';
 import { db } from '../data/mockData';
+import { dataService } from '../data/dataService';
 
 export default function InspectionModal({ leadId, inspectionId, isOpen, onClose, onSaveComplete, currentUser }) {
   const [formData, setFormData] = useState({
@@ -36,61 +37,63 @@ export default function InspectionModal({ leadId, inspectionId, isOpen, onClose,
 
   useEffect(() => {
     if (isOpen) {
-      const activeLeads = db.getLeads();
-      const activeClosers = db.getUsers().filter(u => u.role === 'Sales Closer' && u.status === 'Active');
-      const activeOfficers = db.getUsers().filter(u => u.role === 'Inspection Officer' && u.status === 'Active');
+      Promise.all([dataService.getLeads(), dataService.getUsers()]).then(([activeLeads, allUsers]) => {
+        const activeClosers = allUsers.filter(u => u.role === 'Sales Closer' && u.status === 'Active');
+        const activeOfficers = allUsers.filter(u => u.role === 'Inspection Officer' && u.status === 'Active');
 
-      setLeads(activeLeads);
-      setClosers(activeClosers);
-      setOfficers(activeOfficers);
+        setLeads(activeLeads);
+        setClosers(activeClosers);
+        setOfficers(activeOfficers);
 
-      if (inspectionId) {
-        // Edit inspection mode
-        const list = db.getInspections();
-        const inspection = list.find(i => i.id === inspectionId);
-        if (inspection) {
+        if (inspectionId) {
+          // Edit inspection mode
+          dataService.getInspections().then(list => {
+            const inspection = list.find(i => i.id === inspectionId);
+            if (inspection) {
+              setFormData({
+                leadId: inspection.leadId,
+                estate: inspection.estate,
+                date: inspection.date,
+                time: inspection.time,
+                meetingPoint: inspection.meetingPoint,
+                assignedCloserId: inspection.assignedCloserId,
+                inspectionOfficerId: inspection.inspectionOfficerId,
+                status: inspection.status,
+                internalNotes: inspection.internalNotes || '',
+                noShowNote: inspection.noShowNote || '',
+                report: inspection.report || '',
+                feedback: inspection.feedback || '',
+                nextStepRecommendation: inspection.nextStepRecommendation || ''
+              });
+            }
+          });
+        } else {
+          // Create mode
+          let defaultCloserId = '';
+          if (leadId) {
+            const lead = activeLeads.find(l => l.id === leadId);
+            if (lead) {
+              defaultCloserId = lead.assignedCloserId || '';
+            }
+          }
+
           setFormData({
-            leadId: inspection.leadId,
-            estate: inspection.estate,
-            date: inspection.date,
-            time: inspection.time,
-            meetingPoint: inspection.meetingPoint,
-            assignedCloserId: inspection.assignedCloserId,
-            inspectionOfficerId: inspection.inspectionOfficerId,
-            status: inspection.status,
-            internalNotes: inspection.internalNotes || '',
-            noShowNote: inspection.noShowNote || '',
-            report: inspection.report || '',
-            feedback: inspection.feedback || '',
-            nextStepRecommendation: inspection.nextStepRecommendation || ''
+            leadId: leadId || '',
+            estate: ESTATES[0],
+            date: '',
+            time: '',
+            meetingPoint: '',
+            assignedCloserId: defaultCloserId,
+            inspectionOfficerId: activeOfficers.length > 0 ? activeOfficers[0].id : '',
+            status: 'Scheduled',
+            internalNotes: '',
+            noShowNote: '',
+            report: '',
+            feedback: '',
+            nextStepRecommendation: ''
           });
         }
-      } else {
-        // Create mode
-        let defaultCloserId = '';
-        if (leadId) {
-          const lead = activeLeads.find(l => l.id === leadId);
-          if (lead) {
-            defaultCloserId = lead.assignedCloserId || '';
-          }
-        }
-        
-        setFormData({
-          leadId: leadId || '',
-          estate: ESTATES[0],
-          date: '',
-          time: '',
-          meetingPoint: '',
-          assignedCloserId: defaultCloserId,
-          inspectionOfficerId: activeOfficers.length > 0 ? activeOfficers[0].id : '',
-          status: 'Scheduled',
-          internalNotes: '',
-          noShowNote: '',
-          report: '',
-          feedback: '',
-          nextStepRecommendation: ''
-        });
-      }
+      });
       setErrors({});
       setActiveInspectionWarning(null);
     }
@@ -134,13 +137,14 @@ export default function InspectionModal({ leadId, inspectionId, isOpen, onClose,
     return Object.keys(err).length === 0;
   };
 
-  const handleSave = (bypassWarning = false) => {
+  const handleSave = async (bypassWarning = false) => {
     if (!validate()) return;
 
     // Check for active inspections on lead (only for new inspections)
     if (!inspectionId && !bypassWarning) {
-      const activeIns = db.getInspections().find(
-        i => i.leadId === formData.leadId && 
+      const allInspections = await dataService.getInspections();
+      const activeIns = allInspections.find(
+        i => i.leadId === formData.leadId &&
         (i.status === 'Scheduled' || i.status === 'Confirmed')
       );
       if (activeIns) {
@@ -154,7 +158,7 @@ export default function InspectionModal({ leadId, inspectionId, isOpen, onClose,
       id: inspectionId || undefined
     };
 
-    db.saveInspection(payload);
+    await dataService.saveInspection(payload);
     onSaveComplete();
   };
 

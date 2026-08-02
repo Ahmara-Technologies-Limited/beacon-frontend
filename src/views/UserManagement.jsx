@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Search, Edit2, ToggleLeft, ToggleRight, Key, X, AlertTriangle, Filter, ShieldCheck, SlidersHorizontal } from 'lucide-react';
 import { db } from '../data/mockData';
+import { dataService } from '../data/dataService';
 
 export default function UserManagement({ currentUser }) {
   const [users, setUsers] = useState([]);
@@ -34,9 +35,9 @@ export default function UserManagement({ currentUser }) {
     'Relationship Manager', 'Inspection Officer', 'Admin/Doc Officer'
   ];
 
-  const loadUserData = () => {
-    setUsers(db.getUsers());
-    setLeads(db.getLeads());
+  const loadUserData = async () => {
+    setUsers(await dataService.getUsers());
+    setLeads(await dataService.getLeads());
   };
 
   useEffect(() => {
@@ -113,10 +114,10 @@ export default function UserManagement({ currentUser }) {
     return Object.keys(err).length === 0;
   };
 
-  const handleSaveUser = () => {
+  const handleSaveUser = async () => {
     if (!validateForm()) return;
 
-    db.saveUser({
+    await dataService.saveUser({
       ...formData,
       id: selectedUser ? selectedUser.id : undefined
     });
@@ -125,7 +126,7 @@ export default function UserManagement({ currentUser }) {
     loadUserData();
   };
 
-  const handleStatusToggle = (user) => {
+  const handleStatusToggle = async (user) => {
     // Prevent deactivating own active session
     if (user.id === currentUser.id) {
       alert("You cannot deactivate your own logged-in account.");
@@ -142,7 +143,7 @@ export default function UserManagement({ currentUser }) {
     }
 
     const newStatus = user.status === 'Active' ? 'Inactive' : 'Active';
-    db.saveUser({
+    await dataService.saveUser({
       ...user,
       status: newStatus
     });

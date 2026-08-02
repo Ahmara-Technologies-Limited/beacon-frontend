@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../data/mockData';
+import { dataService } from '../data/dataService';
 import { DollarSign, FileText, CheckCircle, Clock, Plus, Upload, Trash2, X, FileMinus, ArrowUpRight, Clipboard } from 'lucide-react';
 
 export default function DocOfficerHub({ currentUser }) {
@@ -24,16 +25,19 @@ export default function DocOfficerHub({ currentUser }) {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
 
-  const loadHubData = () => {
+  const loadHubData = async () => {
     // Read from database
     setLeads(db.getLeads());
     setUsers(db.getUsers());
-    
-    // Read or initialize custom ledgers in localStorage
-    const savedRefunds = JSON.parse(localStorage.getItem('beacon_refunds')) || [];
-    const savedCommissions = JSON.parse(localStorage.getItem('beacon_commissions')) || [];
-    const savedDiscounts = JSON.parse(localStorage.getItem('beacon_discounts')) || [];
-    
+
+    // Ledgers now go through dataService (demo mode: localStorage parity,
+    // live mode: real /finance/discounts|commissions|refunds/ endpoints).
+    const [savedRefunds, savedCommissions, savedDiscounts] = await Promise.all([
+      dataService.getRefunds(),
+      dataService.getCommissions(),
+      dataService.getDiscounts(),
+    ]);
+
     setRefunds(savedRefunds);
     setCommissions(savedCommissions);
     setDiscounts(savedDiscounts);
@@ -41,19 +45,14 @@ export default function DocOfficerHub({ currentUser }) {
 
   useEffect(() => {
     loadHubData();
+    // NOTE: 2s polling is a crude "live update" mechanism kept for parity
+    // with the previous localStorage-polling behavior (still needed in
+    // demo mode). In live mode this just re-fetches the same endpoints on
+    // an interval - a future improvement would replace this with
+    // websockets/SSE push updates instead of polling.
     const interval = setInterval(loadHubData, 2000);
     return () => clearInterval(interval);
   }, []);
-
-  const saveRefundsList = (list) => {
-    localStorage.setItem('beacon_refunds', JSON.stringify(list));
-    setRefunds(list);
-  };
-
-  const saveCommissionsList = (list) => {
-    localStorage.setItem('beacon_commissions', JSON.stringify(list));
-    setCommissions(list);
-  };
 
   const handleSimulateUpload = (e) => {
     const file = e.target.files[0];
@@ -75,21 +74,20 @@ export default function DocOfficerHub({ currentUser }) {
     }, 200);
   };
 
-  const handleCreateRefundRequest = () => {
+  const handleCreateRefundRequest = async () => {
     const errs = {};
     if (!refundData.leadId) errs.leadId = "Select a client first.";
     if (!refundData.amount || isNaN(Number(refundData.amount)) || Number(refundData.amount) <= 0) {
       errs.amount = "Enter a valid positive refund amount.";
     }
     if (!refundData.reason.trim()) errs.reason = "Refund reason is required.";
-    
+
     setFormErrors(errs);
     if (Object.keys(errs).length > 0) return;
 
     const lead = leads.find(l => l.id === refundData.leadId);
-    
-    const newRefund = {
-      id: 'ref-' + Date.now(),
+
+    const newRefund = await dataService.createRefundRequest({
       leadId: refundData.leadId,
       clientName: lead?.name || 'Unknown Client',
       propertyInterest: lead?.propertyInterest || 'N/A',
@@ -100,36 +98,27 @@ export default function DocOfficerHub({ currentUser }) {
       fileSize: refundData.fileSize,
       dateRequested: new Date().toISOString().split('T')[0],
       status: 'Pending Review' // Pending Review, Approved, Paid
-    };
+    });
 
-    const updated = [newRefund, ...refunds];
-    saveRefundsList(updated);
-    db.logAudit(`Refund request for ${formatPrice(newRefund.amount)} logged for client ${newRefund.clientName}.`);
-    
+    setRefunds(prev => [newRefund, ...prev]);
+    db.logAudit(`Refund request for ${formatPrice(newRefund.amount)} logged for client ${newRefund.clientName}.`); // demo-only; live mode logs server-side via AuditLogMixin
+
     setRefundModalOpen(false);
     setRefundData({ leadId: '', amount: '', reason: '', letterText: '', fileName: '', fileSize: '' });
   };
 
-  const handleUpdateRefundStatus = (id, newStatus) => {
-    const updated = refunds.map(r => {
-      if (r.id === id) {
-        db.logAudit(`Refund request status updated to ${newStatus} for ${r.clientName}.`);
-        return { ...r, status: newStatus };
-      }
-      return r;
-    });
-    saveRefundsList(updated);
+  const handleUpdateRefundStatus = async (id, newStatus) => {
+    const target = refunds.find(r => r.id === id);
+    await dataService.updateRefundStatus(id, newStatus);
+    if (target) db.logAudit(`Refund request status updated to ${newStatus} for ${target.clientName}.`); // demo-only; live mode logs server-side
+    setRefunds(prev => prev.map(r => (r.id === id ? { ...r, status: newStatus } : r)));
   };
 
-  const handleUpdateCommissionStatus = (id, newStatus) => {
-    const updated = commissions.map(c => {
-      if (c.id === id) {
-        db.logAudit(`Commission payout status updated to ${newStatus} for closer ${c.closerName}.`);
-        return { ...c, status: newStatus };
-      }
-      return c;
-    });
-    saveCommissionsList(updated);
+  const handleUpdateCommissionStatus = async (id, newStatus) => {
+    const target = commissions.find(c => c.id === id);
+    await dataService.updateCommissionStatus(id, newStatus);
+    if (target) db.logAudit(`Commission payout status updated to ${newStatus} for closer ${target.closerName}.`); // demo-only; live mode logs server-side
+    setCommissions(prev => prev.map(c => (c.id === id ? { ...c, status: newStatus } : c)));
   };
 
   const formatPrice = (val) => {

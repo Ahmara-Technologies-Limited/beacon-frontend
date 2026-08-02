@@ -4,6 +4,7 @@ import {
   Square, Edit2, AlertCircle, Flag, Ban, Check, Filter, X 
 } from 'lucide-react';
 import { db } from '../data/mockData';
+import { dataService } from '../data/dataService';
 
 export default function LeadManagement({ 
   currentUser, 
@@ -14,6 +15,7 @@ export default function LeadManagement({
 }) {
   const [leads, setLeads] = useState([]);
   const [closers, setClosers] = useState([]);
+  const [officerInspections, setOfficerInspections] = useState([]);
   const [selectedLeadIds, setSelectedLeadIds] = useState([]);
   const [showFilterModal, setShowFilterModal] = useState(false);
 
@@ -44,17 +46,24 @@ export default function LeadManagement({
   const [importSummary, setImportSummary] = useState(null);
 
   // Re-fetch database data
-  const loadLeads = () => {
+  const loadLeads = async () => {
     if (filterArchived === 'Archived') {
-      setLeads(db.getArchivedLeads());
+      setLeads(await dataService.getArchivedLeads());
     } else {
-      setLeads(db.getLeads());
+      setLeads(await dataService.getLeads());
     }
   };
 
   useEffect(() => {
     loadLeads();
-    setClosers(db.getUsers().filter(u => u.role === 'Sales Closer' && u.status === 'Active'));
+    dataService.getUsers().then(users =>
+      setClosers(users.filter(u => u.role === 'Sales Closer' && u.status === 'Active'))
+    );
+    if (currentUser.role === 'Inspection Officer') {
+      dataService.getInspections().then(all =>
+        setOfficerInspections(all.filter(i => i.inspectionOfficerId === currentUser.id))
+      );
+    }
 
     const interval = setInterval(() => {
       loadLeads();
@@ -101,8 +110,7 @@ export default function LeadManagement({
     }
     // Inspection Officers only see leads they have tours/inspections with
     if (currentUser.role === 'Inspection Officer') {
-      const inspections = db.getInspections().filter(i => i.inspectionOfficerId === currentUser.id);
-      const leadIds = inspections.map(i => i.leadId);
+      const leadIds = officerInspections.map(i => i.leadId);
       result = result.filter(l => leadIds.includes(l.id));
     }
 
@@ -184,10 +192,10 @@ export default function LeadManagement({
     if (!file) return;
 
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
       const text = e.target.result;
       const lines = text.split("\n");
-      
+
       let importedCount = 0;
       let skippedCount = 0;
 
@@ -224,7 +232,7 @@ export default function LeadManagement({
         const closerNameInput = cleanValues[9] || "";
         const closerObj = closers.find(c => c.name.toLowerCase().includes(closerNameInput.toLowerCase()));
 
-        db.saveLead({
+        await dataService.saveLead({
           name,
           phone,
           whatsapp: cleanValues[2] || phone,
@@ -253,7 +261,7 @@ export default function LeadManagement({
   };
 
   // Bulk operations
-  const handleBulkAssign = () => {
+  const handleBulkAssign = async () => {
     if (selectedLeadIds.length === 0) {
       alert("No leads selected.");
       return;
@@ -263,18 +271,18 @@ export default function LeadManagement({
       return;
     }
 
-    const allLeads = db.getLeads();
+    const allLeads = await dataService.getLeads();
     const closerObj = closers.find(u => u.id === bulkCloserId);
 
-    selectedLeadIds.forEach(id => {
+    for (const id of selectedLeadIds) {
       const lead = allLeads.find(l => l.id === id);
       if (lead) {
-        db.saveLead({
+        await dataService.saveLead({
           ...lead,
           assignedCloserId: bulkCloserId
         });
       }
-    });
+    }
 
     setBulkStatusMsg(`Successfully reassigned ${selectedLeadIds.length} leads to ${closerObj?.name}.`);
     setSelectedLeadIds([]);
@@ -283,7 +291,7 @@ export default function LeadManagement({
     setTimeout(() => setBulkStatusMsg(''), 4000);
   };
 
-  const handleBulkUpdateStage = () => {
+  const handleBulkUpdateStage = async () => {
     if (selectedLeadIds.length === 0) {
       alert("No leads selected.");
       return;
@@ -293,16 +301,16 @@ export default function LeadManagement({
       return;
     }
 
-    const allLeads = db.getLeads();
-    selectedLeadIds.forEach(id => {
+    const allLeads = await dataService.getLeads();
+    for (const id of selectedLeadIds) {
       const lead = allLeads.find(l => l.id === id);
       if (lead) {
-        db.saveLead({
+        await dataService.saveLead({
           ...lead,
           stage: bulkStage
         });
       }
-    });
+    }
 
     setBulkStatusMsg(`Successfully updated stage of ${selectedLeadIds.length} leads to '${bulkStage}'.`);
     setSelectedLeadIds([]);
@@ -311,9 +319,9 @@ export default function LeadManagement({
     setTimeout(() => setBulkStatusMsg(''), 4000);
   };
 
-  const handleRestore = (id) => {
+  const handleRestore = async (id) => {
     try {
-      db.restoreLead(id);
+      await dataService.restoreLead(id);
       loadLeads();
     } catch (err) {
       alert(err.message);

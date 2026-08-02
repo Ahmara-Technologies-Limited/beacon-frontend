@@ -5,6 +5,7 @@ import {
   Trash2, Archive, RotateCcw, Clock, Plus, Edit3, Check, X, Star, Sparkles, UserPlus, Building2
 } from 'lucide-react';
 import { db } from '../data/mockData';
+import { dataService } from '../data/dataService';
 
 /**
  * @param {{
@@ -31,6 +32,8 @@ export default function LeadProfile({
   const [inspections, setInspections] = useState([]);
   const [closers, setClosers] = useState([]);
   const [assignedCloser, setAssignedCloser] = useState(null);
+  const [allLeads, setAllLeads] = useState([]);
+  const [allUsers, setAllUsers] = useState([]);
 
   // History Tab & Status update states
   const [activeHistoryTab, setActiveHistoryTab] = useState('conversation');
@@ -89,24 +92,33 @@ export default function LeadProfile({
     "Payment", "Allocation", "Documentation", "Client/Investor", "Referral", "Repeat Purchase"
   ];
 
-  const loadLeadData = () => {
-    const activeLeads = db.getLeads();
-    const archivedLeads = db.getArchivedLeads();
+  const loadLeadData = async () => {
+    const [activeLeads, archivedLeads, allActivitiesRaw, allInspectionsRaw, allUsersRaw] = await Promise.all([
+      dataService.getLeads(),
+      dataService.getArchivedLeads(),
+      dataService.getActivities(),
+      dataService.getInspections(),
+      dataService.getUsers(),
+    ]);
+
+    setAllLeads(activeLeads.concat(archivedLeads));
+    setAllUsers(allUsersRaw);
+
     const foundLead = activeLeads.find(l => l.id === leadId) || archivedLeads.find(l => l.id === leadId);
-    
+
     if (foundLead) {
       setLead(foundLead);
-      
+
       // Load activities
-      const allActivities = db.getActivities().filter(a => a.leadId === foundLead.id);
+      const allActivities = allActivitiesRaw.filter(a => a.leadId === foundLead.id);
       setActivities(allActivities);
-      
+
       // Load inspections
-      const allInspections = db.getInspections().filter(i => i.leadId === foundLead.id);
+      const allInspections = allInspectionsRaw.filter(i => i.leadId === foundLead.id);
       setInspections(allInspections);
 
       // Load closers
-      const allClosers = db.getUsers().filter(u => u.role === 'Sales Closer' && u.status === 'Active');
+      const allClosers = allUsersRaw.filter(u => u.role === 'Sales Closer' && u.status === 'Active');
       setClosers(allClosers);
 
       const closer = allClosers.find(u => u.id === foundLead.assignedCloserId);
@@ -148,7 +160,7 @@ export default function LeadProfile({
   const activeInspections = inspections.filter(i => i.status === 'Scheduled' || i.status === 'Confirmed');
 
   // Archive lead trigger
-  const handleArchiveLead = () => {
+  const handleArchiveLead = async () => {
     if (activeInspections.length > 0) {
       alert(`This lead has an upcoming inspection scheduled for ${activeInspections[0].date}. Please cancel or complete the inspection before archiving.`);
       return;
@@ -156,7 +168,7 @@ export default function LeadProfile({
 
     if (window.confirm("Are you sure you want to archive this lead? It will be removed from active views but can be restored at any time.")) {
       try {
-        db.archiveLead(lead.id);
+        await dataService.archiveLead(lead.id);
         loadLeadData();
         alert("Lead successfully archived.");
       } catch (err) {
@@ -166,15 +178,15 @@ export default function LeadProfile({
   };
 
   // Restore lead trigger
-  const handleRestoreLead = () => {
+  const handleRestoreLead = async () => {
     if (window.confirm("Restore this lead to active status?")) {
-      db.restoreLead(lead.id);
+      await dataService.restoreLead(lead.id);
       loadLeadData();
     }
   };
 
   // Reassignment trigger (Super Admin or Management only)
-  const handleReassignCloser = (bypassWarning = false) => {
+  const handleReassignCloser = async (bypassWarning = false) => {
     if (!reassignCloserId) {
       alert("A lead must have an assigned owner. Please select a closer before saving.");
       return;
@@ -187,7 +199,7 @@ export default function LeadProfile({
     }
 
     setShowReassignModal(false);
-    db.saveLead({
+    await dataService.saveLead({
       ...lead,
       assignedCloserId: reassignCloserId
     });
@@ -199,7 +211,7 @@ export default function LeadProfile({
       ...lead,
       applicationFormStatus: 'Sent to Lead'
     };
-    db.saveLead(updatedLead);
+    dataService.saveLead(updatedLead);
     loadLeadData();
     db.logAudit(`Application Form sent to client ${lead.name} by Doc Officer.`);
   };
@@ -210,9 +222,9 @@ export default function LeadProfile({
       applicationFormStatus: 'Submitted',
       applicationData: appData
     };
-    db.saveLead(updatedLead);
+    dataService.saveLead(updatedLead);
     loadLeadData();
-    db.saveActivity({
+    dataService.saveActivity({
       leadId: lead.id,
       type: "Internal Note",
       summary: `Simulation: Client filled and submitted the digital application form.`,
@@ -229,7 +241,7 @@ export default function LeadProfile({
       applicationFormStatus: 'Approved',
       applicationData: appData
     };
-    db.saveLead(updatedLead);
+    dataService.saveLead(updatedLead);
     loadLeadData();
     db.logAudit(`Application Form approved for client ${lead.name} by Doc Officer.`);
   };
@@ -239,7 +251,7 @@ export default function LeadProfile({
       ...lead,
       offerLetterStatus: 'Sent'
     };
-    db.saveLead(updatedLead);
+    dataService.saveLead(updatedLead);
     loadLeadData();
     db.logAudit(`Offer Letter sent to client ${lead.name} by Doc Officer.`);
   };
@@ -251,9 +263,9 @@ export default function LeadProfile({
       offerLetterSignature: signatureText,
       offerLetterSignedDate: new Date().toISOString().split('T')[0]
     };
-    db.saveLead(updatedLead);
+    dataService.saveLead(updatedLead);
     loadLeadData();
-    db.saveActivity({
+    dataService.saveActivity({
       leadId: lead.id,
       type: "Internal Note",
       summary: `Simulation: Client reviewed, digitally signed and accepted the Offer Letter. Signature: ${signatureText}.`,
@@ -264,7 +276,7 @@ export default function LeadProfile({
     });
   };
 
-  const handleCreatePaymentPlan = (e) => {
+  const handleCreatePaymentPlan = async (e) => {
     e.preventDefault();
     const price = Number(payPlanForm.price);
     const discount = Number(payPlanForm.discount) || 0;
@@ -319,22 +331,15 @@ export default function LeadProfile({
       dateCreated: new Date().toISOString().split('T')[0]
     };
 
-    const updatedLead = {
-      ...lead,
-      stage: 'Payment',
-      paymentPlan: payPlan
-    };
-
-    db.saveLead(updatedLead);
+    await dataService.savePaymentPlan(lead.id, payPlan, { stage: 'Payment' });
     loadLeadData();
     setShowPayPlanForm(false);
     db.logAudit(`Payment plan configured for lead ${lead.name} at net price of ${formatPrice(netPrice)}.`);
 
     // Record discount in ledger if applicable
     if (discount > 0) {
-      const discountsList = JSON.parse(localStorage.getItem('beacon_discounts')) || [];
-      discountsList.push({
-        id: 'disc-' + Date.now(),
+      dataService.createDiscount({
+        leadId: lead.id,
         clientName: lead.name,
         propertyName: lead.propertyInterest || 'N/A',
         regularPrice: price,
@@ -343,14 +348,14 @@ export default function LeadProfile({
         authCode: authCode,
         dateIssued: new Date().toISOString().split('T')[0]
       });
-      localStorage.setItem('beacon_discounts', JSON.stringify(discountsList));
     }
   };
 
-  const handleLogPayment = (instIndex) => {
-    const payPlan = { ...lead.paymentPlan };
+  const handleLogPayment = async (instIndex) => {
+    const payPlan = { ...lead.paymentPlan, installmentsList: [...lead.paymentPlan.installmentsList] };
     let paymentAmount = 0;
     let paymentSummary = '';
+    let installmentRef = null;
 
     if (instIndex === -1) {
       paymentAmount = payPlan.depositPaid;
@@ -359,28 +364,32 @@ export default function LeadProfile({
       const idx = payPlan.installmentsList.findIndex(item => item.index === instIndex);
       if (idx !== -1) {
         if (payPlan.installmentsList[idx].status === 'Paid') return;
-        payPlan.installmentsList[idx].status = 'Paid';
+        payPlan.installmentsList[idx] = { ...payPlan.installmentsList[idx], status: 'Paid' };
         paymentAmount = payPlan.installmentsList[idx].amount;
         paymentSummary = `Installment #${instIndex} payment of ${formatPrice(paymentAmount)} received.`;
         payPlan.balance = Math.max(0, payPlan.balance - paymentAmount);
+        installmentRef = payPlan.installmentsList[idx].id ?? payPlan.installmentsList[idx].index;
       }
     }
 
     const allPaid = payPlan.installmentsList.every(i => i.status === 'Paid');
-    const updatedLead = {
-      ...lead,
-      paymentPlan: payPlan
-    };
+    const newStage = (allPaid && payPlan.balance === 0) ? 'Allocation' : undefined;
 
-    if (allPaid && payPlan.balance === 0) {
-      updatedLead.stage = 'Allocation';
+    if (installmentRef !== null) {
+      await dataService.updateInstallment(lead.id, installmentRef, {
+        status: 'Paid',
+        balance: payPlan.balance,
+        stage: newStage,
+      });
+    } else {
+      // Deposit-only "payment" - no installment row to mark, just persist the
+      // (unchanged) plan so both modes go through the same call path.
+      await dataService.savePaymentPlan(lead.id, payPlan, { stage: newStage });
     }
-
-    db.saveLead(updatedLead);
     loadLeadData();
 
     // Log Activity for transaction receipt
-    db.saveActivity({
+    dataService.saveActivity({
       leadId: lead.id,
       type: "Call",
       summary: paymentSummary,
@@ -393,10 +402,10 @@ export default function LeadProfile({
     // Record commission (5% of paymentAmount)
     const commissionVal = Math.round(paymentAmount * 0.05);
     if (commissionVal > 0) {
-      const commissionsList = JSON.parse(localStorage.getItem('beacon_commissions')) || [];
       const closerName = closers.find(u => u.id === lead.assignedCloserId)?.name || 'Unassigned';
-      commissionsList.push({
-        id: 'comm-' + Date.now(),
+      dataService.createCommission({
+        leadId: lead.id,
+        closerId: lead.assignedCloserId || null,
         closerName: closerName,
         clientName: lead.name,
         propertyName: lead.propertyInterest || 'N/A',
@@ -406,7 +415,6 @@ export default function LeadProfile({
         scheduledDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
         status: 'Scheduled'
       });
-      localStorage.setItem('beacon_commissions', JSON.stringify(commissionsList));
     }
 
     // Set document active for print preview immediately
@@ -1487,7 +1495,7 @@ export default function LeadProfile({
                       value={lead.relationshipStatus || 'Active'}
                       onChange={(e) => {
                         const updated = { ...lead, relationshipStatus: e.target.value };
-                        db.saveLead(updated);
+                        dataService.saveLead(updated);
                         loadLeadData();
                         db.logAudit(`Client ${lead.name} relationship status updated to ${e.target.value}`);
                       }}
@@ -1513,7 +1521,7 @@ export default function LeadProfile({
                           style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
                           onClick={() => {
                             const updated = { ...lead, satisfactionScore: star };
-                            db.saveLead(updated);
+                            dataService.saveLead(updated);
                             loadLeadData();
                             db.logAudit(`Client ${lead.name} satisfaction score updated to ${star} stars`);
                           }}
@@ -1542,10 +1550,10 @@ export default function LeadProfile({
                       onClick={() => {
                         const nextStatus = lead.referralStatus === 'Requested' ? 'Generated Referral' : 'Requested';
                         const updated = { ...lead, referralStatus: nextStatus };
-                        db.saveLead(updated);
+                        dataService.saveLead(updated);
                         loadLeadData();
                         db.logAudit(`Client ${lead.name} referral status updated to ${nextStatus}`);
-                        db.saveActivity({
+                        dataService.saveActivity({
                           leadId: lead.id,
                           type: "Internal Note",
                           summary: `Referral status updated to '${nextStatus}'.`,
@@ -1575,7 +1583,7 @@ export default function LeadProfile({
                       value={lead.lastContactDate || ''}
                       onChange={(e) => {
                         const updated = { ...lead, lastContactDate: e.target.value };
-                        db.saveLead(updated);
+                        dataService.saveLead(updated);
                         loadLeadData();
                         db.logAudit(`Client ${lead.name} last contact date updated to ${e.target.value}`);
                       }}
@@ -1590,7 +1598,7 @@ export default function LeadProfile({
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px' }}>
                       <User size={13} className="primary-text" />
                       <span style={{ fontSize: '13px', color: 'var(--text-primary)', fontWeight: '600' }}>
-                        {db.getLeads().find(l => l.id === lead.referredById)?.name || 'Referring Client'}
+                        {allLeads.find(l => l.id === lead.referredById)?.name || 'Referring Client'}
                       </span>
                     </div>
                   </div>
@@ -1599,13 +1607,13 @@ export default function LeadProfile({
                 {/* Referred Leads list */}
                 <div className="contact-item" style={{ borderTop: '1px dashed var(--border-color)', paddingTop: '10px', marginTop: '4px' }}>
                   <span className="contact-label" style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
-                    <span>Referred Leads ({db.getLeads().filter(l => l.referredById === lead.id).length})</span>
+                    <span>Referred Leads ({allLeads.filter(l => l.referredById === lead.id).length})</span>
                   </span>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '6px' }}>
-                    {db.getLeads().filter(l => l.referredById === lead.id).length === 0 ? (
+                    {allLeads.filter(l => l.referredById === lead.id).length === 0 ? (
                       <span style={{ fontSize: '12px', color: 'var(--text-placeholder)', fontStyle: 'italic' }}>No referrals generated yet.</span>
                     ) : (
-                      db.getLeads().filter(l => l.referredById === lead.id).map(ref => (
+                      allLeads.filter(l => l.referredById === lead.id).map(ref => (
                         <div key={ref.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--color-grey-bg)', padding: '6px 10px', borderRadius: '6px' }}>
                           <div style={{ display: 'flex', flexDirection: 'column' }}>
                             <span style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text-primary)' }}>{ref.name}</span>
@@ -1640,7 +1648,7 @@ export default function LeadProfile({
                     </div>
                     <div className="ins-sub-details">
                       <span>Date: {i.date} @ {i.time}</span>
-                      <span>Officer: {db.getUsers().find(u => u.id === i.inspectionOfficerId)?.name || "Officer"}</span>
+                      <span>Officer: {allUsers.find(u => u.id === i.inspectionOfficerId)?.name || "Officer"}</span>
                     </div>
                     {i.report && (
                       <div className="ins-sub-report">

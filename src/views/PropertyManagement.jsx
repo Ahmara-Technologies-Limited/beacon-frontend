@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Search, Building2, MapPin, Tag, SlidersHorizontal, Layers, Trash2, Edit3, X, ChevronRight, User, ArrowLeft } from 'lucide-react';
 import { db } from '../data/mockData';
+import { dataService } from '../data/dataService';
 
 export default function PropertyManagement({ currentUser }) {
   const [properties, setProperties] = useState([]);
@@ -26,9 +27,10 @@ export default function PropertyManagement({ currentUser }) {
   });
   const [formErrors, setFormErrors] = useState({});
 
-  const loadData = () => {
-    setProperties(db.getProperties());
-    setLeads(db.getLeads());
+  const loadData = async () => {
+    const [props, leadsList] = await Promise.all([dataService.getProperties(), db.getLeads()]);
+    setProperties(props);
+    setLeads(leadsList);
   };
 
   useEffect(() => {
@@ -72,11 +74,11 @@ export default function PropertyManagement({ currentUser }) {
     setModalOpen(true);
   };
 
-  const handleDeleteProperty = (e, id) => {
+  const handleDeleteProperty = async (e, id) => {
     e.stopPropagation();
     if (window.confirm("Are you sure you want to delete this property? This action is permanent.")) {
-      db.deleteProperty(id);
-      loadData();
+      await dataService.deleteProperty(id);
+      await loadData();
       if (selectedProperty?.id === id) {
         setSelectedProperty(null);
       }
@@ -100,9 +102,9 @@ export default function PropertyManagement({ currentUser }) {
     return Object.keys(errs).length === 0;
   };
 
-  const handleSaveProperty = () => {
+  const handleSaveProperty = async () => {
     if (!validate()) return;
-    
+
     const payload = {
       id: modalData.id || undefined,
       name: modalData.name.trim(),
@@ -116,8 +118,8 @@ export default function PropertyManagement({ currentUser }) {
       amenities: modalData.amenities ? modalData.amenities.split(',').map(s => s.trim()).filter(Boolean) : []
     };
 
-    db.saveProperty(payload);
-    loadData();
+    await dataService.saveProperty(payload);
+    await loadData();
     setModalOpen(false);
   };
 

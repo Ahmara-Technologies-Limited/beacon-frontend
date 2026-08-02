@@ -2,6 +2,8 @@
 
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { initializeDB, db } from '../data/mockData';
+import { dataService } from '../data/dataService';
+import { isDemoMode } from '../lib/demoMode';
 
 export interface CurrentUser {
   id: string;
@@ -16,9 +18,9 @@ export interface CurrentUser {
 
 interface AuthContextValue {
   currentUser: CurrentUser | null;
-  login: (user: CurrentUser) => void;
+  login: (userOrEmail: CurrentUser | string, password?: string) => Promise<CurrentUser | null | undefined>;
   updateCurrentUser: (user: CurrentUser) => void;
-  logout: () => void;
+  logout: () => Promise<void>;
   loading: boolean;
 }
 
@@ -35,10 +37,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setLoading(false);
   }, []);
 
-  // Persists as the active session (also logs an audit "session switched" entry)
-  const login = (user: CurrentUser) => {
-    db.setCurrentUser(user);
-    setCurrentUserState(user);
+  // Persists as the active session. In demo mode this is the existing
+  // "role switcher" behavior (pass a mock user object). In live mode, pass
+  // (email, password) and it POSTs to /auth/login/, stores JWT tokens, and
+  // stores the returned user.
+  const login = async (userOrEmail: CurrentUser | string, password?: string) => {
+    if (isDemoMode()) {
+      const user = userOrEmail as CurrentUser;
+      db.setCurrentUser(user);
+      setCurrentUserState(user);
+      return user;
+    }
+    const user = await dataService.login(userOrEmail as string, password) as CurrentUser | null;
+    if (user) setCurrentUserState(user);
+    return user;
   };
 
   // Updates the in-memory/session user without the "session switched" audit semantics
@@ -48,9 +60,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setCurrentUserState(user);
   };
 
-  const logout = () => {
-    localStorage.removeItem('beacon_current_user');
-    setCurrentUserState(null);
+  const logout = async () => {
+    try {
+      await dataService.logout();
+    } catch {
+      // best-effort
+    } finally {
+      localStorage.removeItem('beacon_current_user');
+      setCurrentUserState(null);
+    }
   };
 
   return (

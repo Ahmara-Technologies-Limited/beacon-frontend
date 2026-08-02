@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
 import { db } from '../data/mockData';
+import { dataService } from '../data/dataService';
 
 export default function LogActivityModal({ leadId, isOpen, onClose, onSaveComplete, currentUser }) {
   const [formData, setFormData] = useState({
@@ -22,28 +23,29 @@ export default function LogActivityModal({ leadId, isOpen, onClose, onSaveComple
 
   useEffect(() => {
     if (isOpen && leadId) {
-      const leads = db.getLeads();
-      const lead = leads.find(l => l.id === leadId);
-      
-      // Default dates
-      const now = new Date();
-      const formattedNow = now.toISOString().slice(0, 16);
+      dataService.getLeads().then(leads => {
+        const lead = leads.find(l => l.id === leadId);
 
-      setFormData({
-        type: 'Call',
-        date: formattedNow,
-        summary: '',
-        objections: '',
-        feedback: '',
-        outcome: '',
-        nextStep: lead ? lead.nextAction : '',
-        updateFollowUp: false,
-        followUpDate: '',
-        updateStage: false,
-        pipelineStage: lead ? lead.stage : 'New Lead'
+        // Default dates
+        const now = new Date();
+        const formattedNow = now.toISOString().slice(0, 16);
+
+        setFormData({
+          type: 'Call',
+          date: formattedNow,
+          summary: '',
+          objections: '',
+          feedback: '',
+          outcome: '',
+          nextStep: lead ? lead.nextAction : '',
+          updateFollowUp: false,
+          followUpDate: '',
+          updateStage: false,
+          pipelineStage: lead ? lead.stage : 'New Lead'
+        });
+        setErrors({});
+        setIsDirty(false);
       });
-      setErrors({});
-      setIsDirty(false);
     }
   }, [leadId, isOpen]);
 
@@ -81,10 +83,10 @@ export default function LogActivityModal({ leadId, isOpen, onClose, onSaveComple
     return Object.keys(err).length === 0;
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!validate()) return;
 
-    db.saveActivity({
+    await dataService.saveActivity({
       leadId,
       date: formData.date,
       type: formData.type,

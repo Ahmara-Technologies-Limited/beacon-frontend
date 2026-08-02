@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, AlertTriangle } from 'lucide-react';
 import { db } from '../data/mockData';
+import { dataService } from '../data/dataService';
 
 export default function LeadModal({ leadId, isOpen, onClose, onSaveComplete, onSaveAndLogActivity, currentUser }) {
   const [formData, setFormData] = useState({
@@ -24,20 +25,21 @@ export default function LeadModal({ leadId, isOpen, onClose, onSaveComplete, onS
   const [properties, setProperties] = useState([]);
   const [errors, setErrors] = useState({});
   const [duplicateWarning, setDuplicateWarning] = useState(null);
+  const [potentialReferrers, setPotentialReferrers] = useState([]);
 
   useEffect(() => {
     if (isOpen) {
       // Load closers
-      const allClosers = db.getUsers().filter(u => u.role === 'Sales Closer' && u.status === 'Active');
-      setClosers(allClosers);
+      dataService.getUsers().then(allUsers => {
+        setClosers(allUsers.filter(u => u.role === 'Sales Closer' && u.status === 'Active'));
+      });
 
       // Load properties
-      const allProps = db.getProperties();
-      setProperties(allProps);
+      dataService.getProperties().then(setProperties);
 
       // Load lead if editing
       if (leadId) {
-        const leads = db.getLeads();
+        dataService.getLeads().then(leads => {
         const lead = leads.find(l => l.id === leadId);
         if (lead) {
           setFormData({
@@ -63,6 +65,10 @@ export default function LeadModal({ leadId, isOpen, onClose, onSaveComplete, onS
             referredById: lead.referredById || ''
           });
         }
+        });
+        dataService.getLeads().then(leads => {
+          setPotentialReferrers(leads.filter(l => l.id !== leadId && (l.stage === 'Client/Investor' || l.stage === 'Repeat Purchase')));
+        });
       } else {
         // Reset form
         setFormData({
@@ -86,6 +92,9 @@ export default function LeadModal({ leadId, isOpen, onClose, onSaveComplete, onS
           satisfactionScore: '',
           lastContactDate: '',
           referredById: ''
+        });
+        dataService.getLeads().then(leads => {
+          setPotentialReferrers(leads.filter(l => l.stage === 'Client/Investor' || l.stage === 'Repeat Purchase'));
         });
       }
       setErrors({});
@@ -127,12 +136,12 @@ export default function LeadModal({ leadId, isOpen, onClose, onSaveComplete, onS
     return Object.keys(err).length === 0;
   };
 
-  const handleSave = (bypassDuplicateCheck = false, requestLogActivity = false) => {
+  const handleSave = async (bypassDuplicateCheck = false, requestLogActivity = false) => {
     if (!validate()) return;
 
     // Check duplicate phone number (only for new leads or when phone is changed)
     if (!bypassDuplicateCheck) {
-      const allLeads = db.getLeads();
+      const allLeads = await dataService.getLeads();
       const duplicate = allLeads.find(l => l.phone === formData.phone && l.id !== leadId);
       if (duplicate) {
         setDuplicateWarning(duplicate);
@@ -145,8 +154,8 @@ export default function LeadModal({ leadId, isOpen, onClose, onSaveComplete, onS
       id: leadId || undefined
     };
 
-    const savedLead = db.saveLead(payload);
-    
+    const savedLead = await dataService.saveLead(payload);
+
     if (requestLogActivity) {
       onSaveAndLogActivity(savedLead.id);
     } else {
@@ -427,12 +436,9 @@ export default function LeadModal({ leadId, isOpen, onClose, onSaveComplete, onS
                       onChange={e => setFormData({ ...formData, referredById: e.target.value })}
                     >
                       <option value="">-- Direct Lead / None --</option>
-                      {db.getLeads()
-                        .filter(l => l.id !== leadId && (l.stage === 'Client/Investor' || l.stage === 'Repeat Purchase'))
-                        .map(client => (
-                          <option key={client.id} value={client.id}>{client.name} ({client.phone})</option>
-                        ))
-                      }
+                      {potentialReferrers.map(client => (
+                        <option key={client.id} value={client.id}>{client.name} ({client.phone})</option>
+                      ))}
                     </select>
                   </div>
 

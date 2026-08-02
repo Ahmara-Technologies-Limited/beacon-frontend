@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { ShieldCheck, Search, Trash2, X } from 'lucide-react';
 import { db } from '../data/mockData';
+import { dataService } from '../data/dataService';
 
 export default function AuditLogs({ currentUser }) {
   const [logs, setLogs] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
 
-  const loadLogs = () => {
-    setLogs(db.getAuditLogs());
+  const loadLogs = async () => {
+    setLogs(await dataService.getAuditLogs());
   };
 
   useEffect(() => {
@@ -16,21 +17,21 @@ export default function AuditLogs({ currentUser }) {
     return () => clearInterval(interval);
   }, []);
 
-  const handleClearLogs = () => {
+  const handleClearLogs = async () => {
     if (window.confirm("Are you sure you want to permanently clear all system audit logs? This action is irreversible.")) {
-      db.clearAuditLogs();
-      db.logAudit("Cleared all system audit logs.");
-      loadLogs();
+      await dataService.clearAuditLogs();
+      await dataService.logAudit("Cleared all system audit logs.");
+      await loadLogs();
     }
   };
 
   const getFilteredLogs = () => {
     const query = searchQuery.toLowerCase().trim();
     if (query === '') return logs;
-    return logs.filter(log => 
-      log.user.toLowerCase().includes(query) || 
-      log.action.toLowerCase().includes(query) ||
-      log.ipAddress.toLowerCase().includes(query)
+    return logs.filter(log =>
+      (log.user || '').toLowerCase().includes(query) ||
+      (log.action || '').toLowerCase().includes(query) ||
+      (log.ipAddress || '').toLowerCase().includes(query)
     );
   };
 
@@ -98,9 +99,9 @@ export default function AuditLogs({ currentUser }) {
                   <td>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <div className="avatar-sm" style={{ width: 26, height: 26, fontSize: 10 }}>
-                        {log.user.split(' ').map(n => n[0]).join('').substring(0, 2)}
+                        {(log.user || 'System').split(' ').map(n => n[0]).join('').substring(0, 2)}
                       </div>
-                      <span style={{ fontSize: '13px', fontWeight: '600' }}>{log.user}</span>
+                      <span style={{ fontSize: '13px', fontWeight: '600' }}>{log.user || 'System'}</span>
                     </div>
                   </td>
                   <td style={{ fontSize: '13.5px', color: 'var(--text-primary)' }}>

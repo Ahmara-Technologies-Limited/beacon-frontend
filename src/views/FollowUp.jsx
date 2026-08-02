@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Phone, Calendar, Clock, User, X, Check, Eye, AlertTriangle, Filter } from 'lucide-react';
 import { db } from '../data/mockData';
+import { dataService } from '../data/dataService';
 
 export default function FollowUp({ currentUser, setViewingLeadId, setCurrentTab }) {
   const [leads, setLeads] = useState([]);
@@ -26,19 +27,20 @@ export default function FollowUp({ currentUser, setViewingLeadId, setCurrentTab 
   // Snooze modal fields
   const [snoozeDays, setSnoozeDays] = useState('1'); // 1, 2, custom
   const [snoozeCustomDate, setSnoozeCustomDate] = useState('');
-  const loadFollowUpData = () => {
-    setLeads(db.getLeads());
-    setClosers(db.getUsers().filter(u => u.role === 'Sales Closer' && u.status === 'Active'));
+  const loadFollowUpData = async () => {
+    setLeads(await dataService.getLeads());
+    setClosers((await dataService.getUsers()).filter(u => u.role === 'Sales Closer' && u.status === 'Active'));
   };
 
-  const handleSendWarning = (e, lead) => {
+  const handleSendWarning = async (e, lead) => {
     e.stopPropagation();
     if (!lead.assignedCloserId) {
       alert("Cannot send warning for unassigned lead.");
       return;
     }
 
-    const closerUser = db.getUsers().find(u => u.id === lead.assignedCloserId);
+    const allUsers = await dataService.getUsers();
+    const closerUser = allUsers.find(u => u.id === lead.assignedCloserId);
     const closerName = closerUser?.name || "Closer";
 
     db.addNotification({
@@ -58,12 +60,12 @@ export default function FollowUp({ currentUser, setViewingLeadId, setCurrentTab 
     return () => clearInterval(interval);
   }, []);
 
-  const handleReassign = (leadId, targetCloserId) => {
+  const handleReassign = async (leadId, targetCloserId) => {
     if (!targetCloserId) return;
-    const leadsList = db.getLeads();
+    const leadsList = await dataService.getLeads();
     const lead = leadsList.find(l => l.id === leadId);
     if (lead) {
-      db.saveLead({
+      await dataService.saveLead({
         ...lead,
         assignedCloserId: targetCloserId
       });
@@ -80,13 +82,13 @@ export default function FollowUp({ currentUser, setViewingLeadId, setCurrentTab 
     setShowDoneModal(true);
   };
 
-  const handleSaveDone = () => {
+  const handleSaveDone = async () => {
     if (!noFollowUpNeeded && !nextFollowUpDate) {
       alert("What is the next follow-up date for this lead? Please select a date or check 'No follow-up needed'.");
       return;
     }
 
-    db.saveActivity({
+    await dataService.saveActivity({
       leadId: actionLead.id,
       type: "Call",
       summary: "Follow-up marked as Completed / Done.",
@@ -113,7 +115,7 @@ export default function FollowUp({ currentUser, setViewingLeadId, setCurrentTab 
     setShowSnoozeModal(true);
   };
 
-  const handleSaveSnooze = () => {
+  const handleSaveSnooze = async () => {
     if (!snoozeReason.trim()) {
       alert("Please provide a reason note explaining why this follow-up is being snoozed.");
       return;
@@ -132,7 +134,7 @@ export default function FollowUp({ currentUser, setViewingLeadId, setCurrentTab 
       snoozeTargetDate = new Date(snoozeCustomDate);
     }
 
-    db.saveActivity({
+    await dataService.saveActivity({
       leadId: actionLead.id,
       type: "Internal Note",
       summary: `Follow-up was snoozed to ${snoozeTargetDate.toLocaleDateString()}. Reason: ${snoozeReason}`,
