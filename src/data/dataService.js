@@ -690,6 +690,19 @@ export const dataService = {
     }
     const payload = installmentToApi(updates);
     const res = await apiPatch(`/finance/installments/${installmentRef}/`, payload);
+    // The installment endpoint only owns per-installment fields; the running
+    // plan balance and lead stage live on their own resources, so patch them
+    // too when the caller passed those alongside the installment update.
+    if (updates.balance !== undefined && leadId != null) {
+      const plans = await apiGet('/finance/payment-plans/', { lead: leadId });
+      const list = Array.isArray(plans) ? plans : plans.results || [];
+      if (list.length) {
+        await apiPatch(`/finance/payment-plans/${list[0].id}/`, { balance: updates.balance });
+      }
+    }
+    if (updates.stage && leadId != null) {
+      await apiPatch(`/leads/${leadId}/`, { stage: updates.stage });
+    }
     return installmentFromApi(res);
   },
 
