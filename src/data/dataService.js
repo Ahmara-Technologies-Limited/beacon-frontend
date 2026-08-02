@@ -36,14 +36,23 @@ const userFromApi = (u) => {
   };
 };
 
-const userToApi = (u) => {
+const userToApi = (u, { isCreate = false } = {}) => {
   const payload = {};
   if (u.email !== undefined) payload.email = u.email;
   if (u.phone !== undefined) payload.phone_number = u.phone;
   if (u.role !== undefined) payload.role = u.role;
   if (u.status !== undefined) payload.is_active = u.status === 'Active';
-  // NOTE: there is no write field for name/password on this serializer.
-  // See INTEGRATION_STATUS.md for the gap.
+  // Name/password are only accepted by the backend's create-only
+  // UserCreateSerializer (POST /users/) — UserSerializer (used for
+  // PATCH/GET) has no write field for either, so only send them on create.
+  if (isCreate) {
+    if (u.name !== undefined) {
+      const parts = String(u.name).trim().split(/\s+/);
+      payload.first_name = parts[0] || '';
+      payload.last_name = parts.slice(1).join(' ') || '';
+    }
+    if (u.password !== undefined) payload.password = u.password;
+  }
   return payload;
 };
 
@@ -476,8 +485,9 @@ export const dataService = {
 
   saveUser: async (user) => {
     if (isDemoMode()) return Promise.resolve(db.saveUser(user));
-    const payload = userToApi(user);
-    const res = user.id ? await apiPatch(`/users/${user.id}/`, payload) : await apiPost('/users/', payload);
+    const isCreate = !user.id;
+    const payload = userToApi(user, { isCreate });
+    const res = isCreate ? await apiPost('/users/', payload) : await apiPatch(`/users/${user.id}/`, payload);
     return userFromApi(res);
   },
 

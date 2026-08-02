@@ -2,8 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { Plus, Download, LayoutList, Calendar as CalendarIcon, X, Check, AlertCircle, Filter, ArrowLeft, Phone, Mail, MessageSquare, MapPin } from 'lucide-react';
 import { db } from '../data/mockData';
 import { dataService } from '../data/dataService';
+import { formatBudget } from '../lib/format';
 
-export default function Inspections({ 
+export default function Inspections({
   currentUser, 
   onBookInspectionClick, 
   onEditInspectionClick, 
@@ -374,7 +375,7 @@ export default function Inspections({
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                   <div>
                     <label className="form-label" style={{ marginBottom: '2px', fontSize: '11px', color: 'var(--text-placeholder)' }}>Budget</label>
-                    <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--primary-red)' }}>{lead.budget || 'N/A'}</div>
+                    <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--primary-red)' }}>{lead.budget ? formatBudget(lead.budget) : 'N/A'}</div>
                   </div>
                   <div>
                     <label className="form-label" style={{ marginBottom: '2px', fontSize: '11px', color: 'var(--text-placeholder)' }}>Pipeline Stage</label>

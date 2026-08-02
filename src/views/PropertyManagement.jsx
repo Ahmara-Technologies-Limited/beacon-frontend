@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Plus, Search, Building2, MapPin, Tag, SlidersHorizontal, Layers, Trash2, Edit3, X, ChevronRight, User, ArrowLeft } from 'lucide-react';
 import { db } from '../data/mockData';
 import { dataService } from '../data/dataService';
+import { formatBudget } from '../lib/format';
 
 export default function PropertyManagement({ currentUser }) {
   const [properties, setProperties] = useState([]);
@@ -260,7 +261,7 @@ export default function PropertyManagement({ currentUser }) {
                           <tr key={lead.id}>
                             <td style={{ fontWeight: 700 }}>{lead.name}</td>
                             <td><span className="badge badge-grey">{lead.stage}</span></td>
-                            <td style={{ fontWeight: 700, color: 'var(--primary-red)' }}>{lead.budget}</td>
+                            <td style={{ fontWeight: 700, color: 'var(--primary-red)' }}>{formatBudget(lead.budget)}</td>
                             <td>{lead.phone}</td>
                             <td>{lead.email || 'N/A'}</td>
                           </tr>

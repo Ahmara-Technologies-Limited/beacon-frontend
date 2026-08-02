@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { db } from '../data/mockData';
 import { dataService } from '../data/dataService';
+import { formatBudget } from '../lib/format';
 
 /**
  * @param {{
@@ -107,6 +108,13 @@ export default function LeadProfile({
     const foundLead = activeLeads.find(l => l.id === leadId) || archivedLeads.find(l => l.id === leadId);
 
     if (foundLead) {
+      // Demo mode: db.getLeads() already embeds `paymentPlan` on the lead.
+      // Live mode: the API's lead payload has no such field, so fetch it
+      // separately from the finance endpoint (mirrors DocOfficerHub.jsx's
+      // loadHubData, which does the same thing for its lead list).
+      if (foundLead.paymentPlan === undefined) {
+        foundLead.paymentPlan = await dataService.getPaymentPlan(foundLead.id);
+      }
       setLead(foundLead);
 
       // Load activities
@@ -582,7 +590,7 @@ export default function LeadProfile({
             </div>
             <div className="meta-details-row">
               <span className="meta-item"><MapPin size={14} /> {lead.location || 'No location set'}</span>
-              <span className="meta-item"><DollarSign size={14} /> Budget: {lead.budget || '---'}</span>
+              <span className="meta-item"><DollarSign size={14} /> Budget: {formatBudget(lead.budget)}</span>
               <span className="meta-item"><Award size={14} /> Closer: {assignedCloser ? assignedCloser.name : 'Unassigned'}</span>
               <span className="meta-item" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}><CheckCircle size={14} /> Stage: <span className="badge badge-grey" style={{ fontSize: '11.5px', margin: 0, padding: '3px 8px', fontWeight: '700' }}>{lead.stage}</span></span>
             </div>

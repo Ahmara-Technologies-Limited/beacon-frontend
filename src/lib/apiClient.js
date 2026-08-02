@@ -42,7 +42,65 @@ class ApiError extends Error {
   }
 }
 
-async function request(method, path, { body, params, headers = {} } = {}) {
+// Refresh is in-flight de-duplication: if several requests 401 around the
+// same time, they should all await the same refresh call rather than each
+// firing their own POST /auth/refresh/.
+let refreshInFlight = null;
+
+async function refreshAccessToken() {
+  const refresh = getRefreshToken();
+  if (!refresh) return false;
+
+  if (!refreshInFlight) {
+    refreshInFlight = (async () => {
+      const base = getBaseUrl();
+      try {
+        const res = await fetch(`${base}/auth/refresh/`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ refresh }),
+        });
+        if (!res.ok) return false;
+        const data = await res.json().catch(() => null);
+        if (!data || !data.access) return false;
+        setTokens({ access: data.access });
+        return true;
+      } catch {
+        return false;
+      } finally {
+        refreshInFlight = null;
+      }
+    })();
+  }
+  return refreshInFlight;
+}
+
+async function performFetch(method, url, finalHeaders, finalBody) {
+  let response;
+  try {
+    response = await fetch(url, {
+      method,
+      headers: finalHeaders,
+      body: finalBody,
+    });
+  } catch (networkErr) {
+    throw new ApiError(`Network error contacting ${url}: ${networkErr.message}`, 0, null);
+  }
+
+  let parsedBody = null;
+  const text = await response.text();
+  if (text) {
+    try {
+      parsedBody = JSON.parse(text);
+    } catch {
+      parsedBody = text;
+    }
+  }
+
+  return { response, parsedBody };
+}
+
+async function request(method, path, { body, params, headers = {}, _isRetry = false } = {}) {
   const base = getBaseUrl();
   let url = `${base}${path.startsWith('/') ? path : `/${path}`}`;
 
@@ -65,32 +123,23 @@ async function request(method, path, { body, params, headers = {} } = {}) {
     finalHeaders['Authorization'] = `Bearer ${token}`;
   }
 
-  // TODO: implement token refresh (POST /auth/refresh/ or SimpleJWT's token/refresh/
-  // endpoint) when the access token has expired. For now, a 401 just propagates
-  // as an ApiError and the caller (or UI) is responsible for prompting re-login.
-
-  let response;
-  try {
-    response = await fetch(url, {
-      method,
-      headers: finalHeaders,
-      body: finalBody,
-    });
-  } catch (networkErr) {
-    throw new ApiError(`Network error contacting ${url}: ${networkErr.message}`, 0, null);
-  }
-
-  let parsedBody = null;
-  const text = await response.text();
-  if (text) {
-    try {
-      parsedBody = JSON.parse(text);
-    } catch {
-      parsedBody = text;
-    }
-  }
+  const { response, parsedBody } = await performFetch(method, url, finalHeaders, finalBody);
 
   if (!response.ok) {
+    // On a 401 (expired/invalid access token), try exactly one silent
+    // refresh-and-retry before giving up. Skip the auth endpoints
+    // themselves to avoid refresh loops.
+    const isAuthEndpoint = path.startsWith('/auth/login') || path.startsWith('/auth/refresh');
+    if (response.status === 401 && !_isRetry && !isAuthEndpoint) {
+      const refreshed = await refreshAccessToken();
+      if (refreshed) {
+        return request(method, path, { body, params, headers, _isRetry: true });
+      }
+      // Refresh failed (no/expired refresh token) — clear stale tokens so
+      // the app falls back to its existing "not authenticated" UI state.
+      clearTokens();
+    }
+
     const message =
       (parsedBody && (parsedBody.detail || parsedBody.message)) ||
       `Request to ${path} failed with status ${response.status}`;

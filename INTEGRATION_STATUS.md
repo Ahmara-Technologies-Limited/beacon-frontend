@@ -1,5 +1,23 @@
 # Backend Integration Status
 
+## Verification (this pass)
+
+- `python manage.py check` → `System check identified no issues (0 silenced).`
+- `python manage.py makemigrations --check --dry-run` → `No changes detected`
+  (ran against a pip-installed Django 5.2 + DRF + simplejwt + django-filter +
+  django-cors-headers/-environ/-phonenumber-field, phonenumberslite,
+  drf-standardized-errors/-spectacular set, network access was available in
+  this sandbox unlike the prior pass).
+- `npx eslint` on every file touched in this pass — `src/lib/apiClient.js`,
+  `src/lib/format.js`, `src/data/dataService.js` came back completely clean;
+  `src/views/LeadProfile.jsx`, `src/views/DocOfficerHub.jsx`,
+  `src/views/UserManagement.jsx`, `src/views/PropertyManagement.jsx`,
+  `src/views/Inspections.jsx`, `src/views/Dashboard.jsx` came back with 27
+  pre-existing problems (`react-hooks/set-state-in-effect` on the existing
+  2-second polling `setInterval`s, `react/no-unescaped-entities`,
+  `react-hooks/purity` on pre-existing `Date.now()` calls) — all in code this
+  pass did not touch the surrounding logic of; none newly introduced.
+
 ## Environment
 
 - `NEXT_PUBLIC_API_URL` — base URL of the Django backend (no `/api` prefix, no
@@ -164,22 +182,43 @@ Migrated call sites: `src/views/LeadManagement.jsx`, `LeadProfile.jsx`,
 
 ## Known gaps
 
-1. **No password field on user create/update.** `apps/core/serializers.py`'s
-   `UserSerializer` only exposes `full_name` (read-only), `email`,
-   `phone_number`, `role`, `is_active`, `date_joined`. There's no write path
-   for `first_name`/`last_name` or a password, so `dataService.saveUser` in
-   live mode can only patch email/phone/role/active-status — creating a new
-   user via the UI won't be able to set their name or password until the
-   backend adds a create serializer (or a separate `/users/invite/` endpoint).
-2. **No token refresh.** `apiClient.js` has a TODO — a 401 from an expired
-   access token just surfaces as an `ApiError`; there's no automatic refresh
-   via SimpleJWT's `/auth/refresh/` (or equivalent) yet.
-3. **Budget field type mismatch.** Mock data stores `budget` as a formatted
-   Naira string (`"₦150,000,000"`); the backend expects a decimal number.
-   `dataService`'s `leadToApi` strips non-digits before sending; display
-   formatting is left to the UI layer, which mostly still expects the mock's
-   pre-formatted string in a few places — worth a follow-up pass to
-   consistently format `lead.budget` at render time everywhere.
+1. **RESOLVED.** `apps/core/serializers.py` now has `UserCreateSerializer`
+   (first_name/last_name/password, `create()` delegates to
+   `User.objects.create_user` for proper hashing) and
+   `UserViewSet.get_serializer_class()` (`apps/core/views.py`) returns it for
+   `POST`, falling back to the read/patch `UserSerializer` otherwise. On the
+   frontend, `dataService.saveUser`/`userToApi` (`src/data/dataService.js`)
+   now split `name` into `first_name`/`last_name` and send `password` only on
+   create (`isCreate` flag; PATCH still omits both, since the update
+   serializer has no write field for either). `src/views/UserManagement.jsx`'s
+   add-user form now collects a required password (min 8 chars, create mode
+   only) and submits it through the existing `handleSaveUser` flow.
+2. **RESOLVED.** The backend already had `/auth/refresh/` wired to SimpleJWT's
+   `TokenRefreshView` (`apps/core/urls.py`). `src/lib/apiClient.js`'s
+   `request()` now retries exactly once on a 401: it POSTs the stored refresh
+   token to `/auth/refresh/`, stores the new access token, and replays the
+   original request (`_isRetry` guard prevents loops; `/auth/login`/`/auth/
+   refresh` themselves are excluded from the retry path). Concurrent 401s
+   share one in-flight refresh call. If refresh fails (no/expired refresh
+   token), tokens are cleared and the original `ApiError` propagates as
+   before — no change to how the rest of the app reacts to that.
+3. **Budget field type mismatch — display-formatting half RESOLVED; the
+   data-type half (backend expects a decimal) is unchanged/out of scope.**
+   Added `src/lib/format.js` (`formatCurrency`, `parseBudgetNumber`,
+   `formatBudget`) as the shared helper. Applied it at every render site that
+   was printing `lead.budget` (or a value parsed from it) directly, which
+   would otherwise show `NaN`/garbage once `budget` is a raw number from the
+   API instead of the mock's pre-formatted string:
+   `src/views/PropertyManagement.jsx` (lead budget column),
+   `src/views/Inspections.jsx` (lead budget in the inspection card),
+   `src/views/LeadProfile.jsx` (header budget meta item), and
+   `src/views/Dashboard.jsx` (lead budget column, "at-risk" opportunity
+   budget line, and every `parseInt(l.budget.replace(...))` revenue/forecast
+   calculation, now `parseBudgetNumber(l.budget)`, which handles both a
+   formatted string and a raw number safely). `LeadProfile.jsx`'s existing
+   local `formatPrice` — used only for payment-plan-derived numeric
+   values that are never a pre-formatted string — was left as-is rather than
+   forced onto the new helper, to minimize risk.
 4. **Lead `status`/`is_active` mismatch.** Mock leads use `status: "Active" |
    "Archived"`; the backend model appears to use a boolean `is_active` (plus
    the `archive`/`restore` actions). `leadFromApi` maps `is_active === false`
@@ -194,27 +233,26 @@ Migrated call sites: `src/views/LeadManagement.jsx`, `LeadProfile.jsx`,
    touched (e.g. `Settings.jsx:183`, unrelated to this change) — none were
    newly introduced. Recommend running `npm run build` in an environment with
    registry access before shipping.
-6. **Finance UI not migrated (payment plans themselves).**
-   `dataService.getPaymentPlan/savePaymentPlan/updateInstallment` exist and
-   are ready to use, but `LeadProfile.jsx` (payment plan creation at
-   `handleCreatePlan`, payment logging at `handleLogPayment`) and
-   `DocOfficerHub.jsx` (read-only payment plan dashboard) still read/write
-   `lead.paymentPlan` embedded on the lead object via `dataService.saveLead`,
-   not the new `/finance/payment-plans/` / `/finance/installments/`
-   endpoints. This was judged too risky to migrate in this pass without a
-   live backend to test against (multi-step flows: plan creation, partial
-   payments, auto stage-advance to "Allocation" on payoff) — flagging as a
-   follow-up rather than risking half-tested changes to a financial flow.
-   Demo mode is completely unaffected either way. Note: the
-   discount/commission/refund *ledgers* that are side effects of these same
-   handlers (`handleCreatePlan`/`handleLogPayment`) **are** now wired to the
-   real backend (see the Finance ledgers entry above) — only the
-   `PaymentPlan`/`Installment` records themselves remain demo-embedded.
-7. **`makemigrations --check --dry-run` reports one pending, unrelated
-   migration.** `apps/sales/migrations/0002_alter_inspection_options.py`
-   (an `Inspection` `Meta.ordering` change) is still not generated/committed
-   — `git diff apps/sales/models.py` confirms this predates this pass and
-   wasn't touched by it. This is separate from the finance migration added
-   in this pass (`apps/finance/migrations/0002_commission_discountrecord_refundrequest.py`),
-   which **was** generated and confirmed to apply cleanly (`migrate --plan`
-   and `migrate` both run clean against a throwaway local SQLite db).
+6. **RESOLVED.** `handleCreatePlan` and `handleLogPayment` in
+   `src/views/LeadProfile.jsx` now call `dataService.savePaymentPlan`/
+   `dataService.updateInstallment` (not `dataService.saveLead`) for the
+   `PaymentPlan`/`Installment` records themselves — this was already the
+   state of the code found at the start of this pass. What was still missing
+   and has now been fixed: `loadLeadData()` never populated `lead.paymentPlan`
+   for live mode (only demo mode's `db.getLeads()` embeds it), so the JSX
+   reading `lead.paymentPlan` (the payment plan tab, receipts, etc.) would
+   have silently been `undefined` against a real backend. `loadLeadData` now
+   does `if (foundLead.paymentPlan === undefined) foundLead.paymentPlan =
+   await dataService.getPaymentPlan(foundLead.id)`, mirroring the same
+   attach-on-read pattern already used by `DocOfficerHub.jsx`'s
+   `loadHubData`. Demo mode is unaffected (the `undefined` check is a no-op
+   there). This was not tested against a live backend (none available in
+   this sandbox) — verify the finance flow end-to-end once
+   `NEXT_PUBLIC_API_URL` points at a real instance.
+7. **RESOLVED — turned out to already be fixed.** `apps/sales/migrations/
+   0002_alter_inspection_options.py` was found already present and already
+   committed (part of commit `0651cbb`, which predates this pass) — it
+   contains only an `AlterModelOptions` (`Meta.ordering`) change, no
+   column/schema changes. Re-ran `makemigrations --check --dry-run` in this
+   pass to confirm: "No changes detected" (see Verification below). No code
+   change was needed for this gap.

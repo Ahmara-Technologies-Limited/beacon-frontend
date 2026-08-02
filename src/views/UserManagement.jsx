@@ -24,7 +24,8 @@ export default function UserManagement({ currentUser }) {
     email: '',
     phone: '',
     role: 'Sales Closer',
-    status: 'Active'
+    status: 'Active',
+    password: ''
   });
   const [errors, setErrors] = useState({});
 
@@ -73,7 +74,8 @@ export default function UserManagement({ currentUser }) {
       email: '',
       phone: '',
       role: 'Sales Closer',
-      status: 'Active'
+      status: 'Active',
+      password: ''
     });
     setErrors({});
     setShowUserModal(true);
@@ -86,7 +88,8 @@ export default function UserManagement({ currentUser }) {
       email: user.email,
       phone: user.phone || '',
       role: user.role,
-      status: user.status
+      status: user.status,
+      password: ''
     });
     setErrors({});
     setShowUserModal(true);
@@ -109,6 +112,12 @@ export default function UserManagement({ currentUser }) {
     }
 
     if (!formData.role) err.role = 'System Role is required.';
+
+    if (!selectedUser && !formData.password.trim()) {
+      err.password = 'Password is required.';
+    } else if (!selectedUser && formData.password.trim().length < 8) {
+      err.password = 'Password must be at least 8 characters.';
+    }
 
     setErrors(err);
     return Object.keys(err).length === 0;
@@ -335,6 +344,21 @@ export default function UserManagement({ currentUser }) {
                   placeholder="e.g. 08012345678"
                 />
               </div>
+
+              {/* Password (create only) */}
+              {!selectedUser && (
+                <div className="form-group">
+                  <label className="form-label">Password *</label>
+                  <input
+                    type="password"
+                    className="form-control"
+                    value={formData.password}
+                    onChange={e => setFormData({ ...formData, password: e.target.value })}
+                    placeholder="Set an initial password"
+                  />
+                  {errors.password && <span className="form-error">{errors.password}</span>}
+                </div>
+              )}
 
               {/* Role */}
               <div className="form-group">

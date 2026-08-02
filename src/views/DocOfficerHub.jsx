@@ -26,18 +26,29 @@ export default function DocOfficerHub({ currentUser }) {
   const [isUploading, setIsUploading] = useState(false);
 
   const loadHubData = async () => {
-    // Read from database
-    setLeads(db.getLeads());
-    setUsers(db.getUsers());
-
-    // Ledgers now go through dataService (demo mode: localStorage parity,
-    // live mode: real /finance/discounts|commissions|refunds/ endpoints).
-    const [savedRefunds, savedCommissions, savedDiscounts] = await Promise.all([
+    // Leads, users, ledgers, and payment plans all go through dataService
+    // (demo mode: localStorage/mock parity, live mode: real API endpoints),
+    // so this view has one consistent read path regardless of mode.
+    const [allLeads, savedUsers, savedRefunds, savedCommissions, savedDiscounts] = await Promise.all([
+      dataService.getLeads(),
+      dataService.getUsers(),
       dataService.getRefunds(),
       dataService.getCommissions(),
       dataService.getDiscounts(),
     ]);
 
+    // In live mode, payment plans are a separate resource - fetch and
+    // attach them to each lead so downstream rendering (activePlans, the
+    // reminders list) can keep reading `lead.paymentPlan` uniformly.
+    const leadsWithPlans = await Promise.all(
+      allLeads.map(async (lead) => ({
+        ...lead,
+        paymentPlan: lead.paymentPlan !== undefined ? lead.paymentPlan : await dataService.getPaymentPlan(lead.id),
+      }))
+    );
+
+    setLeads(leadsWithPlans);
+    setUsers(savedUsers);
     setRefunds(savedRefunds);
     setCommissions(savedCommissions);
     setDiscounts(savedDiscounts);

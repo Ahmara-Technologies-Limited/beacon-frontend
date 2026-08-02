@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { db } from '../data/mockData';
 import { dataService } from '../data/dataService';
+import { formatBudget, parseBudgetNumber } from '../lib/format';
 
 export default function Dashboard({ currentUser, setCurrentTab, setViewingLeadId, onAddLeadClick, onLogActivityClick, onBookInspectionClick, onEditLeadClick }) {
   const [leads, setLeads] = useState([]);
@@ -148,7 +149,7 @@ export default function Dashboard({ currentUser, setCurrentTab, setViewingLeadId
     const salesClosedCount = salesClosedLeads.length;
     
     const revenueGenerated = salesClosedLeads.reduce((acc, l) => {
-      const num = parseInt(l.budget.replace(/[^0-9]/g, ''), 10) || 0;
+      const num = parseBudgetNumber(l.budget);
       return acc + num;
     }, 0);
 
@@ -1564,7 +1565,7 @@ export default function Dashboard({ currentUser, setCurrentTab, setViewingLeadId
                             </td>
                             <td style={{ padding: '12px', fontSize: '13px' }}>{l.source}</td>
                             <td style={{ padding: '12px' }}>{l.category}</td>
-                            <td style={{ padding: '12px', fontSize: '13px', fontWeight: '600' }}>{l.budget}</td>
+                            <td style={{ padding: '12px', fontSize: '13px', fontWeight: '600' }}>{formatBudget(l.budget)}</td>
                             <td style={{ padding: '12px', fontSize: '12px' }}>{new Date(l.dateCreated).toLocaleDateString()}</td>
                             <td style={{ padding: '12px' }}>
                               <select 
@@ -1708,7 +1709,7 @@ export default function Dashboard({ currentUser, setCurrentTab, setViewingLeadId
     
     // Branch Revenue
     const branchRevenue = branchClients.reduce((acc, l) => {
-      const budgetNum = parseInt(l.budget.replace(/[^0-9]/g, ''), 10) || 0;
+      const budgetNum = parseBudgetNumber(l.budget);
       return acc + budgetNum;
     }, 0);
 
@@ -1868,7 +1869,7 @@ export default function Dashboard({ currentUser, setCurrentTab, setViewingLeadId
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' }}>
                   {branchClosersCompliance.map(c => {
                     const mySales = branchLeads.filter(l => l.assignedCloserId === c.id && (l.stage === 'Repeat Purchase' || l.stage === 'Client/Investor'));
-                    const salesRevenue = mySales.reduce((acc, l) => acc + (parseInt(l.budget.replace(/[^0-9]/g, ''), 10) || 0), 0);
+                    const salesRevenue = mySales.reduce((acc, l) => acc + (parseBudgetNumber(l.budget)), 0);
                     return (
                       <div className="card" key={c.id} style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '6px' }}>
@@ -1976,7 +1977,7 @@ export default function Dashboard({ currentUser, setCurrentTab, setViewingLeadId
     // Expected revenue this month
     const forecastLeads = leads.filter(l => ['Negotiation', 'Reservation', 'Payment'].includes(l.stage));
     const expectedRevenue = forecastLeads.reduce((acc, l) => {
-      const budgetNum = parseInt(l.budget.replace(/[^0-9]/g, ''), 10) || 0;
+      const budgetNum = parseBudgetNumber(l.budget);
       // apply weight based on stage probability
       const prob = l.stage === 'Payment' ? 0.9 : l.stage === 'Reservation' ? 0.75 : 0.4;
       return acc + (budgetNum * prob);
@@ -1984,7 +1985,7 @@ export default function Dashboard({ currentUser, setCurrentTab, setViewingLeadId
 
     // At Risk Opportunities
     const atRiskOpportunities = leads.filter(l => {
-      const budgetNum = parseInt(l.budget.replace(/[^0-9]/g, ''), 10) || 0;
+      const budgetNum = parseBudgetNumber(l.budget);
       const isDormant = (new Date() - new Date(l.lastActivityDate)) > (7 * 24 * 60 * 60 * 1000);
       return budgetNum >= 100000000 && (isDormant || l.relationshipStatus === 'At Risk');
     });
@@ -1993,7 +1994,7 @@ export default function Dashboard({ currentUser, setCurrentTab, setViewingLeadId
     const closersPerformance = users.filter(u => u.role === 'Sales Closer').map(closer => {
       const cLeads = leads.filter(l => l.assignedCloserId === closer.id);
       const closed = cLeads.filter(l => l.stage === 'Repeat Purchase' || l.stage === 'Client/Investor');
-      const revenue = closed.reduce((acc, l) => acc + (parseInt(l.budget.replace(/[^0-9]/g, ''), 10) || 0), 0);
+      const revenue = closed.reduce((acc, l) => acc + (parseBudgetNumber(l.budget)), 0);
       const conversion = cLeads.length > 0 ? ((closed.length / cLeads.length) * 100).toFixed(0) : '0';
       return {
         name: closer.name,
@@ -2012,7 +2013,7 @@ export default function Dashboard({ currentUser, setCurrentTab, setViewingLeadId
       const brClosers = users.filter(u => u.role === 'Sales Closer' && u.branch === brName).map(c => c.id);
       const brLeads = leads.filter(l => brClosers.includes(l.assignedCloserId));
       const brClosed = brLeads.filter(l => l.stage === 'Repeat Purchase' || l.stage === 'Client/Investor');
-      const brRev = brClosed.reduce((acc, l) => acc + (parseInt(l.budget.replace(/[^0-9]/g, ''), 10) || 0), 0);
+      const brRev = brClosed.reduce((acc, l) => acc + (parseBudgetNumber(l.budget)), 0);
       return {
         name: brName.replace(' Branch', ''),
         revenue: brRev,
@@ -2094,7 +2095,7 @@ export default function Dashboard({ currentUser, setCurrentTab, setViewingLeadId
                 <div key={o.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', background: 'var(--card-bg)', border: '1px solid var(--border-color)', borderRadius: '8px' }}>
                   <div>
                     <span style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text-primary)' }}>{o.name}</span>
-                    <span style={{ fontSize: '11px', color: 'var(--text-secondary)', marginLeft: '12px' }}>Budget: {o.budget} | Health: {o.relationshipStatus || 'Warm'} | Last Activity: {new Date(o.lastActivityDate).toLocaleDateString()}</span>
+                    <span style={{ fontSize: '11px', color: 'var(--text-secondary)', marginLeft: '12px' }}>Budget: {formatBudget(o.budget)} | Health: {o.relationshipStatus || 'Warm'} | Last Activity: {new Date(o.lastActivityDate).toLocaleDateString()}</span>
                   </div>
                   <button className="btn btn-xs btn-primary" onClick={() => setViewingLeadId(o.id)}>Inspect Lead Profile</button>
                 </div>
