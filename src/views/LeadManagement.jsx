@@ -19,16 +19,14 @@ export default function LeadManagement({
   const [selectedLeadIds, setSelectedLeadIds] = useState([]);
   const [showFilterModal, setShowFilterModal] = useState(false);
 
-  // Filters State
   const [filterStage, setFilterStage] = useState('All');
   const [filterSource, setFilterSource] = useState('All');
   const [filterCategory, setFilterCategory] = useState('All');
   const [filterTemperature, setFilterTemperature] = useState('All');
   const [filterCloser, setFilterCloser] = useState('All');
   const [filterLocation, setFilterLocation] = useState('All');
-  const [filterArchived, setFilterArchived] = useState('Active'); // Active, Archived
+  const [filterArchived, setFilterArchived] = useState('Active'); // values: 'Active' or 'Archived'
 
-  // Pending States
   const [pendingFilterStage, setPendingFilterStage] = useState('All');
   const [pendingFilterSource, setPendingFilterSource] = useState('All');
   const [pendingFilterCategory, setPendingFilterCategory] = useState('All');
@@ -37,15 +35,12 @@ export default function LeadManagement({
   const [pendingFilterLocation, setPendingFilterLocation] = useState('All');
   const [pendingFilterArchived, setPendingFilterArchived] = useState('Active');
 
-  // Bulk Actions State
   const [bulkCloserId, setBulkCloserId] = useState('');
   const [bulkStage, setBulkStage] = useState('');
   const [bulkStatusMsg, setBulkStatusMsg] = useState('');
 
-  // CSV Import State
   const [importSummary, setImportSummary] = useState(null);
 
-  // Re-fetch database data
   const loadLeads = async () => {
     if (filterArchived === 'Archived') {
       setLeads(await dataService.getArchivedLeads());
@@ -72,7 +67,6 @@ export default function LeadManagement({
     return () => clearInterval(interval);
   }, [filterArchived]);
 
-  // Bulk selectors
   const toggleSelectAll = () => {
     if (selectedLeadIds.length === filteredLeads.length) {
       setSelectedLeadIds([]);
@@ -87,11 +81,10 @@ export default function LeadManagement({
     );
   };
 
-  // Perform Filters
   const getFilteredLeads = () => {
     let result = leads;
 
-    // 1. Role boundaries: Closers only see their assigned leads
+    // Closers only see their assigned leads
     if (currentUser.role === 'Sales Closer') {
       result = result.filter(l => l.assignedCloserId === currentUser.id);
     }
@@ -114,7 +107,7 @@ export default function LeadManagement({
       result = result.filter(l => leadIds.includes(l.id));
     }
 
-    // 2. Search query (SearchTerm is passed down from layout header)
+    // searchTerm is passed down from the layout header
     const query = searchTerm.toLowerCase().trim();
     if (query !== '') {
       result = result.filter(l => 
@@ -124,7 +117,6 @@ export default function LeadManagement({
       );
     }
 
-    // 3. Dropdown Filters
     if (filterStage !== 'All') result = result.filter(l => l.stage === filterStage);
     if (filterSource !== 'All') result = result.filter(l => l.source === filterSource);
     if (filterCategory !== 'All') result = result.filter(l => l.category === filterCategory);
@@ -144,7 +136,6 @@ export default function LeadManagement({
   const filteredLeads = getFilteredLeads();
   const locations = Array.from(new Set(leads.map(l => l.location).filter(Boolean)));
 
-  // CSV Export Action
   const handleCSVExport = () => {
     if (filteredLeads.length === 0) {
       alert("No leads in the current filtered view to export.");
@@ -186,7 +177,6 @@ export default function LeadManagement({
     db.logAudit(`Exported filtered lead list of ${filteredLeads.length} items to CSV.`);
   };
 
-  // CSV Import Action
   const handleCSVImport = (event) => {
     const file = event.target.target || event.target.files[0];
     if (!file) return;
@@ -204,7 +194,6 @@ export default function LeadManagement({
         const line = lines[i].trim();
         if (!line) continue;
 
-        // Split by commas, considering quotes
         const matches = line.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g) || line.split(",");
         const cleanValues = matches.map(v => v.replace(/^"|"$/g, '').trim());
 
@@ -222,7 +211,6 @@ export default function LeadManagement({
         const nextAction = cleanValues[12] || "Follow up";
         const followUpDate = cleanValues[13] || new Date().toISOString();
 
-        // VALIDATION: Required fields check
         if (!name || !phone || !source || !category || !temperature || !stage || !nextAction || !followUpDate) {
           skippedCount++;
           continue;
@@ -256,11 +244,9 @@ export default function LeadManagement({
       db.logAudit(`CSV file uploaded. Imported ${importedCount} leads, skipped ${skippedCount} rows.`);
     };
     reader.readAsText(file);
-    // Reset file input value
     event.target.value = null;
   };
 
-  // Bulk operations
   const handleBulkAssign = async () => {
     if (selectedLeadIds.length === 0) {
       alert("No leads selected.");
@@ -330,7 +316,6 @@ export default function LeadManagement({
 
   return (
     <div className="lead-management-page">
-      {/* Breadcrumbs & Header Actions */}
       <div className="breadcrumbs">
         <span>Home</span>
         <span className="breadcrumb-separator">&gt;</span>
@@ -375,7 +360,6 @@ export default function LeadManagement({
         </div>
       </div>
 
-      {/* CSV Import Notification Popup */}
       {importSummary && (
         <div className="modal-backdrop">
           <div className="modal-content" style={{ maxWidth: '400px' }}>
@@ -403,7 +387,6 @@ export default function LeadManagement({
         </div>
       )}
 
-      {/* Filter Toggles & Row Selector */}
       <div className="filter-controls-row">
         <div className="filter-left-switches">
           <button 
@@ -431,7 +414,6 @@ export default function LeadManagement({
         )}
       </div>
 
-      {/* Active Filter Badges */}
       {(filterStage !== 'All' || filterSource !== 'All' || filterCategory !== 'All' || filterTemperature !== 'All' || filterCloser !== 'All' || filterLocation !== 'All' || filterArchived !== 'Active') && (
         <div className="active-filters-row" style={{ marginTop: '12px' }}>
           <span className="active-filters-label">Active Filters:</span>
@@ -492,7 +474,6 @@ export default function LeadManagement({
 
 
 
-      {/* Bulk Actions Panel */}
       {selectedLeadIds.length > 0 && filterArchived === 'Active' && currentUser.role !== 'Admin/Doc Officer' && (
         <div className="bulk-actions-panel card">
           <div className="bulk-actions-content">
@@ -538,7 +519,6 @@ export default function LeadManagement({
         </div>
       )}
 
-      {/* Leads Table List */}
       <div className="table-container" style={{ minHeight: '300px' }}>
         <table className="custom-table">
           <thead>
@@ -580,7 +560,6 @@ export default function LeadManagement({
                 const assignedCloserObj = closers.find(c => c.id === lead.assignedCloserId);
                 const closerName = assignedCloserObj ? assignedCloserObj.name : "Unassigned";
 
-                // Warnings computation
                 const isFollowUpOverdue = lead.followUpDate && new Date(lead.followUpDate) < new Date() && lead.stage !== 'Repeat Purchase';
                 const isDormant = (new Date() - new Date(lead.lastActivityDate)) > (7 * 24 * 60 * 60 * 1000);
                 const isUnassigned = !lead.assignedCloserId;

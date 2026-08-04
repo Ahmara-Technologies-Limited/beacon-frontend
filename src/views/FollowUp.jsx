@@ -8,24 +8,21 @@ export default function FollowUp({ currentUser, setViewingLeadId, setCurrentTab 
   const [closers, setClosers] = useState([]);
 
   const [filterCloser, setFilterCloser] = useState('All');
-  const [filterType, setFilterType] = useState('All'); // Follow-Up Types
+  const [filterType, setFilterType] = useState('All');
 
-  // Modal Filters State
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [pendingFilterCloser, setPendingFilterCloser] = useState('All');
   const [pendingFilterType, setPendingFilterType] = useState('All');
 
-  // Modal States
-  const [actionLead, setActionLead] = useState(null); // Lead undergoing done/snooze
+  // actionLead is shared between the Done and Snooze modals since only one can be open at a time
+  const [actionLead, setActionLead] = useState(null);
   const [showDoneModal, setShowDoneModal] = useState(false);
   const [showSnoozeModal, setShowSnoozeModal] = useState(false);
 
-  // Done modal fields
   const [nextFollowUpDate, setNextFollowUpDate] = useState('');
   const [noFollowUpNeeded, setNoFollowUpNeeded] = useState(false);
 
-  // Snooze modal fields
-  const [snoozeDays, setSnoozeDays] = useState('1'); // 1, 2, custom
+  const [snoozeDays, setSnoozeDays] = useState('1'); // values: '1', '2', or 'custom'
   const [snoozeCustomDate, setSnoozeCustomDate] = useState('');
   const loadFollowUpData = async () => {
     setLeads(await dataService.getLeads());
@@ -73,7 +70,6 @@ export default function FollowUp({ currentUser, setViewingLeadId, setCurrentTab 
     }
   };
 
-  // Done Action
   const handleOpenDone = (e, lead) => {
     e.stopPropagation();
     setActionLead(lead);
@@ -105,7 +101,6 @@ export default function FollowUp({ currentUser, setViewingLeadId, setCurrentTab 
     loadFollowUpData();
   };
 
-  // Snooze Action
   const handleOpenSnooze = (e, lead) => {
     e.stopPropagation();
     setActionLead(lead);
@@ -151,11 +146,10 @@ export default function FollowUp({ currentUser, setViewingLeadId, setCurrentTab 
     loadFollowUpData();
   };
 
-  // Filters logic
   const getFilteredLeads = () => {
     let result = leads.filter(l => l.followUpDate);
 
-    // Closers see their own follow ups only
+    // Closers only see their own follow-ups; other roles can filter across the team
     if (currentUser.role === 'Sales Closer') {
       result = result.filter(l => l.assignedCloserId === currentUser.id);
     } else if (filterCloser !== 'All') {
@@ -172,7 +166,6 @@ export default function FollowUp({ currentUser, setViewingLeadId, setCurrentTab 
 
   const filteredLeads = getFilteredLeads();
 
-  // Split into Due Today & Overdue
   const today = new Date();
   const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
   const endOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
@@ -205,14 +198,12 @@ export default function FollowUp({ currentUser, setViewingLeadId, setCurrentTab 
         </div>
       </div>
 
-      {/* Summary Stat Box */}
       <div className="card queue-summary-card">
         <span className="summary-text">
           <strong>{dueCount}</strong> follow-ups due today. <strong>{overdueCount}</strong> overdue across <strong>{closers.length}</strong> active closers.
         </span>
       </div>
 
-      {/* Filters Toolbar */}
       <div className="user-toolbar card" style={{ marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <h3 className="section-title" style={{ margin: 0, fontSize: '15px' }}>Follow-Up Queue</h3>
         <button 
@@ -228,7 +219,6 @@ export default function FollowUp({ currentUser, setViewingLeadId, setCurrentTab 
         </button>
       </div>
 
-      {/* Active Filter Badges */}
       {(filterCloser !== 'All' || filterType !== 'All') && (
         <div className="active-filters-row" style={{ marginBottom: '24px' }}>
           <span className="active-filters-label">Active Filters:</span>
@@ -251,7 +241,6 @@ export default function FollowUp({ currentUser, setViewingLeadId, setCurrentTab 
         </div>
       )}
 
-      {/* OVERDUE QUEUE TABLE (Emphasized first) */}
       <div className="queue-section">
         <h2 className="queue-section-header overdue-header">
           🚨 Overdue Follow-Up Backlog ({overdueCount})
@@ -329,7 +318,6 @@ export default function FollowUp({ currentUser, setViewingLeadId, setCurrentTab 
         </div>
       </div>
 
-      {/* DUE TODAY QUEUE TABLE */}
       <div className="queue-section" style={{ marginTop: '32px' }}>
         <h2 className="queue-section-header due-today-header">
           📅 Due Today ({dueCount})
@@ -397,7 +385,6 @@ export default function FollowUp({ currentUser, setViewingLeadId, setCurrentTab 
         </div>
       </div>
 
-      {/* DONE / COMPLETE ACTION MODAL */}
       {showDoneModal && actionLead && (
         <div className="modal-backdrop">
           <div className="modal-content" style={{ maxWidth: '450px' }}>
@@ -450,7 +437,6 @@ export default function FollowUp({ currentUser, setViewingLeadId, setCurrentTab 
         </div>
       )}
 
-      {/* SNOOZE ACTION MODAL */}
       {showSnoozeModal && actionLead && (
         <div className="modal-backdrop">
           <div className="modal-content" style={{ maxWidth: '450px' }}>
@@ -508,7 +494,6 @@ export default function FollowUp({ currentUser, setViewingLeadId, setCurrentTab 
           </div>
         </div>
       )}
-      {/* FILTER MODAL */}
       {showFilterModal && (
         <div className="modal-backdrop">
           <div className="modal-content" style={{ maxWidth: '400px' }}>

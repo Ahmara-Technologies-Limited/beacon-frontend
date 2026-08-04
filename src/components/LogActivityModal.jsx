@@ -26,7 +26,6 @@ export default function LogActivityModal({ leadId, isOpen, onClose, onSaveComple
       dataService.getLeads().then(leads => {
         const lead = leads.find(l => l.id === leadId);
 
-        // Default dates
         const now = new Date();
         const formattedNow = now.toISOString().slice(0, 16);
 
@@ -116,7 +115,6 @@ export default function LogActivityModal({ leadId, isOpen, onClose, onSaveComple
 
         <div className="modal-body">
           <div className="activity-form-grid">
-            {/* Activity Type */}
             <div className="form-group">
               <label className="form-label">Activity Type *</label>
               <select 
@@ -130,7 +128,6 @@ export default function LogActivityModal({ leadId, isOpen, onClose, onSaveComple
               </select>
             </div>
 
-            {/* Date & Time */}
             <div className="form-group">
               <label className="form-label">Interaction Date & Time *</label>
               <input 
@@ -141,7 +138,6 @@ export default function LogActivityModal({ leadId, isOpen, onClose, onSaveComple
               />
             </div>
 
-            {/* Summary */}
             <div className="form-group full-width">
               <label className="form-label">Conversation Summary *</label>
               <textarea 
@@ -154,7 +150,6 @@ export default function LogActivityModal({ leadId, isOpen, onClose, onSaveComple
               {errors.summary && <span className="form-error">{errors.summary}</span>}
             </div>
 
-            {/* Objections */}
             <div className="form-group">
               <label className="form-label">Objections Raised</label>
               <input 
@@ -166,7 +161,6 @@ export default function LogActivityModal({ leadId, isOpen, onClose, onSaveComple
               />
             </div>
 
-            {/* Client Feedback */}
             <div className="form-group">
               <label className="form-label">Client Feedback</label>
               <input 
@@ -178,7 +172,6 @@ export default function LogActivityModal({ leadId, isOpen, onClose, onSaveComple
               />
             </div>
 
-            {/* Next Step */}
             <div className="form-group full-width">
               <label className="form-label">Next Step *</label>
               <input 
@@ -191,7 +184,6 @@ export default function LogActivityModal({ leadId, isOpen, onClose, onSaveComple
               {errors.nextStep && <span className="form-error">{errors.nextStep}</span>}
             </div>
 
-            {/* Checkbox: Update Follow Up */}
             <div className="form-group full-width checkbox-option-group">
               <label className="checkbox-label-container">
                 <input 
@@ -216,7 +208,6 @@ export default function LogActivityModal({ leadId, isOpen, onClose, onSaveComple
               )}
             </div>
 
-            {/* Checkbox: Update Pipeline Stage */}
             <div className="form-group full-width checkbox-option-group">
               <label className="checkbox-label-container">
                 <input 

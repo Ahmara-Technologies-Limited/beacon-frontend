@@ -1,25 +1,12 @@
-// Facade over the data layer. Views should call dataService.* instead of
-// importing `db` from mockData.js directly (for the four entities that have
-// real backend endpoints: leads, users, inspections, activities).
-//
-// In demo mode (default), every method delegates to the existing mock `db.*`
-// methods, wrapped in Promise.resolve so callers can always `await`.
-//
-// In live mode, methods call the real Django API via apiClient and translate
-// field names between the UI (mock/camelCase) shape and the API
-// (snake_case / FK) shape, in both directions.
-//
-// Phase 2 added live endpoints for properties, notifications, settings,
-// audit logs, and finance (payment plans/installments/discounts/
-// commissions/refunds) - see INTEGRATION_STATUS.md for details.
+// Facade over the data layer: demo mode delegates to db.* (mockData.js),
+// live mode calls the real API and translates field names both ways.
+// See INTEGRATION_STATUS.md for the full endpoint list.
 
 import { db } from './mockData';
 import { isDemoMode } from '../lib/demoMode';
-import { apiGet, apiPost, apiPatch, apiDelete, setTokens, clearTokens } from '../lib/apiClient';
+import { apiGet, apiPost, apiPatch, apiDelete, setTokens, clearTokens, getRefreshToken } from '../lib/apiClient';
 
-/* ------------------------------------------------------------------ */
-/* Field mapping helpers                                               */
-/* ------------------------------------------------------------------ */
+/* ---- Field mapping helpers ---- */
 
 // ---- User ----
 const userFromApi = (u) => {
@@ -42,9 +29,7 @@ const userToApi = (u, { isCreate = false } = {}) => {
   if (u.phone !== undefined) payload.phone_number = u.phone;
   if (u.role !== undefined) payload.role = u.role;
   if (u.status !== undefined) payload.is_active = u.status === 'Active';
-  // Name/password are only accepted by the backend's create-only
-  // UserCreateSerializer (POST /users/) — UserSerializer (used for
-  // PATCH/GET) has no write field for either, so only send them on create.
+  // name/password only accepted on create (UserCreateSerializer)
   if (isCreate) {
     if (u.name !== undefined) {
       const parts = String(u.name).trim().split(/\s+/);
@@ -434,17 +419,13 @@ const paymentPlanToApi = (p) => {
   return payload;
 };
 
-/* ------------------------------------------------------------------ */
-/* Facade                                                              */
-/* ------------------------------------------------------------------ */
+/* ---- Facade ---- */
 
 export const dataService = {
   /* ---- Auth ---- */
   login: async (email, password) => {
     if (isDemoMode()) {
-      // Demo mode "login" is really the role-switcher: caller passes a
-      // pre-existing mock user object rather than credentials. Support both
-      // call shapes for backward compatibility.
+      // demo "login" is the role-switcher; accepts a user object or an email
       const user = typeof email === 'object' ? email : db.getUsers().find(u => u.email === email);
       if (user) db.setCurrentUser(user);
       return Promise.resolve(user);
@@ -459,9 +440,9 @@ export const dataService = {
       return Promise.resolve();
     }
     try {
-      await apiPost('/auth/logout/');
+      await apiPost('/auth/logout/', { refresh: getRefreshToken() });
     } catch {
-      // best-effort
+      // ignore
     } finally {
       clearTokens();
     }
@@ -494,6 +475,47 @@ export const dataService = {
   deleteUser: async (id, reassignTo) => {
     if (isDemoMode()) return Promise.resolve(db.deleteUser(id, reassignTo));
     return apiDelete(`/users/${id}/`, reassignTo ? { reassignTo } : undefined);
+  },
+
+  changePassword: async (currentPassword, newPassword) => {
+    if (isDemoMode()) {
+      const user = db.getCurrentUser();
+      const expected = user?.password || 'password';
+      if (currentPassword !== expected) {
+        const err = new Error('Incorrect current password.');
+        err.status = 400;
+        throw err;
+      }
+      const updated = { ...user, password: newPassword };
+      db.saveUser(updated);
+      db.setCurrentUser(updated);
+      return Promise.resolve(updated);
+    }
+    return apiPost('/users/change-password/', {
+      current_password: currentPassword,
+      new_password: newPassword,
+    });
+  },
+
+  // Forgot-password flow (unauthenticated). In demo mode there's no real
+  // email system, so both calls just simulate success/failure locally --
+  // mirrors the spirit of the old alert()-based demo UX, centralized here
+  // instead of scattered across components.
+  requestPasswordReset: async (email) => {
+    if (isDemoMode()) {
+      return Promise.resolve({ message: 'If an account exists for this email, a reset link has been sent.' });
+    }
+    return apiPost('/auth/password-reset/', { email });
+  },
+
+  confirmPasswordReset: async (uid, token, newPassword) => {
+    if (isDemoMode()) {
+      // No real email/reset link is ever issued in demo mode, so this path
+      // shouldn't realistically be reached. Implemented defensively rather
+      // than left to throw an unhandled error.
+      return Promise.resolve({ message: 'Password reset is not available in Demo Mode.' });
+    }
+    return apiPost('/auth/password-reset/confirm/', { uid, token, new_password: newPassword });
   },
 
   /* ---- Leads ---- */

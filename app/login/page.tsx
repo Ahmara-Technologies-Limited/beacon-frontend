@@ -2,9 +2,12 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Lock, Mail, Eye, EyeOff, AlertTriangle } from 'lucide-react';
+import { Lock, Mail, Eye, EyeOff, AlertTriangle, Check } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { db } from '@/data/mockData';
+import { dataService } from '@/data/dataService';
+import { useDemoMode } from '@/lib/demoMode';
+import { ApiError } from '@/lib/apiClient';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -17,6 +20,13 @@ export default function LoginPage() {
   const [failedAttempts, setFailedAttempts] = useState(0);
   const [lockoutTime, setLockoutTime] = useState<Date | null>(null);
   const [loginLoading, setLoginLoading] = useState(false);
+  const [demoMode] = useDemoMode();
+
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [forgotLoading, setForgotLoading] = useState(false);
+  const [forgotSubmitted, setForgotSubmitted] = useState(false);
+  const [forgotError, setForgotError] = useState('');
 
   useEffect(() => {
     if (!loading && currentUser) {
@@ -57,21 +67,56 @@ export default function LoginPage() {
       return;
     }
 
+    if (demoMode) {
+      setLoginLoading(true);
+      setTimeout(() => {
+        const users = db.getUsers();
+        const userMatch = users.find((u: any) => u.email.toLowerCase() === loginEmail.toLowerCase());
+
+        if (!userMatch) { recordFailedAttempt(); setLoginError('Incorrect email or password.'); setLoginLoading(false); return; }
+        if (userMatch.status === 'Inactive') { setLoginError('Account inactive. Contact your administrator.'); setLoginLoading(false); return; }
+        const expectedPassword = userMatch.password || 'password';
+        if (loginPassword !== expectedPassword) { recordFailedAttempt(); setLoginError('Incorrect email or password.'); setLoginLoading(false); return; }
+
+        setFailedAttempts(0);
+        login(userMatch);
+        setLoginLoading(false);
+        router.push('/dashboard');
+      }, 600);
+      return;
+    }
+
+    // Live Mode: skip local mock validation entirely and hit the real API.
     setLoginLoading(true);
-    setTimeout(() => {
-      const users = db.getUsers();
-      const userMatch = users.find((u: any) => u.email.toLowerCase() === loginEmail.toLowerCase());
-
-      if (!userMatch) { recordFailedAttempt(); setLoginError('Incorrect email or password.'); setLoginLoading(false); return; }
-      if (userMatch.status === 'Inactive') { setLoginError('Account inactive. Contact your administrator.'); setLoginLoading(false); return; }
-      const expectedPassword = userMatch.password || 'password';
-      if (loginPassword !== expectedPassword) { recordFailedAttempt(); setLoginError('Incorrect email or password.'); setLoginLoading(false); return; }
-
-      setFailedAttempts(0);
-      login(userMatch);
-      setLoginLoading(false);
-      router.push('/dashboard');
-    }, 600);
+    (async () => {
+      try {
+        const user = await login(loginEmail, loginPassword);
+        if (!user) {
+          recordFailedAttempt();
+          setLoginError('Incorrect email or password.');
+          setLoginLoading(false);
+          return;
+        }
+        setFailedAttempts(0);
+        setLoginLoading(false);
+        router.push('/dashboard');
+      } catch (err) {
+        setLoginLoading(false);
+        if (err instanceof ApiError) {
+          if (err.status === 401) {
+            recordFailedAttempt();
+            setLoginError('Incorrect email or password.');
+          } else if (err.status === 0) {
+            setLoginError('Could not reach the server. It may be starting up — please retry in a moment.');
+          } else {
+            setLoginError(err.message || 'Login failed. Please try again.');
+          }
+        } else {
+          recordFailedAttempt();
+          setLoginError('Incorrect email or password.');
+        }
+      }
+    })();
   };
 
   const handleQuickLogin = (email: string) => {
@@ -80,9 +125,36 @@ export default function LoginPage() {
     setLoginPassword('password');
   };
 
+  const handleForgotSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setForgotError('');
+    if (!forgotEmail) {
+      setForgotError('Enter your email address.');
+      return;
+    }
+    setForgotLoading(true);
+    try {
+      await dataService.requestPasswordReset(forgotEmail);
+    } catch {
+      // Backend intentionally returns a generic success response regardless
+      // of whether the email matches an account (no user enumeration), so a
+      // thrown error here is a genuine network/server problem -- still show
+      // the same generic confirmation to avoid leaking anything.
+    } finally {
+      setForgotLoading(false);
+      setForgotSubmitted(true);
+    }
+  };
+
+  const closeForgotPassword = () => {
+    setShowForgotPassword(false);
+    setForgotEmail('');
+    setForgotSubmitted(false);
+    setForgotError('');
+  };
+
   return (
     <div className="login-split-page">
-      {/* Left panel — architectural photo */}
       <div className="login-left-panel" style={{ backgroundImage: `url('/login-bg.jpg')` }}>
         <div className="login-left-overlay">
           <div className="login-brand-mark">
@@ -120,7 +192,6 @@ export default function LoginPage() {
         </div>
       </div>
 
-      {/* Right panel — form */}
       <div className="login-right-panel">
         <div className="login-form-container">
           <div className="login-form-header">
@@ -161,7 +232,7 @@ export default function LoginPage() {
             <div className="form-group">
               <div className="login-label-row">
                 <label className="form-label">Password</label>
-                <button type="button" className="forgot-link" onClick={() => alert('Contact your administrator to reset your password.')}>Forgot password?</button>
+                <button type="button" className="forgot-link" onClick={() => setShowForgotPassword(true)}>Forgot password?</button>
               </div>
               <div className="login-input-wrap">
                 <Lock size={16} className="login-input-icon" />
@@ -184,6 +255,42 @@ export default function LoginPage() {
             </button>
           </form>
 
+          {showForgotPassword && (
+            <div className="forgot-password-panel">
+              {forgotSubmitted ? (
+                <div className="forgot-success">
+                  <Check size={16} />
+                  <span>If an account exists for that email, a reset link has been sent.</span>
+                  <button type="button" className="forgot-close-link" onClick={closeForgotPassword}>Back to sign in</button>
+                </div>
+              ) : (
+                <form onSubmit={handleForgotSubmit}>
+                  <div className="forgot-panel-header">
+                    <span className="forgot-panel-title">Reset your password</span>
+                    <button type="button" className="forgot-close-link" onClick={closeForgotPassword}>Cancel</button>
+                  </div>
+                  <p className="forgot-panel-hint">Enter your account email and we&apos;ll send you a link to reset your password.</p>
+                  {forgotError && <span className="form-error">{forgotError}</span>}
+                  <div className="login-input-wrap" style={{ marginTop: 8 }}>
+                    <Mail size={16} className="login-input-icon" />
+                    <input
+                      type="email"
+                      className="form-control login-input"
+                      value={forgotEmail}
+                      onChange={(e) => setForgotEmail(e.target.value)}
+                      placeholder="you@beacon.com"
+                      autoComplete="email"
+                    />
+                  </div>
+                  <button type="submit" className={`btn btn-primary login-submit ${forgotLoading ? 'btn-loading' : ''}`} disabled={forgotLoading} style={{ marginTop: 12 }}>
+                    {forgotLoading ? 'Sending…' : 'Send reset link'}
+                  </button>
+                </form>
+              )}
+            </div>
+          )}
+
+          {demoMode && (
           <div className="login-quick-access">
             <div className="quick-access-label">Developer Quick Access</div>
             <div className="quick-access-grid">
@@ -222,6 +329,7 @@ export default function LoginPage() {
             </div>
             <p className="qa-hint">Click a role to pre-fill. Password: <code>password</code></p>
           </div>
+          )}
         </div>
       </div>
 
@@ -503,6 +611,55 @@ export default function LoginPage() {
           border-radius: 4px;
           font-size: 11px;
           color: #344054;
+        }
+
+        .forgot-password-panel {
+          margin-top: 20px;
+          padding: 16px;
+          border: 1px solid #E4E7EC;
+          border-radius: 10px;
+          background: #FAFAFA;
+        }
+
+        .forgot-panel-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 6px;
+        }
+
+        .forgot-panel-title {
+          font-size: 14px;
+          font-weight: 700;
+          color: #101828;
+        }
+
+        .forgot-panel-hint {
+          font-size: 12px;
+          color: #667085;
+          margin-bottom: 4px;
+        }
+
+        .forgot-close-link {
+          background: none;
+          border: none;
+          font-size: 12px;
+          font-weight: 600;
+          color: #D4262A;
+          cursor: pointer;
+          padding: 0;
+        }
+
+        .forgot-close-link:hover { text-decoration: underline; }
+
+        .forgot-success {
+          display: flex;
+          flex-direction: column;
+          align-items: flex-start;
+          gap: 8px;
+          font-size: 13px;
+          color: #067647;
+          font-weight: 600;
         }
 
         @media (max-width: 900px) {

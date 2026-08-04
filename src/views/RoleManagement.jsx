@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { ShieldCheck, Plus, Edit2, Trash2, X, Check, ChevronDown, ChevronUp } from 'lucide-react';
 
-// Default system permissions
 const ALL_PERMISSIONS = [
   { group: 'Leads', items: ['view_leads', 'create_leads', 'edit_leads', 'delete_leads', 'reassign_leads', 'archive_leads'] },
   { group: 'Follow-Ups', items: ['view_followups', 'manage_followups'] },
@@ -102,7 +101,6 @@ export default function RoleManagement() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [expandedGroups, setExpandedGroups] = useState({});
 
-  // Create modal state
   const [newRoleName, setNewRoleName] = useState('');
   const [newRoleDesc, setNewRoleDesc] = useState('');
   const [newRoleColor, setNewRoleColor] = useState('#344054');
@@ -199,7 +197,6 @@ export default function RoleManagement() {
       </div>
 
       <div className="role-mgmt-layout">
-        {/* Left: Roles List */}
         <div className="role-list-panel card">
           <div className="role-list-header">
             <span className="section-title" style={{ marginBottom: 0 }}>System Roles</span>
@@ -223,7 +220,6 @@ export default function RoleManagement() {
           </div>
         </div>
 
-        {/* Right: Role Detail */}
         <div className="role-detail-panel">
           {!selectedRole ? (
             <div className="card role-empty-state">
@@ -232,7 +228,6 @@ export default function RoleManagement() {
             </div>
           ) : (
             <div className="card">
-              {/* Detail Header */}
               <div className="role-detail-header">
                 <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
                   <div className="role-avatar-lg" style={{ background: selectedRole.color }}>
@@ -327,7 +322,6 @@ export default function RoleManagement() {
         </div>
       </div>
 
-      {/* Create Role Modal */}
       {showCreateModal && (
         <div className="modal-backdrop">
           <div className="modal-content" style={{ maxWidth: '520px' }}>

@@ -10,8 +10,7 @@ export default function DocOfficerHub({ currentUser }) {
   const [discounts, setDiscounts] = useState([]);
   const [leads, setLeads] = useState([]);
   const [users, setUsers] = useState([]);
-  
-  // Refund Request Form Modal
+
   const [refundModalOpen, setRefundModalOpen] = useState(false);
   const [refundData, setRefundData] = useState({
     leadId: '',
@@ -186,7 +185,6 @@ export default function DocOfficerHub({ currentUser }) {
         </div>
       </div>
 
-      {/* Hub Tabs Bar */}
       <div className="hub-tabs-container card" style={{ display: 'flex', gap: '8px', padding: '12px 16px', marginBottom: '24px', flexWrap: 'wrap' }}>
         <button 
           className={`btn btn-sm ${activeSubTab === 'accounts' ? 'btn-primary' : ''}`}
@@ -221,10 +219,8 @@ export default function DocOfficerHub({ currentUser }) {
         </button>
       </div>
 
-      {/* Accounts Tab */}
       {activeSubTab === 'accounts' && (
         <div className="hub-panel animate-slide">
-          {/* Due date reminders */}
           <div className="card" style={{ padding: '20px', border: '1px solid #FDA29B', backgroundColor: '#FEF3F2', marginBottom: '24px' }}>
             <h3 className="section-title" style={{ color: '#B42318', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
               <Clock size={18} />
@@ -255,7 +251,6 @@ export default function DocOfficerHub({ currentUser }) {
             )}
           </div>
 
-          {/* Active Payment Plans Registry */}
           <div className="card-header-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
             <h3 className="section-title" style={{ marginBottom: 0 }}>Active Payment Plans & Allocations</h3>
           </div>
@@ -324,7 +319,6 @@ export default function DocOfficerHub({ currentUser }) {
         </div>
       )}
 
-      {/* refunds Tab */}
       {activeSubTab === 'refunds' && (
         <div className="hub-panel animate-slide">
           <div className="card-header-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
@@ -407,7 +401,6 @@ export default function DocOfficerHub({ currentUser }) {
         </div>
       )}
 
-      {/* commissions Tab */}
       {activeSubTab === 'commissions' && (
         <div className="hub-panel animate-slide">
           <div className="card-header-row" style={{ marginBottom: '16px' }}>
@@ -469,7 +462,6 @@ export default function DocOfficerHub({ currentUser }) {
         </div>
       )}
 
-      {/* discounts Tab */}
       {activeSubTab === 'discounts' && (
         <div className="hub-panel animate-slide">
           <div className="card-header-row" style={{ marginBottom: '16px' }}>
@@ -513,7 +505,6 @@ export default function DocOfficerHub({ currentUser }) {
         </div>
       )}
 
-      {/* Refund Request Modal */}
       {refundModalOpen && (
         <div className="modal-backdrop">
           <div className="modal-content" style={{ maxWidth: '480px' }}>

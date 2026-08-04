@@ -29,15 +29,12 @@ export default function LeadModal({ leadId, isOpen, onClose, onSaveComplete, onS
 
   useEffect(() => {
     if (isOpen) {
-      // Load closers
       dataService.getUsers().then(allUsers => {
         setClosers(allUsers.filter(u => u.role === 'Sales Closer' && u.status === 'Active'));
       });
 
-      // Load properties
       dataService.getProperties().then(setProperties);
 
-      // Load lead if editing
       if (leadId) {
         dataService.getLeads().then(leads => {
         const lead = leads.find(l => l.id === leadId);
@@ -70,7 +67,6 @@ export default function LeadModal({ leadId, isOpen, onClose, onSaveComplete, onS
           setPotentialReferrers(leads.filter(l => l.id !== leadId && (l.stage === 'Client/Investor' || l.stage === 'Repeat Purchase')));
         });
       } else {
-        // Reset form
         setFormData({
           name: '',
           phone: '',
@@ -126,8 +122,7 @@ export default function LeadModal({ leadId, isOpen, onClose, onSaveComplete, onS
     if (!formData.stage) err.stage = 'Pipeline Stage is required.';
     if (!formData.nextAction.trim()) err.nextAction = 'Next Action is required.';
     if (!formData.followUpDate) err.followUpDate = 'Follow-Up Date & Time is required.';
-    
-    // Closer check
+
     if (currentUser.role !== 'Sales Closer' && !formData.assignedCloserId) {
       err.assignedCloserId = 'Assigned Closer is required.';
     }
@@ -163,7 +158,6 @@ export default function LeadModal({ leadId, isOpen, onClose, onSaveComplete, onS
     }
   };
 
-  // Check if Assigned Closer field should be disabled (Locked for Closers)
   const isCloserFieldLocked = currentUser.role === 'Sales Closer';
 
   return (
@@ -199,7 +193,6 @@ export default function LeadModal({ leadId, isOpen, onClose, onSaveComplete, onS
           )}
 
           <div className="lead-form-grid">
-            {/* Full Name */}
             <div className="form-group">
               <label className="form-label">Full Name *</label>
               <input 
@@ -212,7 +205,6 @@ export default function LeadModal({ leadId, isOpen, onClose, onSaveComplete, onS
               {errors.name && <span className="form-error">{errors.name}</span>}
             </div>
 
-            {/* Phone */}
             <div className="form-group">
               <label className="form-label">Phone Number *</label>
               <input 
@@ -225,7 +217,6 @@ export default function LeadModal({ leadId, isOpen, onClose, onSaveComplete, onS
               {errors.phone && <span className="form-error">{errors.phone}</span>}
             </div>
 
-            {/* WhatsApp */}
             <div className="form-group">
               <label className="form-label">WhatsApp Number</label>
               <input 
@@ -237,7 +228,6 @@ export default function LeadModal({ leadId, isOpen, onClose, onSaveComplete, onS
               />
             </div>
 
-            {/* Email */}
             <div className="form-group">
               <label className="form-label">Email Address</label>
               <input 
@@ -249,7 +239,6 @@ export default function LeadModal({ leadId, isOpen, onClose, onSaveComplete, onS
               />
             </div>
 
-            {/* Location */}
             <div className="form-group">
               <label className="form-label">Location / Area</label>
               <input 
@@ -261,7 +250,6 @@ export default function LeadModal({ leadId, isOpen, onClose, onSaveComplete, onS
               />
             </div>
 
-            {/* Lead Source */}
             <div className="form-group">
               <label className="form-label">Lead Source *</label>
               <select 
@@ -275,7 +263,6 @@ export default function LeadModal({ leadId, isOpen, onClose, onSaveComplete, onS
               </select>
             </div>
 
-            {/* Category */}
             <div className="form-group">
               <label className="form-label">Lead Category *</label>
               <select 
@@ -289,7 +276,6 @@ export default function LeadModal({ leadId, isOpen, onClose, onSaveComplete, onS
               </select>
             </div>
 
-            {/* Temperature */}
             <div className="form-group">
               <label className="form-label">Temperature *</label>
               <select 
@@ -303,7 +289,6 @@ export default function LeadModal({ leadId, isOpen, onClose, onSaveComplete, onS
               </select>
             </div>
 
-            {/* Assigned Closer */}
             <div className="form-group">
               <label className="form-label">Assigned Closer *</label>
               {isCloserFieldLocked ? (
@@ -329,7 +314,6 @@ export default function LeadModal({ leadId, isOpen, onClose, onSaveComplete, onS
               {errors.assignedCloserId && <span className="form-error">{errors.assignedCloserId}</span>}
             </div>
 
-            {/* Branch Selector */}
             <div className="form-group">
               <label className="form-label">Branch *</label>
               <select 
@@ -344,7 +328,6 @@ export default function LeadModal({ leadId, isOpen, onClose, onSaveComplete, onS
               </select>
             </div>
 
-            {/* Pipeline Stage */}
             <div className="form-group">
               <label className="form-label">Pipeline Stage *</label>
               <select 
@@ -362,13 +345,11 @@ export default function LeadModal({ leadId, isOpen, onClose, onSaveComplete, onS
               </select>
             </div>
 
-            {/* Client Management Fields (Conditional) */}
             {(formData.stage === 'Client/Investor' || formData.stage === 'Repeat Purchase') && (
               <div className="form-group full-width client-mgmt-section" style={{ borderTop: '1px solid var(--border-color)', paddingTop: '16px', marginTop: '8px' }}>
                 <h4 style={{ fontSize: '13px', fontWeight: '700', marginBottom: '12px', color: 'var(--primary-red)' }}>Client Relationship Settings</h4>
                 <div style={{ display: 'grid', gap: '16px' }} className="modal-subgrid-2col">
                   
-                  {/* Relationship Status */}
                   <div className="form-group">
                     <label className="form-label" style={{ fontSize: '11px' }}>Relationship Status</label>
                     <select 
@@ -384,7 +365,6 @@ export default function LeadModal({ leadId, isOpen, onClose, onSaveComplete, onS
                     </select>
                   </div>
 
-                  {/* Referral Status */}
                   <div className="form-group">
                     <label className="form-label" style={{ fontSize: '11px' }}>Referral Status</label>
                     <select 
@@ -399,7 +379,6 @@ export default function LeadModal({ leadId, isOpen, onClose, onSaveComplete, onS
                     </select>
                   </div>
 
-                  {/* Satisfaction Score */}
                   <div className="form-group">
                     <label className="form-label" style={{ fontSize: '11px' }}>Satisfaction Score (1-5)</label>
                     <select 
@@ -416,7 +395,6 @@ export default function LeadModal({ leadId, isOpen, onClose, onSaveComplete, onS
                     </select>
                   </div>
 
-                  {/* Last Contact Date */}
                   <div className="form-group">
                     <label className="form-label" style={{ fontSize: '11px' }}>Last Contact Date</label>
                     <input 
@@ -427,7 +405,6 @@ export default function LeadModal({ leadId, isOpen, onClose, onSaveComplete, onS
                     />
                   </div>
 
-                  {/* Referred By */}
                   <div className="form-group full-width">
                     <label className="form-label" style={{ fontSize: '11px' }}>Referred By (Client)</label>
                     <select 
@@ -446,7 +423,6 @@ export default function LeadModal({ leadId, isOpen, onClose, onSaveComplete, onS
               </div>
             )}
 
-            {/* Budget */}
             <div className="form-group">
               <label className="form-label">Budget Range</label>
               <input 
@@ -458,7 +434,6 @@ export default function LeadModal({ leadId, isOpen, onClose, onSaveComplete, onS
               />
             </div>
 
-            {/* Property Interest */}
             <div className="form-group">
               <label className="form-label">Property Interest</label>
               <select 
@@ -491,7 +466,6 @@ export default function LeadModal({ leadId, isOpen, onClose, onSaveComplete, onS
               )}
             </div>
 
-            {/* Next Action */}
             <div className="form-group full-width">
               <label className="form-label">Next Action *</label>
               <textarea 
@@ -504,7 +478,6 @@ export default function LeadModal({ leadId, isOpen, onClose, onSaveComplete, onS
               {errors.nextAction && <span className="form-error">{errors.nextAction}</span>}
             </div>
 
-            {/* Follow Up Date & Time */}
             <div className="form-group full-width">
               <label className="form-label">Follow-Up Date & Time *</label>
               <input 

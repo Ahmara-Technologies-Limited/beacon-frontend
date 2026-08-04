@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { Save, Check, ShieldAlert, Wifi, WifiOff } from 'lucide-react';
-import { db } from '../data/mockData';
 import { dataService } from '../data/dataService';
 import { useDemoMode } from '../lib/demoMode';
 
@@ -30,7 +29,7 @@ export default function Settings({ currentUser, onUserChange }) {
 
   const [errors, setErrors] = useState({});
   const [successToast, setSuccessToast] = useState(false);
-  const [demoMode, setDemoMode] = useDemoMode();
+  const [demoMode] = useDemoMode();
 
   useEffect(() => {
     // Load settings from the data layer (demo db.* or live backend)
@@ -113,14 +112,12 @@ export default function Settings({ currentUser, onUserChange }) {
       )}
 
       <div className="settings-layout-grid">
-        {/* Left Side: System Thresholds (Super Admin only) */}
         <div className="settings-column">
           <div className="card">
             <h3 className="section-title">Data Source</h3>
             <p className="section-desc">
-              Toggle between Demo Mode (local mock data, no backend required) and Live Mode
-              (real Beacon backend via {`NEXT_PUBLIC_API_URL`}). Reports and the discounts/commissions
-              ledgers still use local demo data in both modes pending further backend work.
+              Controlled by <code>NEXT_PUBLIC_DEMO_MODE</code> in the environment
+              (requires a rebuild/restart to change — there is no in-app switch, by design).
             </p>
             <div className="toggle-setting-row" style={{ borderBottom: 'none', paddingBottom: 0 }}>
               <div className="toggle-text-col">
@@ -128,19 +125,16 @@ export default function Settings({ currentUser, onUserChange }) {
                 <span>
                   {demoMode
                     ? 'Using local mock data stored in your browser.'
-                    : 'Using the live backend API for leads, users, inspections, and activities.'}
+                    : `Using the live backend API at ${process.env.NEXT_PUBLIC_API_URL || '(NEXT_PUBLIC_API_URL not set)'}.`}
                 </span>
               </div>
-              <button
-                type="button"
+              <span
                 className="btn btn-sm"
-                onClick={() => setDemoMode(!demoMode)}
-                title={demoMode ? 'Switch to Live Mode' : 'Switch to Demo Mode'}
-                style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+                style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'default' }}
               >
                 {demoMode ? <WifiOff size={14} /> : <Wifi size={14} />}
-                <span>Switch to {demoMode ? 'Live Mode' : 'Demo Mode'}</span>
-              </button>
+                <span>{demoMode ? 'Demo Mode' : 'Live Mode'}</span>
+              </span>
             </div>
           </div>
 
@@ -156,7 +150,6 @@ export default function Settings({ currentUser, onUserChange }) {
             ) : null}
 
             <fieldset disabled={currentUser.role !== 'Super Admin'} style={{ border: 'none' }}>
-              {/* Contact Time Limit */}
               <div className="form-group">
                 <label className="form-label">Contact Time Limit (Hours)</label>
                 <input 
@@ -170,7 +163,6 @@ export default function Settings({ currentUser, onUserChange }) {
                 {errors.contactHoursLimit && <span className="form-error">{errors.contactHoursLimit}</span>}
               </div>
 
-              {/* Dormancy Threshold */}
               <div className="form-group">
                 <label className="form-label">Dormancy Threshold (Days)</label>
                 <input 
@@ -184,7 +176,6 @@ export default function Settings({ currentUser, onUserChange }) {
                 {errors.dormancyDaysThreshold && <span className="form-error">{errors.dormancyDaysThreshold}</span>}
               </div>
 
-              {/* Inspection Confirmation */}
               <div className="form-group">
                 <label className="form-label">Inspection Auto-Confirmation Window (Hours)</label>
                 <input 
@@ -211,17 +202,14 @@ export default function Settings({ currentUser, onUserChange }) {
               </div>
             )}
 
-            <form onSubmit={(e) => {
+            <form onSubmit={async (e) => {
               e.preventDefault();
               setPasswordErrors({});
               setPasswordSuccess(false);
 
               const errs = {};
-              const expectedPassword = currentUser.password || 'password';
               if (!passwordData.currentPassword) {
                 errs.currentPassword = 'Current password is required.';
-              } else if (passwordData.currentPassword !== expectedPassword) {
-                errs.currentPassword = 'Incorrect current password.';
               }
 
               if (!passwordData.newPassword) {
@@ -239,14 +227,18 @@ export default function Settings({ currentUser, onUserChange }) {
                 return;
               }
 
-              const updatedUser = {
-                ...currentUser,
-                password: passwordData.newPassword
-              };
-              db.saveUser(updatedUser);
+              try {
+                const updatedUser = await dataService.changePassword(
+                  passwordData.currentPassword,
+                  passwordData.newPassword
+                );
 
-              if (typeof onUserChange === 'function') {
-                onUserChange(updatedUser);
+                if (typeof onUserChange === 'function' && updatedUser) {
+                  onUserChange(updatedUser);
+                }
+              } catch (err) {
+                setPasswordErrors({ currentPassword: err.status === 400 ? (err.body?.current_password?.[0] || err.message) : 'Incorrect current password.' });
+                return;
               }
 
               setPasswordSuccess(true);
@@ -300,7 +292,6 @@ export default function Settings({ currentUser, onUserChange }) {
           </div>
         </div>
 
-        {/* Right Side: Toggles list and reminders */}
         <div className="settings-column">
           <div className="card" style={{ marginBottom: '24px' }}>
             <h3 className="section-title">Notification Alerts Preferences</h3>
@@ -456,7 +447,6 @@ export default function Settings({ currentUser, onUserChange }) {
           color: var(--text-secondary);
         }
 
-        /* Basic switch styling */
         .ios-switch {
           appearance: none;
           width: 44px;

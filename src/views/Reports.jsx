@@ -4,20 +4,18 @@ import { Download, Mail, Calendar, BarChart3, PieChart, X } from 'lucide-react';
 import { db } from '../data/mockData';
 
 export default function Reports({ currentUser }) {
-  const [reportType, setReportType] = useState('Lead Summary'); // Lead Summary, Pipeline Movement, Follow-Up Performance, Inspection, Conversion, Team Performance
+  const [reportType, setReportType] = useState('Lead Summary');
   const [leads, setLeads] = useState([]);
   const [inspections, setInspections] = useState([]);
   const [activities, setActivities] = useState([]);
   const [users, setUsers] = useState([]);
 
-  // Report Filters
   const [filterPeriod, setFilterPeriod] = useState('This Month');
   const [filterCloser, setFilterCloser] = useState('All');
-  
-  // Scheduling State
+
   const [showScheduleModal, setShowScheduleModal] = useState(false);
   const [scheduleEmail, setScheduleEmail] = useState('');
-  const [scheduleFrequency, setScheduleFrequency] = useState('Weekly'); // Weekly, Monthly
+  const [scheduleFrequency, setScheduleFrequency] = useState('Weekly');
 
   const loadReportData = () => {
     setLeads(db.getLeads());
@@ -32,7 +30,6 @@ export default function Reports({ currentUser }) {
     return () => clearInterval(interval);
   }, []);
 
-  // Filter application helper
   const getFilteredLeads = () => {
     let result = leads;
     if (filterCloser !== 'All') {
@@ -57,11 +54,6 @@ export default function Reports({ currentUser }) {
     db.logAudit(`Scheduled auto-delivery of ${reportType} to ${scheduleEmail} (${scheduleFrequency}).`);
   };
 
-  // ----------------------------------------------------
-  // REPORT RENDERS
-  // ----------------------------------------------------
-  
-  // 1. Lead Summary Report
   const renderLeadSummaryReport = () => {
     const total = filteredLeads.length;
     const incomingCount = filteredLeads.filter(l => l.category === 'Incoming').length;
@@ -108,9 +100,8 @@ export default function Reports({ currentUser }) {
     );
   };
 
-  // 2. Pipeline Movement Report
   const renderPipelineMovementReport = () => {
-    // Simulated pipeline stage movement counts
+    // Entered/AvgDays are randomized here since there's no real movement-history tracking yet
     const stages = ["New Lead", "Conversation Started", "Inspection Booked", "Negotiation", "Reservation", "Repeat Purchase"];
     const chartData = stages.map(s => ({
       name: s.substring(0, 14),
@@ -166,7 +157,6 @@ export default function Reports({ currentUser }) {
     );
   };
 
-  // 3. Follow-Up Performance Report
   const renderFollowUpReport = () => {
     const totalFollowUps = filteredLeads.filter(l => l.followUpDate).length;
     const missed = filteredLeads.filter(l => l.followUpDate && new Date(l.followUpDate) < new Date()).length;
@@ -208,7 +198,6 @@ export default function Reports({ currentUser }) {
     );
   };
 
-  // 4. Inspection Report
   const renderInspectionReport = () => {
     const scheduled = inspections.filter(i => i.status === 'Scheduled').length;
     const confirmed = inspections.filter(i => i.status === 'Confirmed').length;
@@ -252,7 +241,6 @@ export default function Reports({ currentUser }) {
     );
   };
 
-  // 5. Conversion Report
   const renderConversionReport = () => {
     const data = users.filter(u => u.role === 'Sales Closer').map(closer => {
       const assigned = leads.filter(l => l.assignedCloserId === closer.id);
@@ -310,7 +298,6 @@ export default function Reports({ currentUser }) {
     );
   };
 
-  // 6. Team Performance Report
   const renderTeamPerformanceReport = () => {
     const data = users.filter(u => u.role === 'Sales Closer').map(closer => {
       const assigned = leads.filter(l => l.assignedCloserId === closer.id);
@@ -387,7 +374,6 @@ export default function Reports({ currentUser }) {
         </div>
       </div>
 
-      {/* Select Report Panel */}
       <div className="reports-selection-panel card">
         <div className="form-group" style={{ margin: 0 }}>
           <label className="form-label" style={{ fontWeight: '700' }}>Select Report Type:</label>
@@ -426,12 +412,10 @@ export default function Reports({ currentUser }) {
         </div>
       </div>
 
-      {/* Dynamic Report Content */}
       <div className="report-main-viewport card" style={{ marginTop: '24px' }}>
         {getActiveReportContent()}
       </div>
 
-      {/* REPORT SCHEDULER EMAIL MODAL */}
       {showScheduleModal && (
         <div className="modal-backdrop">
           <div className="modal-content" style={{ maxWidth: '400px' }}>

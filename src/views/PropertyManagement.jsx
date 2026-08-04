@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Search, Building2, MapPin, Tag, SlidersHorizontal, Layers, Trash2, Edit3, X, ChevronRight, User, ArrowLeft } from 'lucide-react';
-import { db } from '../data/mockData';
 import { dataService } from '../data/dataService';
 import { formatBudget } from '../lib/format';
 
@@ -11,8 +10,7 @@ export default function PropertyManagement({ currentUser }) {
   const [filterType, setFilterType] = useState('All');
   const [filterStatus, setFilterStatus] = useState('All');
   const [selectedProperty, setSelectedProperty] = useState(null);
-  
-  // Modal State
+
   const [modalOpen, setModalOpen] = useState(false);
   const [modalData, setModalData] = useState({
     id: '',
@@ -29,7 +27,7 @@ export default function PropertyManagement({ currentUser }) {
   const [formErrors, setFormErrors] = useState({});
 
   const loadData = async () => {
-    const [props, leadsList] = await Promise.all([dataService.getProperties(), db.getLeads()]);
+    const [props, leadsList] = await Promise.all([dataService.getProperties(), dataService.getLeads()]);
     setProperties(props);
     setLeads(leadsList);
   };
@@ -124,7 +122,6 @@ export default function PropertyManagement({ currentUser }) {
     setModalOpen(false);
   };
 
-  // Filter properties
   const getFilteredProperties = () => {
     let result = properties;
 
@@ -150,10 +147,10 @@ export default function PropertyManagement({ currentUser }) {
   const filteredProps = getFilteredProperties();
   const propertyTypes = Array.from(new Set(properties.map(p => p.type)));
 
-  // Get allocations (leads interested or allocated to this property)
   const getAllocations = (prop) => {
     if (!prop) return [];
-    // Match by lead interest (starts with property name or contains it)
+    // A lead counts as "allocated" only once it's past Reservation; property match is by
+    // free-text interest string OR explicit propertyId, since older leads only have the former.
     return leads.filter(l => {
       const stageOrder = ['Reservation', 'Payment', 'Documentation', 'Allocation', 'Client/Investor'];
       const isAllocatedStage = stageOrder.includes(l.stage);
@@ -199,7 +196,6 @@ export default function PropertyManagement({ currentUser }) {
       </div>
 
       {selectedProperty ? (
-        /* Detailed Property Page View */
         <div className="property-detail-page animate-slide">
           <button className="btn btn-sm back-nav-btn" onClick={() => setSelectedProperty(null)} style={{ marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '6px' }}>
             <ArrowLeft size={16} />
@@ -305,7 +301,6 @@ export default function PropertyManagement({ currentUser }) {
           </div>
         </div>
       ) : (
-        /* Properties Table View */
         <>
           <div className="page-header-row">
             <div>
@@ -417,7 +412,6 @@ export default function PropertyManagement({ currentUser }) {
         </>
       )}
 
-      {/* Add / Edit Modal */}
       {modalOpen && (
         <div className="modal-backdrop">
           <div className="modal-content" style={{ maxWidth: '500px' }}>

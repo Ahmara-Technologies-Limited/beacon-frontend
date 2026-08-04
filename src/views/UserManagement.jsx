@@ -2,21 +2,19 @@ import React, { useState, useEffect } from 'react';
 import { Plus, Search, Edit2, ToggleLeft, ToggleRight, Key, X, AlertTriangle, Filter, ShieldCheck, SlidersHorizontal } from 'lucide-react';
 import { db } from '../data/mockData';
 import { dataService } from '../data/dataService';
+import { isDemoMode } from '../lib/demoMode';
 
 export default function UserManagement({ currentUser }) {
   const [users, setUsers] = useState([]);
   const [leads, setLeads] = useState([]);
 
-  // Filter States
   const [searchQuery, setSearchQuery] = useState('');
   const [filterRole, setFilterRole] = useState('All');
   const [filterStatus, setFilterStatus] = useState('All');
-  // Filter modal pending state
   const [pendingFilterRole, setPendingFilterRole] = useState('All');
   const [pendingFilterStatus, setPendingFilterStatus] = useState('All');
   const [showFilterModal, setShowFilterModal] = useState(false);
 
-  // Form Modals State
   const [showUserModal, setShowUserModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null); // null for create mode
   const [formData, setFormData] = useState({
@@ -47,7 +45,6 @@ export default function UserManagement({ currentUser }) {
     return () => clearInterval(interval);
   }, []);
 
-  // Filter computation
   const getFilteredUsers = () => {
     let result = users;
 
@@ -159,9 +156,18 @@ export default function UserManagement({ currentUser }) {
     loadUserData();
   };
 
-  const handleTriggerResetPassword = (user) => {
-    alert(`A password reset link has been successfully dispatched to ${user.email}. Link will expire in 60 minutes.`);
-    db.logAudit(`Triggered password reset link for user ${user.name} (${user.email}).`);
+  const handleTriggerResetPassword = async (user) => {
+    if (isDemoMode()) {
+      alert(`A password reset link has been successfully dispatched to ${user.email}. Link will expire in 60 minutes.`);
+      db.logAudit(`Triggered password reset link for user ${user.name} (${user.email}).`);
+      return;
+    }
+    try {
+      await dataService.requestPasswordReset(user.email);
+      alert(`A password reset link has been sent to ${user.email} (if the account exists).`);
+    } catch (err) {
+      alert(`Failed to send password reset link: ${err.message || 'Unknown error'}`);
+    }
   };
 
 
@@ -186,7 +192,6 @@ export default function UserManagement({ currentUser }) {
       </div>
 
 
-      {/* Filters & Search Toolbar */}
       <div className="user-toolbar card">
         <div className="toolbar-search">
           <Search size={18} className="search-icon" />
@@ -210,7 +215,6 @@ export default function UserManagement({ currentUser }) {
         </div>
       </div>
 
-      {/* Active Filter Badges */}
       {(filterRole !== 'All' || filterStatus !== 'All') && (
         <div className="active-filters-row">
           <span className="active-filters-label">Active Filters:</span>
@@ -230,7 +234,6 @@ export default function UserManagement({ currentUser }) {
         </div>
       )}
 
-      {/* Users directory Table */}
       <div className="table-container">
         <table className="custom-table">
           <thead>
@@ -291,7 +294,6 @@ export default function UserManagement({ currentUser }) {
         </table>
       </div>
 
-      {/* CREATE & EDIT USER MODAL */}
       {showUserModal && (
         <div className="modal-backdrop">
           <div className="modal-content">
@@ -305,7 +307,6 @@ export default function UserManagement({ currentUser }) {
             </div>
 
             <div className="modal-body">
-              {/* Full Name */}
               <div className="form-group">
                 <label className="form-label">Full Name *</label>
                 <input 
@@ -318,7 +319,6 @@ export default function UserManagement({ currentUser }) {
                 {errors.name && <span className="form-error">{errors.name}</span>}
               </div>
 
-              {/* Email Address */}
               <div className="form-group">
                 <label className="form-label">Email Address *</label>
                 <input 
@@ -333,7 +333,6 @@ export default function UserManagement({ currentUser }) {
                 {errors.email && <span className="form-error">{errors.email}</span>}
               </div>
 
-              {/* Phone */}
               <div className="form-group">
                 <label className="form-label">Phone Number</label>
                 <input 
@@ -345,7 +344,6 @@ export default function UserManagement({ currentUser }) {
                 />
               </div>
 
-              {/* Password (create only) */}
               {!selectedUser && (
                 <div className="form-group">
                   <label className="form-label">Password *</label>
@@ -360,7 +358,6 @@ export default function UserManagement({ currentUser }) {
                 </div>
               )}
 
-              {/* Role */}
               <div className="form-group">
                 <label className="form-label">CRM System Role *</label>
                 <select 
@@ -373,7 +370,6 @@ export default function UserManagement({ currentUser }) {
                 {errors.role && <span className="form-error">{errors.role}</span>}
               </div>
 
-              {/* Status */}
               <div className="form-group">
                 <label className="form-label">Active Account Status</label>
                 <select 
@@ -397,7 +393,6 @@ export default function UserManagement({ currentUser }) {
         </div>
       )}
 
-      {/* FILTER MODAL */}
       {showFilterModal && (
         <div className="modal-backdrop">
           <div className="modal-content" style={{ maxWidth: '420px' }}>

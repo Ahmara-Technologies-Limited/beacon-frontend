@@ -23,13 +23,11 @@ export default function Dashboard({ currentUser, setCurrentTab, setViewingLeadId
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
 
-  // Role Dashboard Sub-tab States
   const [rmTab, setRmTab] = useState('clients');
   const [opsTab, setOpsTab] = useState('leads');
   const [bmTab, setBmTab] = useState('team');
   const [gmTab, setGmTab] = useState('performance');
 
-  // Quick Referral creation states (Relationship Manager)
   const [refClientSource, setRefClientSource] = useState('');
   const [refName, setRefName] = useState('');
   const [refPhone, setRefPhone] = useState('');
@@ -64,14 +62,13 @@ export default function Dashboard({ currentUser, setCurrentTab, setViewingLeadId
   };
 
   useEffect(() => {
-    // Load data from the data service
     loadDashboardData();
     setSettings(db.getSettings());
 
     const interval = setInterval(loadDashboardData, 1500);
 
     return () => clearInterval(interval);
-  }, [])  // Filter Helper for dates
+  }, [])
   const filterByDate = (items, dateKey) => {
     if (dateFilter === 'All Time') return items;
     if (dateFilter === 'Custom') {
@@ -118,18 +115,14 @@ export default function Dashboard({ currentUser, setCurrentTab, setViewingLeadId
     });
   };
 
-  // ----------------------------------------------------
   // ROLE 1: Super Admin / Management Dashboard
-  // ----------------------------------------------------
   const renderManagementDashboard = () => {
-    // 1. Filter Leads
     let filteredLeads = leads;
     if (staffFilter !== 'All') {
       filteredLeads = filteredLeads.filter(l => l.assignedCloserId === staffFilter);
     }
     filteredLeads = filterByDate(filteredLeads, 'dateCreated');
 
-    // 2. Computed Stats
     const totalLeads = filteredLeads.length;
     
     const startOfToday = new Date();
@@ -144,7 +137,6 @@ export default function Dashboard({ currentUser, setCurrentTab, setViewingLeadId
       return leadActivities.length === 0;
     }).length;
 
-    // Converted leads & Revenue
     const salesClosedLeads = filteredLeads.filter(l => l.stage === 'Repeat Purchase' || l.stage === 'Client/Investor');
     const salesClosedCount = salesClosedLeads.length;
     
@@ -153,7 +145,6 @@ export default function Dashboard({ currentUser, setCurrentTab, setViewingLeadId
       return acc + num;
     }, 0);
 
-    // Follow ups
     const followUpsDueToday = filteredLeads.filter(l => {
       if (!l.followUpDate) return false;
       const fDate = new Date(l.followUpDate);
@@ -168,7 +159,6 @@ export default function Dashboard({ currentUser, setCurrentTab, setViewingLeadId
       return new Date(l.followUpDate) < new Date() && l.stage !== 'Repeat Purchase';
     }).length;
 
-    // Inspections
     const inspectionsThisWeek = inspections.filter(i => {
       const iDate = new Date(i.date);
       const now = new Date();
@@ -185,7 +175,6 @@ export default function Dashboard({ currentUser, setCurrentTab, setViewingLeadId
       return iDate.getMonth() === now.getMonth() && iDate.getFullYear() === now.getFullYear() && i.status === 'Completed';
     }).length;
 
-    // Charts Data: Pipeline Stage distribution (14 stages)
     const STAGES_ORDER = [
       "New Lead", "Contact Attempted", "Conversation Started", "Qualified Prospect", 
       "Inspection Booked", "Inspection Completed", "Negotiation", "Reservation", 
@@ -196,7 +185,6 @@ export default function Dashboard({ currentUser, setCurrentTab, setViewingLeadId
       return { name: stage.substring(0, 12), count };
     });
 
-    // Charts Data: Lead source breakdown
     const sourcesMap = {};
     filteredLeads.forEach(l => {
       sourcesMap[l.source] = (sourcesMap[l.source] || 0) + 1;
@@ -210,14 +198,12 @@ export default function Dashboard({ currentUser, setCurrentTab, setViewingLeadId
       value: sourcesMap[key]
     }));
 
-    // Top 5 Closers
     const closersPerformance = users.filter(u => u.role === 'Sales Closer').map(closer => {
       const assigned = leads.filter(l => l.assignedCloserId === closer.id);
       const converted = assigned.filter(l => l.stage === 'Repeat Purchase' || l.stage === 'Client/Investor').length;
       return { name: closer.name, converted, activeLeads: assigned.filter(l => l.stage !== 'Repeat Purchase').length };
     }).sort((a, b) => b.converted - a.converted).slice(0, 5);
 
-    // Live Alerts
     const alertsList = [];
     leads.forEach(l => {
       const hasActivities = activities.some(a => a.leadId === l.id && a.type !== 'Internal Note');
@@ -253,10 +239,8 @@ export default function Dashboard({ currentUser, setCurrentTab, setViewingLeadId
 
     return (
       <div className="management-dashboard">
-        {/* Welcome Banner */}
         <WelcomeBanner subtitle="Here's a live overview of your entire sales pipeline and team performance." />
 
-        {/* Filters bar */}
         <div className="dashboard-filters-bar">
           <div className="filter-group">
             <label className="filter-label">Period:</label>
@@ -303,7 +287,6 @@ export default function Dashboard({ currentUser, setCurrentTab, setViewingLeadId
           </div>
         </div>
 
-        {/* Stats cards grid */}
         <div className="stat-grid">
           <div className="stat-card" onClick={() => setCurrentTab('leads')}>
             <span className="stat-title">Total Leads</span>
@@ -358,7 +341,6 @@ export default function Dashboard({ currentUser, setCurrentTab, setViewingLeadId
           </div>
         </div>
 
-        {/* Charts & Tables Section */}
         <div className="dashboard-layout-row">
           <div className="card dashboard-main-chart">
             <h3 className="section-title">Pipeline Stage Distribution</h3>
@@ -409,7 +391,6 @@ export default function Dashboard({ currentUser, setCurrentTab, setViewingLeadId
         </div>
 
         <div className="dashboard-layout-row" style={{ marginTop: '24px' }}>
-          {/* Top Closers Table */}
           <div className="card dashboard-table-half">
             <h3 className="section-title">Top 5 Closers (This Month)</h3>
             <table className="closers-table">
@@ -435,7 +416,6 @@ export default function Dashboard({ currentUser, setCurrentTab, setViewingLeadId
             </table>
           </div>
 
-          {/* Live Alerts Panel */}
           <div className="card dashboard-alerts-half">
             <h3 className="section-title">Live Alerts Feed ({alertsList.length})</h3>
             <div className="alerts-feed-list">
@@ -463,7 +443,6 @@ export default function Dashboard({ currentUser, setCurrentTab, setViewingLeadId
           </div>
         </div>
 
-        {/* Recent Activities list */}
         <div className="card" style={{ marginTop: '24px' }}>
           <h3 className="section-title">Recent Activity Feed</h3>
           <div className="activity-feed-list">
@@ -551,7 +530,6 @@ export default function Dashboard({ currentUser, setCurrentTab, setViewingLeadId
       <div className="closer-dashboard">
         <WelcomeBanner subtitle="Track your portfolio, manage today's follow-ups, and close more deals." />
 
-        {/* Quick action buttons */}
         <div className="dashboard-header-actions" style={{ marginBottom: '24px', display: 'flex', gap: '10px' }}>
           <button className="btn btn-primary" onClick={onAddLeadClick}>
             <Plus size={16} />
@@ -567,7 +545,6 @@ export default function Dashboard({ currentUser, setCurrentTab, setViewingLeadId
           </button>
         </div>
 
-        {/* Stats grid */}
         <div className="stat-grid">
           <div className="stat-card" onClick={() => setCurrentTab('leads')}>
             <div className="stat-card-icon blue"><Users size={20} /></div>
@@ -613,7 +590,6 @@ export default function Dashboard({ currentUser, setCurrentTab, setViewingLeadId
         </div>
 
         <div className="dashboard-layout-row">
-          {/* Priority Queue */}
           <div className="card" style={{ flex: 1.5 }}>
             <h3 className="section-title" style={{ color: 'var(--primary-red)' }}>Today's Priority Queue</h3>
             
@@ -662,7 +638,6 @@ export default function Dashboard({ currentUser, setCurrentTab, setViewingLeadId
             </div>
           </div>
 
-          {/* Pipeline Snapshot */}
           <div className="card" style={{ flex: 1 }}>
             <h3 className="section-title">My Pipeline Snapshot</h3>
             <div className="pipeline-snapshot-list">
@@ -687,7 +662,6 @@ export default function Dashboard({ currentUser, setCurrentTab, setViewingLeadId
           </div>
         </div>
 
-        {/* Upcoming Inspections + Recent Activity */}
         <div className="dashboard-layout-row">
           <div className="card" style={{ flex: 1.2 }}>
             <h3 className="section-title">Upcoming Site Inspections (Next 7 Days)</h3>
@@ -766,7 +740,6 @@ export default function Dashboard({ currentUser, setCurrentTab, setViewingLeadId
       new Date(i.date).getMonth() === new Date().getMonth()
     ).length;
 
-    // Week Calendar Strip
     const daysOfWeek = [];
     const curr = new Date();
     const first = curr.getDate() - curr.getDay(); // Sunday
@@ -801,7 +774,6 @@ export default function Dashboard({ currentUser, setCurrentTab, setViewingLeadId
       <div className="officer-dashboard">
         <WelcomeBanner subtitle="Manage your inspection schedule and keep site visits on track." />
 
-        {/* Inspection Officer Stats */}
         <div className="stat-grid">
           <div className="stat-card">
             <div className="stat-card-icon red"><Calendar size={20} /></div>
@@ -837,7 +809,6 @@ export default function Dashboard({ currentUser, setCurrentTab, setViewingLeadId
         </div>
 
 
-        {/* Calendar Strip */}
         <div className="card calendar-strip-card" style={{ marginBottom: '24px' }}>
           <h3 className="section-title">My Calendar (This Week)</h3>
           <div className="calendar-strip">
@@ -853,7 +824,6 @@ export default function Dashboard({ currentUser, setCurrentTab, setViewingLeadId
           </div>
         </div>
 
-        {/* Today's Inspections Queue */}
         <div className="card">
           <h3 className="section-title">Today's Scheduled Inspections</h3>
           {todayInspections.length === 0 ? (
@@ -929,25 +899,20 @@ export default function Dashboard({ currentUser, setCurrentTab, setViewingLeadId
     );
   };
 
-  // ----------------------------------------------------
   // ROLE 4: Admin / Documentation Officer Dashboard
-  // ----------------------------------------------------
   const renderDocOfficerDashboard = () => {
-    // Stat cards for: Reservation, Payment, Documentation, Allocation
     const reservationCount = leads.filter(l => l.stage === 'Reservation').length;
     const paymentCount = leads.filter(l => l.stage === 'Payment').length;
     const docCount = leads.filter(l => l.stage === 'Documentation').length;
     const allocationCount = leads.filter(l => l.stage === 'Allocation').length;
 
-    // List of leads currently at Documentation or Allocation stages
-    const pendingAdminLeads = leads.filter(l => 
-      l.stage === 'Reservation' || 
-      l.stage === 'Payment' || 
-      l.stage === 'Documentation' || 
+    const pendingAdminLeads = leads.filter(l =>
+      l.stage === 'Reservation' ||
+      l.stage === 'Payment' ||
+      l.stage === 'Documentation' ||
       l.stage === 'Allocation'
     ).sort((a,b) => new Date(b.lastActivityDate) - new Date(a.lastActivityDate));
 
-    // Recent activity feed on tracked leads (last 5)
     const trackedLeadIds = pendingAdminLeads.map(l => l.id);
     const docActivities = activities.filter(a => trackedLeadIds.includes(a.leadId)).slice(0, 5);
 
@@ -988,7 +953,6 @@ export default function Dashboard({ currentUser, setCurrentTab, setViewingLeadId
 
 
         <div className="dashboard-layout-row">
-          {/* Tracked Leads Table */}
           <div className="card" style={{ flex: 1.5 }}>
             <h3 className="section-title">Administrative Action Queue</h3>
             {pendingAdminLeads.length === 0 ? (
@@ -1026,7 +990,6 @@ export default function Dashboard({ currentUser, setCurrentTab, setViewingLeadId
             )}
           </div>
 
-          {/* Activity on tracked leads */}
           <div className="card" style={{ flex: 1 }}>
             <h3 className="section-title">Tracked Leads Activity Log</h3>
             <div className="my-activities-list">
@@ -1063,19 +1026,16 @@ export default function Dashboard({ currentUser, setCurrentTab, setViewingLeadId
     const totalClients = clients.length;
     const repeatPurchasers = clients.filter(c => c.stage === 'Repeat Purchase').length;
     
-    // Average satisfaction score of rated clients
     const ratedClients = clients.filter(c => c.satisfactionScore);
-    const avgSatisfaction = ratedClients.length > 0 
-      ? (ratedClients.reduce((sum, c) => sum + Number(c.satisfactionScore), 0) / ratedClients.length).toFixed(1) 
+    const avgSatisfaction = ratedClients.length > 0
+      ? (ratedClients.reduce((sum, c) => sum + Number(c.satisfactionScore), 0) / ratedClients.length).toFixed(1)
       : 'N/A';
-      
-    // Retention rate: active clients vs dormant clients
+
     const activeClientsCount = clients.filter(c => c.relationshipStatus !== 'Dormant').length;
-    const retentionRate = totalClients > 0 
-      ? ((activeClientsCount / totalClients) * 100).toFixed(0) 
+    const retentionRate = totalClients > 0
+      ? ((activeClientsCount / totalClients) * 100).toFixed(0)
       : '100';
 
-    // Non-Negotiables Alert List
     const nonNegotiableViolations = clients.filter(c => 
       !c.relationshipStatus || !c.lastContactDate || !c.followUpDate || !c.referralStatus || c.referralStatus === 'None'
     );
@@ -1107,8 +1067,7 @@ export default function Dashboard({ currentUser, setCurrentTab, setViewingLeadId
       };
 
       dataService.saveLead(payload);
-      
-      // Update client referral count
+
       const referrer = clients.find(c => c.id === refClientSource);
       if (referrer) {
         dataService.saveLead({
@@ -1128,7 +1087,6 @@ export default function Dashboard({ currentUser, setCurrentTab, setViewingLeadId
       <div className="relationship-manager-dashboard">
         <WelcomeBanner subtitle="Client Engagement Hub — Convert leads, generate referrals, and drive repeat purchases." />
         
-        {/* Metric Cards */}
         <div className="dashboard-stats-grid">
           <div className="stat-card card">
             <span className="stat-label">Referrals Generated</span>
@@ -1157,7 +1115,6 @@ export default function Dashboard({ currentUser, setCurrentTab, setViewingLeadId
           </div>
         </div>
 
-        {/* Non-Negotiables Alert Card */}
         {nonNegotiableViolations.length > 0 && (
           <div className="card" style={{ borderLeft: '4px solid var(--primary-red)', background: 'rgba(212,38,42,0.02)', marginBottom: '24px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
@@ -1188,7 +1145,6 @@ export default function Dashboard({ currentUser, setCurrentTab, setViewingLeadId
           </div>
         )}
 
-        {/* Workspace Sub-tabs */}
         <div className="card" style={{ padding: '0px', overflow: 'hidden' }}>
           <div style={{ display: 'flex', borderBottom: '1px solid var(--border-color)', background: 'var(--table-header-bg)' }}>
             <button className={`tab-btn ${rmTab === 'clients' ? 'active' : ''}`} onClick={() => setRmTab('clients')} style={{ padding: '16px 24px', font: 'inherit', fontWeight: '600', border: 'none', background: 'none', borderBottom: rmTab === 'clients' ? '2px solid var(--primary-red)' : 'none', cursor: 'pointer', color: rmTab === 'clients' ? 'var(--primary-red)' : 'var(--text-secondary)' }}>
@@ -1249,7 +1205,6 @@ export default function Dashboard({ currentUser, setCurrentTab, setViewingLeadId
                           <td style={{ padding: '12px' }}>
                             <div style={{ display: 'flex', gap: '8px' }}>
                               <button className="btn btn-xs btn-primary" onClick={() => {
-                                // Quick log call action
                                 const todayStr = new Date().toISOString().split('T')[0];
                                 const updated = {
                                   ...c,
@@ -1452,7 +1407,6 @@ export default function Dashboard({ currentUser, setCurrentTab, setViewingLeadId
       <div className="operations-dashboard">
         <WelcomeBanner subtitle="Operations Command — Keep pipelines running smoothly, audits secure, and allocations verified." />
 
-        {/* Metric Cards */}
         <div className="dashboard-stats-grid">
           <div className="stat-card card">
             <span className="stat-label">Unassigned Leads</span>
@@ -1481,7 +1435,6 @@ export default function Dashboard({ currentUser, setCurrentTab, setViewingLeadId
           </div>
         </div>
 
-        {/* Operations Breaches Alert (Non-Negotiables) */}
         {operationsBreaches.length > 0 && (
           <div className="card" style={{ borderLeft: '4px solid var(--primary-red)', background: 'rgba(212,38,42,0.02)', marginBottom: '24px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
@@ -1523,7 +1476,6 @@ export default function Dashboard({ currentUser, setCurrentTab, setViewingLeadId
           </div>
         )}
 
-        {/* Workflows Sub-tabs */}
         <div className="card" style={{ padding: '0px', overflow: 'hidden' }}>
           <div style={{ display: 'flex', borderBottom: '1px solid var(--border-color)', background: 'var(--table-header-bg)' }}>
             <button className={`tab-btn ${opsTab === 'leads' ? 'active' : ''}`} onClick={() => setOpsTab('leads')} style={{ padding: '16px 24px', font: 'inherit', fontWeight: '600', border: 'none', background: 'none', borderBottom: opsTab === 'leads' ? '2px solid var(--primary-red)' : 'none', cursor: 'pointer', color: opsTab === 'leads' ? 'var(--primary-red)' : 'var(--text-secondary)' }}>
@@ -1695,19 +1647,15 @@ export default function Dashboard({ currentUser, setCurrentTab, setViewingLeadId
   // ROLE 7: Branch Manager Dashboard
   const renderBranchManagerDashboard = () => {
     const myBranchName = currentUser.branch || 'Lekki Branch';
-    
-    // Find all closers belonging to this branch
+
     const branchClosers = users.filter(u => u.role === 'Sales Closer' && u.branch === myBranchName);
     const branchCloserIds = branchClosers.map(c => c.id);
-    
-    // Leads assigned to branch closers
+
     const branchLeads = leads.filter(l => branchCloserIds.includes(l.assignedCloserId));
-    
-    // Branch metrics
+
     const totalBranchLeads = branchLeads.length;
     const branchClients = branchLeads.filter(l => l.stage === 'Client/Investor' || l.stage === 'Repeat Purchase');
-    
-    // Branch Revenue
+
     const branchRevenue = branchClients.reduce((acc, l) => {
       const budgetNum = parseBudgetNumber(l.budget);
       return acc + budgetNum;
@@ -1717,7 +1665,6 @@ export default function Dashboard({ currentUser, setCurrentTab, setViewingLeadId
       ? ((branchClients.length / totalBranchLeads) * 100).toFixed(0)
       : '0';
 
-    // Site Tours Success
     const branchInspections = inspections.filter(i => branchCloserIds.includes(i.assignedCloserId));
     const completedTours = branchInspections.filter(i => i.status === 'Completed');
     const inspectionToSaleCount = branchClients.filter(l => 
@@ -1727,14 +1674,12 @@ export default function Dashboard({ currentUser, setCurrentTab, setViewingLeadId
       ? ((inspectionToSaleCount / completedTours.length) * 100).toFixed(0)
       : '0';
 
-    // Team compliance
     const totalFollowUps = branchLeads.filter(l => l.followUpDate);
     const compliantFollowUps = totalFollowUps.filter(l => new Date(l.followUpDate) >= new Date());
     const teamComplianceRate = totalFollowUps.length > 0
       ? ((compliantFollowUps.length / totalFollowUps.length) * 100).toFixed(0)
       : '100';
 
-    // Closer Compliance checklist
     const branchClosersCompliance = branchClosers.map(closer => {
       const closerLeads = branchLeads.filter(l => l.assignedCloserId === closer.id);
       const overdue = closerLeads.filter(l => l.followUpDate && new Date(l.followUpDate) < new Date() && l.stage !== 'Repeat Purchase');
@@ -1768,7 +1713,6 @@ export default function Dashboard({ currentUser, setCurrentTab, setViewingLeadId
       }
     };
 
-    // Stage Distribution Chart Data
     const stageMap = {};
     branchLeads.forEach(l => { stageMap[l.stage] = (stageMap[l.stage] || 0) + 1; });
     const chartData = Object.keys(stageMap).map(k => ({ name: k.replace(' Lead', ''), value: stageMap[k] }));
@@ -1777,7 +1721,6 @@ export default function Dashboard({ currentUser, setCurrentTab, setViewingLeadId
       <div className="branch-manager-dashboard">
         <WelcomeBanner subtitle={`Branch Performance — Managing closers, monitoring tours, and tracking revenue for ${myBranchName}.`} />
 
-        {/* Metric Cards */}
         <div className="dashboard-stats-grid">
           <div className="stat-card card">
             <span className="stat-label">Branch Revenue</span>
@@ -1806,7 +1749,6 @@ export default function Dashboard({ currentUser, setCurrentTab, setViewingLeadId
           </div>
         </div>
 
-        {/* Closer Compliance Tracker (Non-Negotiables) */}
         <div className="card" style={{ marginBottom: '24px' }}>
           <h3 className="section-title">Closer Compliance Tracker (Non-Negotiable)</h3>
           <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '12px' }}>
@@ -1848,7 +1790,6 @@ export default function Dashboard({ currentUser, setCurrentTab, setViewingLeadId
           </div>
         </div>
 
-        {/* Workflows Sub-tabs */}
         <div className="card" style={{ padding: '0px', overflow: 'hidden' }}>
           <div style={{ display: 'flex', borderBottom: '1px solid var(--border-color)', background: 'var(--table-header-bg)' }}>
             <button className={`tab-btn ${bmTab === 'team' ? 'active' : ''}`} onClick={() => setBmTab('team')} style={{ padding: '16px 24px', font: 'inherit', fontWeight: '600', border: 'none', background: 'none', borderBottom: bmTab === 'team' ? '2px solid var(--primary-red)' : 'none', cursor: 'pointer', color: bmTab === 'team' ? 'var(--primary-red)' : 'var(--text-secondary)' }}>
@@ -1964,7 +1905,6 @@ export default function Dashboard({ currentUser, setCurrentTab, setViewingLeadId
     const totalLeads = leads.length;
     const hotLeads = leads.filter(l => l.temperature === 'Hot').length;
     
-    // Inspections this week
     const startOfWeek = new Date();
     startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay());
     startOfWeek.setHours(0, 0, 0, 0);
@@ -1974,7 +1914,6 @@ export default function Dashboard({ currentUser, setCurrentTab, setViewingLeadId
       return iDate >= startOfWeek && iDate <= endOfWeek;
     }).length;
 
-    // Expected revenue this month
     const forecastLeads = leads.filter(l => ['Negotiation', 'Reservation', 'Payment'].includes(l.stage));
     const expectedRevenue = forecastLeads.reduce((acc, l) => {
       const budgetNum = parseBudgetNumber(l.budget);
@@ -1983,14 +1922,12 @@ export default function Dashboard({ currentUser, setCurrentTab, setViewingLeadId
       return acc + (budgetNum * prob);
     }, 0);
 
-    // At Risk Opportunities
     const atRiskOpportunities = leads.filter(l => {
       const budgetNum = parseBudgetNumber(l.budget);
       const isDormant = (new Date() - new Date(l.lastActivityDate)) > (7 * 24 * 60 * 60 * 1000);
       return budgetNum >= 100000000 && (isDormant || l.relationshipStatus === 'At Risk');
     });
 
-    // Top / Bottom performers
     const closersPerformance = users.filter(u => u.role === 'Sales Closer').map(closer => {
       const cLeads = leads.filter(l => l.assignedCloserId === closer.id);
       const closed = cLeads.filter(l => l.stage === 'Repeat Purchase' || l.stage === 'Client/Investor');
@@ -2007,7 +1944,6 @@ export default function Dashboard({ currentUser, setCurrentTab, setViewingLeadId
     const topPerformer = closersPerformance[0];
     const bottomPerformer = closersPerformance[closersPerformance.length - 1];
 
-    // Branch Performance Data
     const branches = ['Lekki Branch', 'Maitama Branch', 'Airport Residential Branch'];
     const branchStats = branches.map(brName => {
       const brClosers = users.filter(u => u.role === 'Sales Closer' && u.branch === brName).map(c => c.id);
@@ -2022,7 +1958,6 @@ export default function Dashboard({ currentUser, setCurrentTab, setViewingLeadId
       };
     });
 
-    // Marketing ROI Distribution
     const sourceMap = {};
     leads.forEach(l => {
       sourceMap[l.source] = (sourceMap[l.source] || 0) + 1;
@@ -2041,10 +1976,8 @@ export default function Dashboard({ currentUser, setCurrentTab, setViewingLeadId
 
     return (
       <div className="gm-dashboard">
-        {/* welcome */}
         <WelcomeBanner subtitle="General Manager Command Center — Corporate pipelines, forecasts, branch performance, and executive metrics." />
 
-        {/* GM Command Center: 6 Mandatory Numbers */}
         <div className="dashboard-stats-grid">
           <div className="stat-card card" style={{ borderTop: '4px solid var(--primary-red)' }}>
             <span className="stat-label">Total Leads</span>
@@ -2080,7 +2013,6 @@ export default function Dashboard({ currentUser, setCurrentTab, setViewingLeadId
           </div>
         </div>
 
-        {/* At-Risk Opportunities Highlight */}
         {atRiskOpportunities.length > 0 && (
           <div className="card" style={{ borderLeft: '4px solid var(--primary-red)', background: 'rgba(212,38,42,0.02)', marginBottom: '24px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
@@ -2104,7 +2036,6 @@ export default function Dashboard({ currentUser, setCurrentTab, setViewingLeadId
           </div>
         )}
 
-        {/* Workflows Sub-tabs */}
         <div className="card" style={{ padding: '0px', overflow: 'hidden' }}>
           <div style={{ display: 'flex', borderBottom: '1px solid var(--border-color)', background: 'var(--table-header-bg)' }}>
             <button className={`tab-btn ${gmTab === 'forecast' ? 'active' : ''}`} onClick={() => setGmTab('forecast')} style={{ padding: '16px 24px', font: 'inherit', fontWeight: '600', border: 'none', background: 'none', borderBottom: gmTab === 'forecast' ? '2px solid var(--primary-red)' : 'none', cursor: 'pointer', color: gmTab === 'forecast' ? 'var(--primary-red)' : 'var(--text-secondary)' }}>
@@ -2237,7 +2168,6 @@ export default function Dashboard({ currentUser, setCurrentTab, setViewingLeadId
     );
   };
 
-  // Switch Render view based on Role
   switch (currentUser?.role) {
     case 'Super Admin':
       return renderManagementDashboard();

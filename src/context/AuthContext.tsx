@@ -37,10 +37,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setLoading(false);
   }, []);
 
-  // Persists as the active session. In demo mode this is the existing
-  // "role switcher" behavior (pass a mock user object). In live mode, pass
-  // (email, password) and it POSTs to /auth/login/, stores JWT tokens, and
-  // stores the returned user.
+  // In demo mode this is the existing "role switcher" behavior (pass a mock
+  // user object). In live mode, pass (email, password) and it POSTs to
+  // /auth/login/, stores JWT tokens, and stores the returned user.
   const login = async (userOrEmail: CurrentUser | string, password?: string) => {
     if (isDemoMode()) {
       const user = userOrEmail as CurrentUser;

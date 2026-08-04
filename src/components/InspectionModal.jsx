@@ -46,7 +46,6 @@ export default function InspectionModal({ leadId, inspectionId, isOpen, onClose,
         setOfficers(activeOfficers);
 
         if (inspectionId) {
-          // Edit inspection mode
           dataService.getInspections().then(list => {
             const inspection = list.find(i => i.id === inspectionId);
             if (inspection) {
@@ -68,7 +67,6 @@ export default function InspectionModal({ leadId, inspectionId, isOpen, onClose,
             }
           });
         } else {
-          // Create mode
           let defaultCloserId = '';
           if (leadId) {
             const lead = activeLeads.find(l => l.id === leadId);
@@ -101,7 +99,6 @@ export default function InspectionModal({ leadId, inspectionId, isOpen, onClose,
 
   if (!isOpen) return null;
 
-  // Handle lead selection to auto-populate closer
   const handleLeadChange = (selectedLeadId) => {
     const selectedLead = leads.find(l => l.id === selectedLeadId);
     setFormData(prev => ({
@@ -120,8 +117,7 @@ export default function InspectionModal({ leadId, inspectionId, isOpen, onClose,
     if (!formData.meetingPoint.trim()) err.meetingPoint = 'Meeting Point is required.';
     if (!formData.assignedCloserId) err.assignedCloserId = 'Assigned Closer is required.';
     if (!formData.inspectionOfficerId) err.inspectionOfficerId = 'Inspection Officer is required.';
-    
-    // Status specific validations
+
     if (formData.status === 'Completed' && currentUser.role === 'Inspection Officer') {
       if (!formData.report.trim()) err.report = 'Inspection Report summary is required.';
       if (!formData.nextStepRecommendation.trim()) err.nextStepRecommendation = 'Next Step Recommendation is required.';
@@ -200,7 +196,6 @@ export default function InspectionModal({ leadId, inspectionId, isOpen, onClose,
 
           {currentUser.role === 'Inspection Officer' ? (
             <div className="inspection-officer-modal-view" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              {/* Read-Only Core Summary Card */}
               <div className="card" style={{ padding: '16px', background: 'var(--color-grey-bg)', border: '1px solid var(--border-color)', borderRadius: '8px', marginBottom: '0' }}>
                 <h4 style={{ fontSize: '12px', fontWeight: '800', color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '12px', letterSpacing: '0.5px' }}>
                   Inspection Assignment Details
@@ -219,7 +214,6 @@ export default function InspectionModal({ leadId, inspectionId, isOpen, onClose,
                 </div>
               </div>
 
-              {/* Log Outcome Form */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                 <div className="form-group">
                   <label className="form-label">Inspection Status *</label>
@@ -237,7 +231,6 @@ export default function InspectionModal({ leadId, inspectionId, isOpen, onClose,
                   </select>
                 </div>
 
-                {/* Conditional Reschedule Fields inside Log Outcome Form */}
                 {formData.status === 'Rescheduled' && (
                   <div className="inspection-report-section animate-slide modal-subgrid-2col" style={{ display: 'grid', gap: '16px', background: 'rgba(212,38,42,0.02)', border: '1px solid var(--border-color)', padding: '16px', borderRadius: '8px' }}>
                     <div className="form-group">
@@ -272,7 +265,6 @@ export default function InspectionModal({ leadId, inspectionId, isOpen, onClose,
                   </div>
                 )}
 
-                {/* Conditional Cancelled Fields */}
                 {formData.status === 'Cancelled' && (
                   <div className="inspection-report-section animate-slide" style={{ background: 'rgba(212,38,42,0.02)', border: '1px solid var(--border-color)', padding: '16px', borderRadius: '8px' }}>
                     <div className="form-group">
@@ -288,7 +280,6 @@ export default function InspectionModal({ leadId, inspectionId, isOpen, onClose,
                   </div>
                 )}
 
-                {/* Conditional Completed Fields */}
                 {formData.status === 'Completed' && (
                   <div className="inspection-report-section animate-slide" style={{ background: 'rgba(2, 122, 72, 0.02)', border: '1px solid #D0F5E3', padding: '20px', borderRadius: '8px' }}>
                     <h4 className="report-title" style={{ fontSize: '14px', fontWeight: '700', color: 'var(--color-success-text)', borderBottom: '1px dashed #D0F5E3', paddingBottom: '8px', marginBottom: '12px' }}>
@@ -329,7 +320,6 @@ export default function InspectionModal({ leadId, inspectionId, isOpen, onClose,
                   </div>
                 )}
 
-                {/* Conditional No-Show Fields */}
                 {formData.status === 'No-Show' && (
                   <div className="inspection-report-section animate-slide" style={{ background: 'rgba(212,38,42,0.02)', border: '1px solid var(--border-color)', padding: '16px', borderRadius: '8px' }}>
                     <div className="form-group">
@@ -349,7 +339,6 @@ export default function InspectionModal({ leadId, inspectionId, isOpen, onClose,
             </div>
           ) : (
             <div className="inspection-form-grid">
-              {/* Lead Selector */}
               <div className="form-group full-width">
                 <label className="form-label">Client / Lead *</label>
                 {leadId ? (
@@ -376,7 +365,6 @@ export default function InspectionModal({ leadId, inspectionId, isOpen, onClose,
                 {errors.leadId && <span className="form-error">{errors.leadId}</span>}
               </div>
 
-              {/* Estate */}
               <div className="form-group">
                 <label className="form-label">Estate / Project *</label>
                 <select 
@@ -391,7 +379,6 @@ export default function InspectionModal({ leadId, inspectionId, isOpen, onClose,
                 </select>
               </div>
 
-              {/* Status */}
               <div className="form-group">
                 <label className="form-label">Inspection Status *</label>
                 <select 
@@ -408,7 +395,6 @@ export default function InspectionModal({ leadId, inspectionId, isOpen, onClose,
                 </select>
               </div>
 
-              {/* Date */}
               <div className="form-group">
                 <label className="form-label">Inspection Date *</label>
                 <input 
@@ -421,7 +407,6 @@ export default function InspectionModal({ leadId, inspectionId, isOpen, onClose,
                 {errors.date && <span className="form-error">{errors.date}</span>}
               </div>
 
-              {/* Time */}
               <div className="form-group">
                 <label className="form-label">Time *</label>
                 <input 
@@ -434,7 +419,6 @@ export default function InspectionModal({ leadId, inspectionId, isOpen, onClose,
                 {errors.time && <span className="form-error">{errors.time}</span>}
               </div>
 
-              {/* Meeting Point */}
               <div className="form-group full-width">
                 <label className="form-label">Meeting Point / Instructions *</label>
                 <input 
@@ -448,7 +432,6 @@ export default function InspectionModal({ leadId, inspectionId, isOpen, onClose,
                 {errors.meetingPoint && <span className="form-error">{errors.meetingPoint}</span>}
               </div>
 
-              {/* Assigned Closer */}
               <div className="form-group">
                 <label className="form-label">Assigned Sales Closer *</label>
                 <select 
@@ -465,7 +448,6 @@ export default function InspectionModal({ leadId, inspectionId, isOpen, onClose,
                 {errors.assignedCloserId && <span className="form-error">{errors.assignedCloserId}</span>}
               </div>
 
-              {/* Inspection Officer */}
               <div className="form-group">
                 <label className="form-label">Assigned Inspection Officer *</label>
                 <select 
@@ -481,7 +463,6 @@ export default function InspectionModal({ leadId, inspectionId, isOpen, onClose,
                 {errors.inspectionOfficerId && <span className="form-error">{errors.inspectionOfficerId}</span>}
               </div>
 
-              {/* Notes */}
               <div className="form-group full-width">
                 <label className="form-label">Internal Booking Notes</label>
                 <textarea 
@@ -494,7 +475,6 @@ export default function InspectionModal({ leadId, inspectionId, isOpen, onClose,
                 />
               </div>
 
-              {/* CONDITIONAL SUBMISSION FIELDS FOR INSPECTION OFFICERS */}
               {formData.status === 'Completed' && (
                 <div className="inspection-report-section full-width animate-slide">
                   <h4 className="report-title">Submit Inspection Report</h4>

@@ -38,7 +38,6 @@ export default function Header() {
     };
   }, []);
 
-  // Handle clicking outside notifications dropdown
   useEffect(() => {
     function handleClickOutside(event) {
       if (notificationRef.current && !notificationRef.current.contains(event.target)) {
@@ -57,7 +56,6 @@ export default function Header() {
     setNotifications(await dataService.getNotifications());
     setShowNotifications(false);
 
-    // Parse link and redirect
     if (n.link) {
       if (n.link.startsWith('/leads/')) {
         const leadId = n.link.split('/').pop();
@@ -123,7 +121,6 @@ export default function Header() {
       </div>
 
       <div className="header-right">
-        {/* Search */}
         <div className="search-container">
           <Search size={18} className="search-icon" />
           <input 
@@ -134,7 +131,6 @@ export default function Header() {
           />
         </div>
 
-        {/* Dark Mode Toggle */}
         <button
           className="dark-mode-toggle-btn"
           onClick={toggleDarkMode}
@@ -143,7 +139,6 @@ export default function Header() {
           {darkMode ? <Sun size={18} /> : <Moon size={18} />}
         </button>
 
-        {/* Notifications */}
         <div className="notification-bell-container" ref={notificationRef}>
           <button 
             className="notification-bell-btn" 

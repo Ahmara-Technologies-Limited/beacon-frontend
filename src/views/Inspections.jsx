@@ -27,23 +27,19 @@ export default function Inspections({
   const [rescheduleTime, setRescheduleTime] = useState('');
   const [cancellationReason, setCancellationReason] = useState('');
 
-  // View Mode: list vs calendar
-  const [viewMode, setViewMode] = useState('list'); // list or calendar
+  const [viewMode, setViewMode] = useState('list');
 
-  // Filters State
   const [filterStatus, setFilterStatus] = useState('All');
   const [filterEstate, setFilterEstate] = useState('All');
   const [filterCloser, setFilterCloser] = useState('All');
   const [filterOfficer, setFilterOfficer] = useState('All');
 
-  // Modal Filters State
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [pendingFilterStatus, setPendingFilterStatus] = useState('All');
   const [pendingFilterEstate, setPendingFilterEstate] = useState('All');
   const [pendingFilterCloser, setPendingFilterCloser] = useState('All');
   const [pendingFilterOfficer, setPendingFilterOfficer] = useState('All');
 
-  // Calendar State
   const [currentDate, setCurrentDate] = useState(new Date());
 
   const ESTATES = [
@@ -110,11 +106,9 @@ export default function Inspections({
     return false;
   };
 
-  // Filter application
   const getFilteredInspections = () => {
     let result = inspections;
 
-    // Role restrictions
     if (currentUser.role === 'Sales Closer') {
       result = result.filter(i => i.assignedCloserId === currentUser.id);
     } else if (currentUser.role === 'Inspection Officer') {
@@ -131,7 +125,6 @@ export default function Inspections({
 
   const filteredInspections = getFilteredInspections();
 
-  // CSV Export Utility
   const handleExportCSV = () => {
     if (filteredInspections.length === 0) {
       alert("No inspections to export.");
@@ -169,7 +162,6 @@ export default function Inspections({
     db.logAudit(`Exported filtered inspections log of ${filteredInspections.length} entries to CSV.`);
   };
 
-  // Status Badge Class
   const getStatusBadgeClass = (status) => {
     switch (status) {
       case 'Scheduled': return 'badge-cold'; // blue
@@ -182,7 +174,6 @@ export default function Inspections({
     }
   };
 
-  // Calendar Grid Builder Helpers
   const getDaysInMonth = (date) => {
     return new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
   };
@@ -201,7 +192,6 @@ export default function Inspections({
       days.push({ day: null, dateStr: null });
     }
 
-    // Load actual days
     for (let day = 1; day <= daysInMonth; day++) {
       const year = currentDate.getFullYear();
       const month = String(currentDate.getMonth() + 1).padStart(2, '0');
@@ -223,21 +213,18 @@ export default function Inspections({
 
     return (
       <div className="calendar-view-container animate-slide">
-        {/* Month Selector header */}
         <div className="calendar-header-toolbar">
           <button className="btn btn-sm" onClick={handlePrevMonth}>&lt; Prev Month</button>
           <span className="current-month-year-label">{monthName} {yearName}</span>
           <button className="btn btn-sm" onClick={handleNextMonth}>Next Month &gt;</button>
         </div>
 
-        {/* Days Header */}
         <div className="calendar-grid-header">
           {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => (
             <div key={d} className="calendar-grid-header-cell">{d}</div>
           ))}
         </div>
 
-        {/* Grid Cells */}
         <div className="calendar-grid-body">
           {days.map((item, idx) => {
             const dayInspections = item.dateStr 
@@ -337,9 +324,7 @@ export default function Inspections({
         </button>
 
         <div style={{ display: 'grid', gap: '24px' }} className="responsive-details-grid">
-          {/* Left Column: Client & Property Details */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-            {/* Client Info Card */}
             <div className="card" style={{ padding: '20px' }}>
               <h3 style={{ fontSize: '16px', fontWeight: 700, marginBottom: '16px', color: 'var(--text-primary)', borderBottom: '1px solid var(--border-color)', paddingBottom: '10px' }}>
                 Client Details
@@ -385,7 +370,6 @@ export default function Inspections({
               </div>
             </div>
 
-            {/* Property Info Card */}
             <div className="card" style={{ padding: '20px' }}>
               <h3 style={{ fontSize: '16px', fontWeight: 700, marginBottom: '16px', color: 'var(--text-primary)', borderBottom: '1px solid var(--border-color)', paddingBottom: '10px' }}>
                 Property Interest Details
@@ -424,9 +408,7 @@ export default function Inspections({
             </div>
           </div>
 
-          {/* Right Column: Reporting Form & Conversation History */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-            {/* Reporting Form Card */}
             <div className="card" style={{ padding: '24px' }}>
               <h3 style={{ fontSize: '18px', fontWeight: 700, marginBottom: '20px', color: 'var(--text-primary)', borderBottom: '1px solid var(--border-color)', paddingBottom: '12px' }}>
                 Log Inspection Outcome
@@ -558,7 +540,6 @@ export default function Inspections({
               </form>
             </div>
 
-            {/* Conversation History Card */}
             <div className="card" style={{ padding: '20px' }}>
               <h3 style={{ fontSize: '16px', fontWeight: 700, marginBottom: '16px', color: 'var(--text-primary)', borderBottom: '1px solid var(--border-color)', paddingBottom: '10px' }}>
                 Conversation History & Interaction Timeline
@@ -624,7 +605,6 @@ export default function Inspections({
         </div>
       </div>
 
-      {/* Mode selectors and filters bar */}
       <div className="inspections-toolbar card">
         <div className="toolbar-left-view-toggles">
           <button 
@@ -658,7 +638,6 @@ export default function Inspections({
         </button>
       </div>
 
-      {/* Active Filter Badges */}
       {(filterStatus !== 'All' || filterEstate !== 'All' || filterCloser !== 'All' || filterOfficer !== 'All') && (
         <div className="active-filters-row" style={{ marginBottom: '24px' }}>
           <span className="active-filters-label">Active Filters:</span>
@@ -695,7 +674,6 @@ export default function Inspections({
         </div>
       )}
 
-      {/* CONTENT SWITCHER */}
       {viewMode === 'calendar' ? (
         renderCalendarView()
       ) : (
@@ -785,7 +763,6 @@ export default function Inspections({
         </div>
       )}
 
-      {/* FILTER MODAL */}
       {showFilterModal && (
         <div className="modal-backdrop">
           <div className="modal-content" style={{ maxWidth: '400px' }}>
@@ -895,7 +872,6 @@ export default function Inspections({
           color: #9A3412;
         }
 
-        /* Calendar grid styling */
         .calendar-view-container {
           background-color: var(--card-bg);
           border: 1px solid var(--border-color);

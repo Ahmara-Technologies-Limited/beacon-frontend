@@ -1,11 +1,12 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { CrmUIProvider } from '@/context/CrmUIContext';
 import Sidebar from '@/components/Sidebar';
 import Header from '@/components/Header';
+import { isRouteAllowed } from '@/lib/routes';
 
 export default function ProtectedLayout({
   children,
@@ -13,15 +14,20 @@ export default function ProtectedLayout({
   children: React.ReactNode;
 }>) {
   const router = useRouter();
+  const pathname = usePathname();
   const { currentUser, logout, loading } = useAuth();
+
+  const allowed = !currentUser || isRouteAllowed(pathname, currentUser.role);
 
   useEffect(() => {
     if (!loading && !currentUser) {
       router.replace('/login');
+    } else if (currentUser && !allowed) {
+      router.replace('/dashboard');
     }
-  }, [loading, currentUser, router]);
+  }, [loading, currentUser, allowed, router]);
 
-  if (loading || !currentUser) {
+  if (loading || !currentUser || !allowed) {
     return null;
   }
 

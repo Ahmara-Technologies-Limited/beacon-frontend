@@ -17,7 +17,7 @@ import {
   Building2,
   DollarSign
 } from 'lucide-react';
-import { TAB_ROUTES } from '../lib/routes';
+import { TAB_ROUTES, TAB_ROLES } from '../lib/routes';
 import { useCrmUI } from '../context/CrmUIContext';
 
 export default function Sidebar({ currentUser, onSignOut }) {
@@ -27,7 +27,6 @@ export default function Sidebar({ currentUser, onSignOut }) {
 
   if (!currentUser) return null;
 
-  // Determine available tabs based on role
   const role = currentUser.role;
 
   const getGroupedMenuItems = () => {
@@ -35,38 +34,37 @@ export default function Sidebar({ currentUser, onSignOut }) {
       {
         title: 'Overview',
         items: [
-          { id: 'dashboard', name: 'Dashboard', icon: LayoutDashboard, roles: ['Super Admin', 'Sales Closer', 'Inspection Officer', 'Admin/Doc Officer', 'Relationship Manager', 'Head of Operations', 'Branch Manager', 'General Manager'] },
-          { id: 'settings', name: 'Settings', icon: Settings, roles: ['Super Admin', 'Sales Closer', 'Inspection Officer', 'Admin/Doc Officer', 'Relationship Manager', 'Head of Operations', 'Branch Manager', 'General Manager'] }
+          { id: 'dashboard', name: 'Dashboard', icon: LayoutDashboard },
+          { id: 'settings', name: 'Settings', icon: Settings }
         ]
       },
       {
         title: 'Sales & Pipelines',
         items: [
-          { 
-            id: 'leads', 
-            name: role === 'Sales Closer' ? 'My Leads' : role === 'Relationship Manager' ? 'Clients & Referrals' : 'Lead Management', 
-            icon: Users, 
-            roles: ['Super Admin', 'Sales Closer', 'Admin/Doc Officer', 'Relationship Manager', 'Head of Operations', 'Branch Manager', 'General Manager'] 
+          {
+            id: 'leads',
+            name: role === 'Sales Closer' ? 'My Leads' : role === 'Relationship Manager' ? 'Clients & Referrals' : 'Lead Management',
+            icon: Users
           },
-          { id: 'followup', name: 'Follow Up', icon: PhoneCall, roles: ['Super Admin', 'Sales Closer', 'Relationship Manager', 'General Manager'] },
-          { id: 'properties', name: 'Properties', icon: Building2, roles: ['Super Admin', 'Sales Closer', 'Admin/Doc Officer', 'Inspection Officer', 'Relationship Manager', 'Head of Operations', 'General Manager'] },
-          { id: 'inspections', name: 'Inspections', icon: CalendarRange, roles: ['Super Admin', 'Sales Closer', 'Inspection Officer', 'Head of Operations', 'Branch Manager', 'General Manager'] },
-          { id: 'pipeline', name: 'Pipelines', icon: LayoutGrid, roles: ['Super Admin', 'Sales Closer', 'Relationship Manager', 'Head of Operations', 'Branch Manager', 'General Manager'] },
-          { id: 'docHub', name: 'Legal & Finance Hub', icon: DollarSign, roles: ['Super Admin', 'Admin/Doc Officer', 'Head of Operations', 'General Manager'] }
+          { id: 'followup', name: 'Follow Up', icon: PhoneCall },
+          { id: 'properties', name: 'Properties', icon: Building2 },
+          { id: 'inspections', name: 'Inspections', icon: CalendarRange },
+          { id: 'pipeline', name: 'Pipelines', icon: LayoutGrid },
+          { id: 'docHub', name: 'Legal & Finance Hub', icon: DollarSign }
         ]
       },
       {
         title: 'Business Intelligence',
         items: [
-          { id: 'reports', name: 'Reports', icon: BarChart3, roles: ['Super Admin', 'Head of Operations', 'Branch Manager', 'General Manager'] }
+          { id: 'reports', name: 'Reports', icon: BarChart3 }
         ]
       },
       {
         title: 'System Administration',
         items: [
-          { id: 'users', name: 'User Management', icon: ClipboardList, roles: ['Super Admin', 'General Manager'] },
-          { id: 'roles', name: 'Roles & Permissions', icon: ShieldAlert, roles: ['Super Admin', 'General Manager'] },
-          { id: 'audit', name: 'Audit Logs', icon: ShieldAlert, roles: ['Super Admin', 'General Manager'] }
+          { id: 'users', name: 'User Management', icon: ClipboardList },
+          { id: 'roles', name: 'Roles & Permissions', icon: ShieldAlert },
+          { id: 'audit', name: 'Audit Logs', icon: ShieldAlert }
         ]
       }
     ];
@@ -74,7 +72,7 @@ export default function Sidebar({ currentUser, onSignOut }) {
     return sections
       .map(section => ({
         ...section,
-        items: section.items.filter(item => item.roles.includes(role))
+        items: section.items.filter(item => (TAB_ROLES[item.id] || []).includes(role))
       }))
       .filter(section => section.items.length > 0);
   };

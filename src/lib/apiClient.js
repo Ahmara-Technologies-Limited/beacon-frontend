@@ -1,8 +1,3 @@
-// Thin fetch wrapper around the Django REST backend.
-// Reads NEXT_PUBLIC_API_URL, attaches the JWT bearer token from localStorage,
-// handles JSON request/response, and throws on non-2xx responses with the
-// parsed error body attached (err.body / err.status).
-
 const ACCESS_TOKEN_KEY = 'beacon_access_token';
 const REFRESH_TOKEN_KEY = 'beacon_refresh_token';
 
@@ -42,9 +37,6 @@ class ApiError extends Error {
   }
 }
 
-// Refresh is in-flight de-duplication: if several requests 401 around the
-// same time, they should all await the same refresh call rather than each
-// firing their own POST /auth/refresh/.
 let refreshInFlight = null;
 
 async function refreshAccessToken() {
@@ -63,7 +55,10 @@ async function refreshAccessToken() {
         if (!res.ok) return false;
         const data = await res.json().catch(() => null);
         if (!data || !data.access) return false;
-        setTokens({ access: data.access });
+        // ROTATE_REFRESH_TOKENS is on server-side: the old refresh token is
+        // blacklisted on use, so the new one must be saved too, or the next
+        // refresh attempt will fail.
+        setTokens({ access: data.access, refresh: data.refresh });
         return true;
       } catch {
         return false;
@@ -126,17 +121,12 @@ async function request(method, path, { body, params, headers = {}, _isRetry = fa
   const { response, parsedBody } = await performFetch(method, url, finalHeaders, finalBody);
 
   if (!response.ok) {
-    // On a 401 (expired/invalid access token), try exactly one silent
-    // refresh-and-retry before giving up. Skip the auth endpoints
-    // themselves to avoid refresh loops.
     const isAuthEndpoint = path.startsWith('/auth/login') || path.startsWith('/auth/refresh');
     if (response.status === 401 && !_isRetry && !isAuthEndpoint) {
       const refreshed = await refreshAccessToken();
       if (refreshed) {
         return request(method, path, { body, params, headers, _isRetry: true });
       }
-      // Refresh failed (no/expired refresh token) — clear stale tokens so
-      // the app falls back to its existing "not authenticated" UI state.
       clearTokens();
     }
 

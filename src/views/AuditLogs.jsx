@@ -58,7 +58,6 @@ export default function AuditLogs({ currentUser }) {
         )}
       </div>
 
-      {/* Search Bar Toolbar */}
       <div className="user-toolbar card" style={{ marginBottom: '24px' }}>
         <div className="toolbar-search">
           <Search size={18} className="search-icon" />
@@ -72,7 +71,6 @@ export default function AuditLogs({ currentUser }) {
         </div>
       </div>
 
-      {/* Logs Table */}
       <div className="table-container">
         <table className="custom-table">
           <thead>
