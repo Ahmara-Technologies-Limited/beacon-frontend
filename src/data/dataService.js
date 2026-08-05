@@ -29,14 +29,12 @@ const userToApi = (u, { isCreate = false } = {}) => {
   if (u.phone !== undefined) payload.phone_number = u.phone;
   if (u.role !== undefined) payload.role = u.role;
   if (u.status !== undefined) payload.is_active = u.status === 'Active';
-  // name/password only accepted on create (UserCreateSerializer)
-  if (isCreate) {
-    if (u.name !== undefined) {
-      const parts = String(u.name).trim().split(/\s+/);
-      payload.first_name = parts[0] || '';
-      payload.last_name = parts.slice(1).join(' ') || '';
-    }
-    if (u.password !== undefined) payload.password = u.password;
+  // name only accepted on create (UserCreateSerializer); password is
+  // generated server-side and emailed as a set-password link - never sent.
+  if (isCreate && u.name !== undefined) {
+    const parts = String(u.name).trim().split(/\s+/);
+    payload.first_name = parts[0] || '';
+    payload.last_name = parts.slice(1).join(' ') || '';
   }
   return payload;
 };

@@ -22,8 +22,7 @@ export default function UserManagement({ currentUser }) {
     email: '',
     phone: '',
     role: 'Sales Closer',
-    status: 'Active',
-    password: ''
+    status: 'Active'
   });
   const [errors, setErrors] = useState({});
 
@@ -71,8 +70,7 @@ export default function UserManagement({ currentUser }) {
       email: '',
       phone: '',
       role: 'Sales Closer',
-      status: 'Active',
-      password: ''
+      status: 'Active'
     });
     setErrors({});
     setShowUserModal(true);
@@ -85,8 +83,7 @@ export default function UserManagement({ currentUser }) {
       email: user.email,
       phone: user.phone || '',
       role: user.role,
-      status: user.status,
-      password: ''
+      status: user.status
     });
     setErrors({});
     setShowUserModal(true);
@@ -109,12 +106,6 @@ export default function UserManagement({ currentUser }) {
     }
 
     if (!formData.role) err.role = 'System Role is required.';
-
-    if (!selectedUser && !formData.password.trim()) {
-      err.password = 'Password is required.';
-    } else if (!selectedUser && formData.password.trim().length < 8) {
-      err.password = 'Password must be at least 8 characters.';
-    }
 
     setErrors(err);
     return Object.keys(err).length === 0;
@@ -346,15 +337,9 @@ export default function UserManagement({ currentUser }) {
 
               {!selectedUser && (
                 <div className="form-group">
-                  <label className="form-label">Password *</label>
-                  <input
-                    type="password"
-                    className="form-control"
-                    value={formData.password}
-                    onChange={e => setFormData({ ...formData, password: e.target.value })}
-                    placeholder="Set an initial password"
-                  />
-                  {errors.password && <span className="form-error">{errors.password}</span>}
+                  <div style={{ fontSize: 13, color: 'var(--text-secondary)', background: 'var(--color-grey-bg)', padding: '10px 12px', borderRadius: 8 }}>
+                    An invite email with a set-password link will be sent to this address once the account is created.
+                  </div>
                 </div>
               )}
 
