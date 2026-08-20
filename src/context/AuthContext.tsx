@@ -4,6 +4,7 @@ import { createContext, useContext, useEffect, useState, ReactNode } from 'react
 import { initializeDB, db } from '../data/mockData';
 import { dataService } from '../data/dataService';
 import { isDemoMode } from '../lib/demoMode';
+import { getAccessToken, clearTokens } from '../lib/apiClient';
 
 export interface CurrentUser {
   id: string;
@@ -31,10 +32,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    initializeDB();
-    const savedUser = db.getCurrentUser();
-    if (savedUser) setCurrentUserState(savedUser);
-    setLoading(false);
+    let cancelled = false;
+
+    async function bootstrap() {
+      if (isDemoMode()) {
+        initializeDB();
+        const savedUser = db.getCurrentUser();
+        if (!cancelled) setCurrentUserState(savedUser || null);
+        if (!cancelled) setLoading(false);
+        return;
+      }
+
+      // Live mode: the session lives in the JWT, not localStorage - refetch
+      // the profile on every load so a refresh doesn't look logged-out.
+      if (!getAccessToken()) {
+        if (!cancelled) setLoading(false);
+        return;
+      }
+      try {
+        const user = await dataService.getCurrentUserProfile();
+        if (!cancelled) setCurrentUserState(user as CurrentUser);
+      } catch {
+        clearTokens();
+        if (!cancelled) setCurrentUserState(null);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+
+    bootstrap();
+    return () => { cancelled = true; };
   }, []);
 
   // In demo mode this is the existing "role switcher" behavior (pass a mock
@@ -55,7 +82,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Updates the in-memory/session user without the "session switched" audit semantics
   // (e.g. after a user edits their own profile in Settings)
   const updateCurrentUser = (user: CurrentUser) => {
-    localStorage.setItem('beacon_current_user', JSON.stringify(user));
+    if (isDemoMode()) localStorage.setItem('beacon_current_user', JSON.stringify(user));
     setCurrentUserState(user);
   };
 
@@ -66,6 +93,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // best-effort
     } finally {
       localStorage.removeItem('beacon_current_user');
+      clearTokens();
       setCurrentUserState(null);
     }
   };
