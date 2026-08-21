@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import NextTopLoader from "nextjs-toploader";
 import { AuthProvider } from "@/context/AuthContext";
 import "@/index.css";
 
@@ -17,6 +18,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
+        <NextTopLoader color="#D4262A" showSpinner={false} />
         <AuthProvider>{children}</AuthProvider>
       </body>
     </html>

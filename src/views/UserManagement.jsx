@@ -28,9 +28,13 @@ export default function UserManagement({ currentUser }) {
 
 
 
+  // Must exactly match apps.core.enums.UserRole on the backend - these are
+  // sent verbatim as the `role` field, which the API validates as a strict
+  // enum (a mismatched string, e.g. "GM" instead of "General Manager", is
+  // rejected with a 400).
   const ROLES = [
-    'Super Admin', 'GM', 'Head of Ops', 'Sales Closer', 
-    'Relationship Manager', 'Inspection Officer', 'Admin/Doc Officer'
+    'Super Admin', 'Sales Closer', 'Inspection Officer', 'Admin/Doc Officer',
+    'Relationship Manager', 'Head of Operations', 'Branch Manager', 'General Manager'
   ];
 
   const loadUserData = async () => {

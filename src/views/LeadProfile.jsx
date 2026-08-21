@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { db } from '../data/mockData';
 import { dataService } from '../data/dataService';
+import { getPollInterval } from '../lib/demoMode';
 import { formatBudget } from '../lib/format';
 
 /**
@@ -139,7 +140,7 @@ export default function LeadProfile({
     loadLeadData();
     const interval = setInterval(() => {
       loadLeadData();
-    }, 2000);
+    }, getPollInterval(2000));
     return () => clearInterval(interval);
   }, [leadId]);
 

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Bell, Search, X, Check, Eye, Sun, Moon, Menu } from 'lucide-react';
 import { db } from '../data/mockData';
 import { dataService } from '../data/dataService';
+import { getPollInterval } from '../lib/demoMode';
 import { useAuth } from '../context/AuthContext';
 import { useCrmUI } from '../context/CrmUIContext';
 
@@ -30,7 +31,7 @@ export default function Header() {
     // Custom check timer for updates within same window
     const interval = setInterval(() => {
       dataService.getNotifications().then(setNotifications);
-    }, 1000);
+    }, getPollInterval(1000));
 
     return () => {
       window.removeEventListener('storage', handleStorageChange);

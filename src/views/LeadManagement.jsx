@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import { db } from '../data/mockData';
 import { dataService } from '../data/dataService';
+import { getPollInterval } from '../lib/demoMode';
 
 export default function LeadManagement({ 
   currentUser, 
@@ -62,7 +63,7 @@ export default function LeadManagement({
 
     const interval = setInterval(() => {
       loadLeads();
-    }, 2000);
+    }, getPollInterval(2000));
 
     return () => clearInterval(interval);
   }, [filterArchived]);
