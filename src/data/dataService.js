@@ -519,14 +519,14 @@ export const dataService = {
   /* ---- Leads ---- */
   getLeads: async () => {
     if (isDemoMode()) return Promise.resolve(db.getLeads());
-    const res = await apiGet('/leads/');
+    const res = await apiGet('/sales/leads/');
     const list = Array.isArray(res) ? res : res.results || [];
     return list.map(leadFromApi);
   },
 
   getArchivedLeads: async () => {
     if (isDemoMode()) return Promise.resolve(db.getArchivedLeads());
-    const res = await apiGet('/leads/', { is_active: false });
+    const res = await apiGet('/sales/leads/', { is_active: false });
     const list = Array.isArray(res) ? res : res.results || [];
     return list.map(leadFromApi);
   },
@@ -534,18 +534,18 @@ export const dataService = {
   saveLead: async (lead) => {
     if (isDemoMode()) return Promise.resolve(db.saveLead(lead));
     const payload = leadToApi(lead);
-    const res = lead.id ? await apiPatch(`/leads/${lead.id}/`, payload) : await apiPost('/leads/', payload);
+    const res = lead.id ? await apiPatch(`/sales/leads/${lead.id}/`, payload) : await apiPost('/sales/leads/', payload);
     return leadFromApi(res);
   },
 
   archiveLead: async (id) => {
     if (isDemoMode()) return Promise.resolve(db.archiveLead(id));
-    return apiPost(`/leads/${id}/archive/`);
+    return apiPost(`/sales/leads/${id}/archive/`);
   },
 
   restoreLead: async (id) => {
     if (isDemoMode()) return Promise.resolve(db.restoreLead(id));
-    return apiPost(`/leads/${id}/restore/`);
+    return apiPost(`/sales/leads/${id}/restore/`);
   },
 
   /* ---- Inspections ---- */
@@ -554,7 +554,7 @@ export const dataService = {
       const all = db.getInspections();
       return Promise.resolve(leadId ? all.filter(i => i.leadId === leadId) : all);
     }
-    const res = await apiGet('/inspections/', leadId ? { lead: leadId } : undefined);
+    const res = await apiGet('/sales/inspections/', leadId ? { lead: leadId } : undefined);
     const list = Array.isArray(res) ? res : res.results || [];
     return list.map(inspectionFromApi);
   },
@@ -563,8 +563,8 @@ export const dataService = {
     if (isDemoMode()) return Promise.resolve(db.saveInspection(inspection));
     const payload = inspectionToApi(inspection);
     const res = inspection.id
-      ? await apiPatch(`/inspections/${inspection.id}/`, payload)
-      : await apiPost('/inspections/', payload);
+      ? await apiPatch(`/sales/inspections/${inspection.id}/`, payload)
+      : await apiPost('/sales/inspections/', payload);
     return inspectionFromApi(res);
   },
 
@@ -574,7 +574,7 @@ export const dataService = {
       const all = db.getActivities();
       return Promise.resolve(leadId ? all.filter(a => a.leadId === leadId) : all);
     }
-    const res = await apiGet('/activities/', leadId ? { lead: leadId } : undefined);
+    const res = await apiGet('/sales/activities/', leadId ? { lead: leadId } : undefined);
     const list = Array.isArray(res) ? res : res.results || [];
     return list.map(activityFromApi);
   },
@@ -582,7 +582,7 @@ export const dataService = {
   saveActivity: async (activity) => {
     if (isDemoMode()) return Promise.resolve(db.saveActivity(activity));
     const payload = activityToApi(activity);
-    const res = await apiPost('/activities/', payload);
+    const res = await apiPost('/sales/activities/', payload);
     return activityFromApi(res);
   },
 
@@ -731,7 +731,7 @@ export const dataService = {
       }
     }
     if (updates.stage && leadId != null) {
-      await apiPatch(`/leads/${leadId}/`, { stage: updates.stage });
+      await apiPatch(`/sales/leads/${leadId}/`, { stage: updates.stage });
     }
     return installmentFromApi(res);
   },

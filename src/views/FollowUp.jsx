@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Phone, Calendar, Clock, User, X, Check, Eye, AlertTriangle, Filter } from 'lucide-react';
 import { db } from '../data/mockData';
 import { dataService } from '../data/dataService';
+import { getPollInterval } from '../lib/demoMode';
 
 export default function FollowUp({ currentUser, setViewingLeadId, setCurrentTab }) {
   const [leads, setLeads] = useState([]);
@@ -53,7 +54,7 @@ export default function FollowUp({ currentUser, setViewingLeadId, setCurrentTab 
 
   useEffect(() => {
     loadFollowUpData();
-    const interval = setInterval(loadFollowUpData, 2000);
+    const interval = setInterval(loadFollowUpData, getPollInterval(2000));
     return () => clearInterval(interval);
   }, []);
 

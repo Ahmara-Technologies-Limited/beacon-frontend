@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../data/mockData';
 import { dataService } from '../data/dataService';
+import { getPollInterval } from '../lib/demoMode';
 import { AlertCircle, Calendar } from 'lucide-react';
 
 export default function PipelineTracker({ currentUser, setViewingLeadId, setCurrentTab }) {
@@ -32,7 +33,7 @@ export default function PipelineTracker({ currentUser, setViewingLeadId, setCurr
 
   useEffect(() => {
     loadPipelineData();
-    const interval = setInterval(loadPipelineData, 2000);
+    const interval = setInterval(loadPipelineData, getPollInterval(2000));
     return () => clearInterval(interval);
   }, []);
 

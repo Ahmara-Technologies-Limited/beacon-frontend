@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Plus, Search, Edit2, ToggleLeft, ToggleRight, Key, X, AlertTriangle, Filter, ShieldCheck, SlidersHorizontal } from 'lucide-react';
 import { db } from '../data/mockData';
 import { dataService } from '../data/dataService';
-import { isDemoMode } from '../lib/demoMode';
+import { isDemoMode, getPollInterval } from '../lib/demoMode';
 
 export default function UserManagement({ currentUser }) {
   const [users, setUsers] = useState([]);
@@ -40,7 +40,7 @@ export default function UserManagement({ currentUser }) {
 
   useEffect(() => {
     loadUserData();
-    const interval = setInterval(loadUserData, 2000);
+    const interval = setInterval(loadUserData, getPollInterval(2000));
     return () => clearInterval(interval);
   }, []);
 

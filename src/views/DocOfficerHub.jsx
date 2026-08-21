@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../data/mockData';
 import { dataService } from '../data/dataService';
+import { getPollInterval } from '../lib/demoMode';
 import { DollarSign, FileText, CheckCircle, Clock, Plus, Upload, Trash2, X, FileMinus, ArrowUpRight, Clipboard } from 'lucide-react';
 
 export default function DocOfficerHub({ currentUser }) {
@@ -60,7 +61,7 @@ export default function DocOfficerHub({ currentUser }) {
     // demo mode). In live mode this just re-fetches the same endpoints on
     // an interval - a future improvement would replace this with
     // websockets/SSE push updates instead of polling.
-    const interval = setInterval(loadHubData, 2000);
+    const interval = setInterval(loadHubData, getPollInterval(2000));
     return () => clearInterval(interval);
   }, []);
 

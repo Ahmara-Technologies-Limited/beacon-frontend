@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { db } from '../data/mockData';
 import { dataService } from '../data/dataService';
+import { getPollInterval } from '../lib/demoMode';
 import { formatBudget, parseBudgetNumber } from '../lib/format';
 
 export default function Dashboard({ currentUser, setCurrentTab, setViewingLeadId, onAddLeadClick, onLogActivityClick, onBookInspectionClick, onEditLeadClick }) {
@@ -65,7 +66,7 @@ export default function Dashboard({ currentUser, setCurrentTab, setViewingLeadId
     loadDashboardData();
     setSettings(db.getSettings());
 
-    const interval = setInterval(loadDashboardData, 1500);
+    const interval = setInterval(loadDashboardData, getPollInterval(1500));
 
     return () => clearInterval(interval);
   }, [])

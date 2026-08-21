@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Plus, Download, LayoutList, Calendar as CalendarIcon, X, Check, AlertCircle, Filter, ArrowLeft, Phone, Mail, MessageSquare, MapPin } from 'lucide-react';
 import { db } from '../data/mockData';
 import { dataService } from '../data/dataService';
+import { getPollInterval } from '../lib/demoMode';
 import { formatBudget } from '../lib/format';
 
 export default function Inspections({
@@ -80,7 +81,7 @@ export default function Inspections({
 
   useEffect(() => {
     loadInspectionData();
-    const interval = setInterval(loadInspectionData, 2000);
+    const interval = setInterval(loadInspectionData, getPollInterval(2000));
     return () => clearInterval(interval);
   }, []);
 

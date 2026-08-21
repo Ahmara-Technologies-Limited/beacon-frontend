@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Save, Check, ShieldAlert, Wifi, WifiOff } from 'lucide-react';
+import { Save, Check, ShieldAlert } from 'lucide-react';
 import { dataService } from '../data/dataService';
-import { useDemoMode } from '../lib/demoMode';
 
 export default function Settings({ currentUser, onUserChange }) {
   const [passwordData, setPasswordData] = useState({
@@ -29,7 +28,6 @@ export default function Settings({ currentUser, onUserChange }) {
 
   const [errors, setErrors] = useState({});
   const [successToast, setSuccessToast] = useState(false);
-  const [demoMode] = useDemoMode();
 
   useEffect(() => {
     // Load settings from the data layer (demo db.* or live backend)
@@ -114,31 +112,6 @@ export default function Settings({ currentUser, onUserChange }) {
       <div className="settings-layout-grid">
         <div className="settings-column">
           <div className="card">
-            <h3 className="section-title">Data Source</h3>
-            <p className="section-desc">
-              Controlled by <code>NEXT_PUBLIC_DEMO_MODE</code> in the environment
-              (requires a rebuild/restart to change — there is no in-app switch, by design).
-            </p>
-            <div className="toggle-setting-row" style={{ borderBottom: 'none', paddingBottom: 0 }}>
-              <div className="toggle-text-col">
-                <strong>{demoMode ? 'Demo Mode' : 'Live Mode'}</strong>
-                <span>
-                  {demoMode
-                    ? 'Using local mock data stored in your browser.'
-                    : `Using the live backend API at ${process.env.NEXT_PUBLIC_API_URL || '(NEXT_PUBLIC_API_URL not set)'}.`}
-                </span>
-              </div>
-              <span
-                className="btn btn-sm"
-                style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'default' }}
-              >
-                {demoMode ? <WifiOff size={14} /> : <Wifi size={14} />}
-                <span>{demoMode ? 'Demo Mode' : 'Live Mode'}</span>
-              </span>
-            </div>
-          </div>
-
-          <div className="card" style={{ marginTop: '24px' }}>
             <h3 className="section-title">System Alert Thresholds</h3>
             <p className="section-desc">These options configure background alert metrics used across the entire company portfolio.</p>
             

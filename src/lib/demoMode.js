@@ -11,3 +11,8 @@ export const isDemoMode = () => {
 export function useDemoMode() {
   return [isDemoMode()];
 }
+
+// Demo mode polls a cheap in-memory/localStorage read, so a short interval
+// (demoMs) is fine. Live mode hits a real API - never poll faster than 30s,
+// regardless of what a caller asks for.
+export const getPollInterval = (demoMs) => (isDemoMode() ? demoMs : Math.max(demoMs, 30000));

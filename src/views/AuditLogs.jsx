@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ShieldCheck, Search, Trash2, X } from 'lucide-react';
 import { db } from '../data/mockData';
 import { dataService } from '../data/dataService';
+import { getPollInterval } from '../lib/demoMode';
 
 export default function AuditLogs({ currentUser }) {
   const [logs, setLogs] = useState([]);
@@ -13,7 +14,7 @@ export default function AuditLogs({ currentUser }) {
 
   useEffect(() => {
     loadLogs();
-    const interval = setInterval(loadLogs, 2000);
+    const interval = setInterval(loadLogs, getPollInterval(2000));
     return () => clearInterval(interval);
   }, []);
 

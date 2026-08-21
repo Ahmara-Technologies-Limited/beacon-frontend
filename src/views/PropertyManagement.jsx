@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Search, Building2, MapPin, Tag, SlidersHorizontal, Layers, Trash2, Edit3, X, ChevronRight, User, ArrowLeft } from 'lucide-react';
 import { dataService } from '../data/dataService';
+import { getPollInterval } from '../lib/demoMode';
 import { formatBudget } from '../lib/format';
 
 export default function PropertyManagement({ currentUser }) {
@@ -34,7 +35,7 @@ export default function PropertyManagement({ currentUser }) {
 
   useEffect(() => {
     loadData();
-    const interval = setInterval(loadData, 2000);
+    const interval = setInterval(loadData, getPollInterval(2000));
     return () => clearInterval(interval);
   }, []);
 
