@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, AlertTriangle } from 'lucide-react';
 import { db } from '../data/mockData';
 import { dataService } from '../data/dataService';
+import { notifySuccess, notifyError } from '../lib/toast';
 
 export default function InspectionModal({ leadId, inspectionId, isOpen, onClose, onSaveComplete, currentUser }) {
   const [formData, setFormData] = useState({
@@ -25,6 +26,7 @@ export default function InspectionModal({ leadId, inspectionId, isOpen, onClose,
   const [officers, setOfficers] = useState([]);
   const [errors, setErrors] = useState({});
   const [activeInspectionWarning, setActiveInspectionWarning] = useState(null);
+  const [isSaving, setIsSaving] = useState(false);
 
   const ESTATES = [
     'Beacon Heights, Lekki',
@@ -135,27 +137,37 @@ export default function InspectionModal({ leadId, inspectionId, isOpen, onClose,
 
   const handleSave = async (bypassWarning = false) => {
     if (!validate()) return;
+    if (isSaving) return;
 
-    // Check for active inspections on lead (only for new inspections)
-    if (!inspectionId && !bypassWarning) {
-      const allInspections = await dataService.getInspections();
-      const activeIns = allInspections.find(
-        i => i.leadId === formData.leadId &&
-        (i.status === 'Scheduled' || i.status === 'Confirmed')
-      );
-      if (activeIns) {
-        setActiveInspectionWarning(activeIns);
-        return;
+    setIsSaving(true);
+    try {
+      // Check for active inspections on lead (only for new inspections)
+      if (!inspectionId && !bypassWarning) {
+        const allInspections = await dataService.getInspections();
+        const activeIns = allInspections.find(
+          i => i.leadId === formData.leadId &&
+          (i.status === 'Scheduled' || i.status === 'Confirmed')
+        );
+        if (activeIns) {
+          setActiveInspectionWarning(activeIns);
+          setIsSaving(false);
+          return;
+        }
       }
+
+      const payload = {
+        ...formData,
+        id: inspectionId || undefined
+      };
+
+      await dataService.saveInspection(payload);
+      notifySuccess(inspectionId ? 'Inspection updated successfully.' : 'Inspection booked successfully.');
+      onSaveComplete();
+    } catch (err) {
+      notifyError(err, 'Could not save this inspection. Please try again.');
+    } finally {
+      setIsSaving(false);
     }
-
-    const payload = {
-      ...formData,
-      id: inspectionId || undefined
-    };
-
-    await dataService.saveInspection(payload);
-    onSaveComplete();
   };
 
   const selectedLeadDetails = leads.find(l => l.id === formData.leadId);
@@ -536,9 +548,9 @@ export default function InspectionModal({ leadId, inspectionId, isOpen, onClose,
         </div>
 
         <div className="modal-footer">
-          <button className="btn" onClick={onClose}>Cancel</button>
-          <button className="btn btn-primary" onClick={() => handleSave(false)}>
-            {currentUser.role === 'Inspection Officer' ? 'Submit Outcome' : 'Save Booking'}
+          <button className="btn" onClick={onClose} disabled={isSaving}>Cancel</button>
+          <button className="btn btn-primary" onClick={() => handleSave(false)} disabled={isSaving}>
+            {isSaving ? 'Saving...' : (currentUser.role === 'Inspection Officer' ? 'Submit Outcome' : 'Save Booking')}
           </button>
         </div>
       </div>

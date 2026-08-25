@@ -3,6 +3,7 @@ import { Plus, Search, Building2, MapPin, Tag, SlidersHorizontal, Layers, Trash2
 import { dataService } from '../data/dataService';
 import { getPollInterval } from '../lib/demoMode';
 import { formatBudget } from '../lib/format';
+import { notifySuccess, notifyError } from '../lib/toast';
 
 export default function PropertyManagement({ currentUser }) {
   const [properties, setProperties] = useState([]);
@@ -26,6 +27,7 @@ export default function PropertyManagement({ currentUser }) {
     amenities: ''
   });
   const [formErrors, setFormErrors] = useState({});
+  const [isSavingProperty, setIsSavingProperty] = useState(false);
 
   const loadData = async () => {
     const [props, leadsList] = await Promise.all([dataService.getProperties(), dataService.getLeads()]);
@@ -77,10 +79,15 @@ export default function PropertyManagement({ currentUser }) {
   const handleDeleteProperty = async (e, id) => {
     e.stopPropagation();
     if (window.confirm("Are you sure you want to delete this property? This action is permanent.")) {
-      await dataService.deleteProperty(id);
-      await loadData();
-      if (selectedProperty?.id === id) {
-        setSelectedProperty(null);
+      try {
+        await dataService.deleteProperty(id);
+        notifySuccess('Property deleted successfully.');
+        await loadData();
+        if (selectedProperty?.id === id) {
+          setSelectedProperty(null);
+        }
+      } catch (err) {
+        notifyError(err, 'Could not delete this property.');
       }
     }
   };
@@ -104,6 +111,7 @@ export default function PropertyManagement({ currentUser }) {
 
   const handleSaveProperty = async () => {
     if (!validate()) return;
+    if (isSavingProperty) return;
 
     const payload = {
       id: modalData.id || undefined,
@@ -118,9 +126,17 @@ export default function PropertyManagement({ currentUser }) {
       amenities: modalData.amenities ? modalData.amenities.split(',').map(s => s.trim()).filter(Boolean) : []
     };
 
-    await dataService.saveProperty(payload);
-    await loadData();
-    setModalOpen(false);
+    setIsSavingProperty(true);
+    try {
+      await dataService.saveProperty(payload);
+      notifySuccess(modalData.id ? 'Property updated successfully.' : 'Property created successfully.');
+      await loadData();
+      setModalOpen(false);
+    } catch (err) {
+      notifyError(err, 'Could not save this property.');
+    } finally {
+      setIsSavingProperty(false);
+    }
   };
 
   const getFilteredProperties = () => {
@@ -539,8 +555,10 @@ export default function PropertyManagement({ currentUser }) {
             </div>
 
             <div className="modal-footer">
-              <button className="btn" onClick={() => setModalOpen(false)}>Cancel</button>
-              <button className="btn btn-primary" onClick={handleSaveProperty}>Save Listing</button>
+              <button className="btn" onClick={() => setModalOpen(false)} disabled={isSavingProperty}>Cancel</button>
+              <button className="btn btn-primary" onClick={handleSaveProperty} disabled={isSavingProperty}>
+                {isSavingProperty ? 'Saving...' : 'Save Listing'}
+              </button>
             </div>
           </div>
         </div>

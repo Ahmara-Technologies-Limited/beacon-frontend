@@ -6,6 +6,7 @@ import {
 import { db } from '../data/mockData';
 import { dataService } from '../data/dataService';
 import { getPollInterval } from '../lib/demoMode';
+import { notifySuccess, notifyError } from '../lib/toast';
 
 export default function LeadManagement({ 
   currentUser, 
@@ -250,68 +251,75 @@ export default function LeadManagement({
 
   const handleBulkAssign = async () => {
     if (selectedLeadIds.length === 0) {
-      alert("No leads selected.");
+      notifyError(null, "No leads selected.");
       return;
     }
     if (!bulkCloserId) {
-      alert("Please select a closer to reassign.");
+      notifyError(null, "Please select a closer to reassign.");
       return;
     }
 
-    const allLeads = await dataService.getLeads();
-    const closerObj = closers.find(u => u.id === bulkCloserId);
+    try {
+      const allLeads = await dataService.getLeads();
+      const closerObj = closers.find(u => u.id === bulkCloserId);
 
-    for (const id of selectedLeadIds) {
-      const lead = allLeads.find(l => l.id === id);
-      if (lead) {
-        await dataService.saveLead({
-          ...lead,
-          assignedCloserId: bulkCloserId
-        });
+      for (const id of selectedLeadIds) {
+        const lead = allLeads.find(l => l.id === id);
+        if (lead) {
+          await dataService.saveLead({
+            ...lead,
+            assignedCloserId: bulkCloserId
+          });
+        }
       }
-    }
 
-    setBulkStatusMsg(`Successfully reassigned ${selectedLeadIds.length} leads to ${closerObj?.name}.`);
-    setSelectedLeadIds([]);
-    setBulkCloserId('');
-    loadLeads();
-    setTimeout(() => setBulkStatusMsg(''), 4000);
+      notifySuccess(`Successfully reassigned ${selectedLeadIds.length} leads to ${closerObj?.name}.`);
+      setSelectedLeadIds([]);
+      setBulkCloserId('');
+      loadLeads();
+    } catch (err) {
+      notifyError(err, 'Could not reassign these leads. Please try again.');
+    }
   };
 
   const handleBulkUpdateStage = async () => {
     if (selectedLeadIds.length === 0) {
-      alert("No leads selected.");
+      notifyError(null, "No leads selected.");
       return;
     }
     if (!bulkStage) {
-      alert("Please select a stage to update.");
+      notifyError(null, "Please select a stage to update.");
       return;
     }
 
-    const allLeads = await dataService.getLeads();
-    for (const id of selectedLeadIds) {
-      const lead = allLeads.find(l => l.id === id);
-      if (lead) {
-        await dataService.saveLead({
-          ...lead,
-          stage: bulkStage
-        });
+    try {
+      const allLeads = await dataService.getLeads();
+      for (const id of selectedLeadIds) {
+        const lead = allLeads.find(l => l.id === id);
+        if (lead) {
+          await dataService.saveLead({
+            ...lead,
+            stage: bulkStage
+          });
+        }
       }
-    }
 
-    setBulkStatusMsg(`Successfully updated stage of ${selectedLeadIds.length} leads to '${bulkStage}'.`);
-    setSelectedLeadIds([]);
-    setBulkStage('');
-    loadLeads();
-    setTimeout(() => setBulkStatusMsg(''), 4000);
+      notifySuccess(`Successfully updated stage of ${selectedLeadIds.length} leads to '${bulkStage}'.`);
+      setSelectedLeadIds([]);
+      setBulkStage('');
+      loadLeads();
+    } catch (err) {
+      notifyError(err, 'Could not update stage for these leads. Please try again.');
+    }
   };
 
   const handleRestore = async (id) => {
     try {
       await dataService.restoreLead(id);
+      notifySuccess('Lead restored successfully.');
       loadLeads();
     } catch (err) {
-      alert(err.message);
+      notifyError(err, 'Could not restore this lead.');
     }
   };
 

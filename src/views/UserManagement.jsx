@@ -3,6 +3,7 @@ import { Plus, Search, Edit2, ToggleLeft, ToggleRight, Key, X, AlertTriangle, Fi
 import { db } from '../data/mockData';
 import { dataService } from '../data/dataService';
 import { isDemoMode, getPollInterval } from '../lib/demoMode';
+import { notifySuccess, notifyError } from '../lib/toast';
 
 export default function UserManagement({ currentUser }) {
   const [users, setUsers] = useState([]);
@@ -25,6 +26,7 @@ export default function UserManagement({ currentUser }) {
     status: 'Active'
   });
   const [errors, setErrors] = useState({});
+  const [isSavingUser, setIsSavingUser] = useState(false);
 
 
 
@@ -117,20 +119,29 @@ export default function UserManagement({ currentUser }) {
 
   const handleSaveUser = async () => {
     if (!validateForm()) return;
+    if (isSavingUser) return;
 
-    await dataService.saveUser({
-      ...formData,
-      id: selectedUser ? selectedUser.id : undefined
-    });
+    setIsSavingUser(true);
+    try {
+      await dataService.saveUser({
+        ...formData,
+        id: selectedUser ? selectedUser.id : undefined
+      });
 
-    setShowUserModal(false);
-    loadUserData();
+      notifySuccess(selectedUser ? 'User updated successfully.' : 'User created successfully. An email invite has been sent.');
+      setShowUserModal(false);
+      loadUserData();
+    } catch (err) {
+      notifyError(err, 'Could not save this user.');
+    } finally {
+      setIsSavingUser(false);
+    }
   };
 
   const handleStatusToggle = async (user) => {
     // Prevent deactivating own active session
     if (user.id === currentUser.id) {
-      alert("You cannot deactivate your own logged-in account.");
+      notifyError(null, "You cannot deactivate your own logged-in account.");
       return;
     }
 
@@ -138,30 +149,35 @@ export default function UserManagement({ currentUser }) {
     if (user.role === 'Super Admin' && user.status === 'Active') {
       const activeAdmins = users.filter(u => u.role === 'Super Admin' && u.status === 'Active');
       if (activeAdmins.length === 1) {
-        alert("You cannot deactivate the only active Super Admin account.");
+        notifyError(null, "You cannot deactivate the only active Super Admin account.");
         return;
       }
     }
 
     const newStatus = user.status === 'Active' ? 'Inactive' : 'Active';
-    await dataService.saveUser({
-      ...user,
-      status: newStatus
-    });
-    loadUserData();
+    try {
+      await dataService.saveUser({
+        ...user,
+        status: newStatus
+      });
+      notifySuccess(`User ${newStatus === 'Active' ? 'activated' : 'deactivated'} successfully.`);
+      loadUserData();
+    } catch (err) {
+      notifyError(err, 'Could not update this user\'s status.');
+    }
   };
 
   const handleTriggerResetPassword = async (user) => {
     if (isDemoMode()) {
-      alert(`A password reset link has been successfully dispatched to ${user.email}. Link will expire in 60 minutes.`);
+      notifySuccess(`A password reset link has been successfully dispatched to ${user.email}. Link will expire in 60 minutes.`);
       db.logAudit(`Triggered password reset link for user ${user.name} (${user.email}).`);
       return;
     }
     try {
       await dataService.requestPasswordReset(user.email);
-      alert(`A password reset link has been sent to ${user.email} (if the account exists).`);
+      notifySuccess(`A password reset link has been sent to ${user.email} (if the account exists).`);
     } catch (err) {
-      alert(`Failed to send password reset link: ${err.message || 'Unknown error'}`);
+      notifyError(err, 'Failed to send password reset link.');
     }
   };
 
@@ -373,9 +389,9 @@ export default function UserManagement({ currentUser }) {
             </div>
 
             <div className="modal-footer">
-              <button className="btn" onClick={() => setShowUserModal(false)}>Cancel</button>
-              <button className="btn btn-primary" onClick={handleSaveUser}>
-                Save Account
+              <button className="btn" onClick={() => setShowUserModal(false)} disabled={isSavingUser}>Cancel</button>
+              <button className="btn btn-primary" onClick={handleSaveUser} disabled={isSavingUser}>
+                {isSavingUser ? 'Saving...' : 'Save Account'}
               </button>
             </div>
           </div>

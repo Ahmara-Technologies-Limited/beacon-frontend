@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Save, Check, ShieldAlert } from 'lucide-react';
 import { dataService } from '../data/dataService';
+import { notifySuccess, notifyError } from '../lib/toast';
 
 export default function Settings({ currentUser, onUserChange }) {
   const [passwordData, setPasswordData] = useState({
@@ -28,6 +29,8 @@ export default function Settings({ currentUser, onUserChange }) {
 
   const [errors, setErrors] = useState({});
   const [successToast, setSuccessToast] = useState(false);
+  const [isSavingSettings, setIsSavingSettings] = useState(false);
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
 
   useEffect(() => {
     // Load settings from the data layer (demo db.* or live backend)
@@ -64,16 +67,25 @@ export default function Settings({ currentUser, onUserChange }) {
 
   const handleSave = async () => {
     if (!validate()) return;
+    if (isSavingSettings) return;
 
-    await dataService.saveSettings({
-      contactHoursLimit: parseInt(formData.contactHoursLimit, 10),
-      dormancyDaysThreshold: parseInt(formData.dormancyDaysThreshold, 10),
-      inspectionConfirmationHours: parseInt(formData.inspectionConfirmationHours, 10),
-      remindersTiming: formData.remindersTiming
-    });
+    setIsSavingSettings(true);
+    try {
+      await dataService.saveSettings({
+        contactHoursLimit: parseInt(formData.contactHoursLimit, 10),
+        dormancyDaysThreshold: parseInt(formData.dormancyDaysThreshold, 10),
+        inspectionConfirmationHours: parseInt(formData.inspectionConfirmationHours, 10),
+        remindersTiming: formData.remindersTiming
+      });
 
-    setSuccessToast(true);
-    setTimeout(() => setSuccessToast(false), 3000);
+      notifySuccess('Settings successfully saved and applied system-wide.');
+      setSuccessToast(true);
+      setTimeout(() => setSuccessToast(false), 3000);
+    } catch (err) {
+      notifyError(err, 'Could not save settings.');
+    } finally {
+      setIsSavingSettings(false);
+    }
   };
 
   const handleToggle = (key) => {
@@ -96,9 +108,9 @@ export default function Settings({ currentUser, onUserChange }) {
           <h1 className="page-title">System Settings</h1>
           <p className="page-subtitle">Configure notification thresholds, escalation timing, and alerts preferences.</p>
         </div>
-        <button className="btn btn-primary" onClick={handleSave}>
+        <button className="btn btn-primary" onClick={handleSave} disabled={isSavingSettings}>
           <Save size={16} />
-          <span>Save Changes</span>
+          <span>{isSavingSettings ? 'Saving...' : 'Save Changes'}</span>
         </button>
       </div>
 
@@ -177,6 +189,7 @@ export default function Settings({ currentUser, onUserChange }) {
 
             <form onSubmit={async (e) => {
               e.preventDefault();
+              if (isChangingPassword) return;
               setPasswordErrors({});
               setPasswordSuccess(false);
 
@@ -200,6 +213,7 @@ export default function Settings({ currentUser, onUserChange }) {
                 return;
               }
 
+              setIsChangingPassword(true);
               try {
                 const updatedUser = await dataService.changePassword(
                   passwordData.currentPassword,
@@ -210,16 +224,21 @@ export default function Settings({ currentUser, onUserChange }) {
                   onUserChange(updatedUser);
                 }
               } catch (err) {
-                setPasswordErrors({ currentPassword: err.status === 400 ? (err.body?.current_password?.[0] || err.message) : 'Incorrect current password.' });
+                const message = err.status === 400 ? (err.body?.current_password?.[0] || err.message) : 'Incorrect current password.';
+                setPasswordErrors({ currentPassword: message });
+                notifyError(null, message);
+                setIsChangingPassword(false);
                 return;
               }
 
+              notifySuccess('Password successfully updated.');
               setPasswordSuccess(true);
               setPasswordData({
                 currentPassword: '',
                 newPassword: '',
                 confirmPassword: ''
               });
+              setIsChangingPassword(false);
               setTimeout(() => setPasswordSuccess(false), 3000);
             }}>
               <div className="form-group">
@@ -258,8 +277,8 @@ export default function Settings({ currentUser, onUserChange }) {
                 {passwordErrors.confirmPassword && <span className="form-error">{passwordErrors.confirmPassword}</span>}
               </div>
 
-              <button type="submit" className="btn btn-primary" style={{ width: '100%', marginTop: '8px' }}>
-                Update Password
+              <button type="submit" className="btn btn-primary" style={{ width: '100%', marginTop: '8px' }} disabled={isChangingPassword}>
+                {isChangingPassword ? 'Updating...' : 'Update Password'}
               </button>
             </form>
           </div>

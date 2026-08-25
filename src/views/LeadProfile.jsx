@@ -8,6 +8,7 @@ import { db } from '../data/mockData';
 import { dataService } from '../data/dataService';
 import { getPollInterval } from '../lib/demoMode';
 import { formatBudget } from '../lib/format';
+import { notifySuccess, notifyError } from '../lib/toast';
 
 /**
  * @param {{
@@ -171,7 +172,7 @@ export default function LeadProfile({
   // Archive lead trigger
   const handleArchiveLead = async () => {
     if (activeInspections.length > 0) {
-      alert(`This lead has an upcoming inspection scheduled for ${activeInspections[0].date}. Please cancel or complete the inspection before archiving.`);
+      notifyError(null, `This lead has an upcoming inspection scheduled for ${activeInspections[0].date}. Please cancel or complete the inspection before archiving.`);
       return;
     }
 
@@ -179,9 +180,9 @@ export default function LeadProfile({
       try {
         await dataService.archiveLead(lead.id);
         loadLeadData();
-        alert("Lead successfully archived.");
+        notifySuccess("Lead successfully archived.");
       } catch (err) {
-        alert(err.message);
+        notifyError(err, 'Could not archive this lead.');
       }
     }
   };
@@ -189,15 +190,20 @@ export default function LeadProfile({
   // Restore lead trigger
   const handleRestoreLead = async () => {
     if (window.confirm("Restore this lead to active status?")) {
-      await dataService.restoreLead(lead.id);
-      loadLeadData();
+      try {
+        await dataService.restoreLead(lead.id);
+        notifySuccess("Lead restored successfully.");
+        loadLeadData();
+      } catch (err) {
+        notifyError(err, 'Could not restore this lead.');
+      }
     }
   };
 
   // Reassignment trigger (Super Admin or Management only)
   const handleReassignCloser = async (bypassWarning = false) => {
     if (!reassignCloserId) {
-      alert("A lead must have an assigned owner. Please select a closer before saving.");
+      notifyError(null, "A lead must have an assigned owner. Please select a closer before saving.");
       return;
     }
 
@@ -208,81 +214,109 @@ export default function LeadProfile({
     }
 
     setShowReassignModal(false);
-    await dataService.saveLead({
-      ...lead,
-      assignedCloserId: reassignCloserId
-    });
-    loadLeadData();
+    try {
+      await dataService.saveLead({
+        ...lead,
+        assignedCloserId: reassignCloserId
+      });
+      notifySuccess('Closer reassigned successfully.');
+      loadLeadData();
+    } catch (err) {
+      notifyError(err, 'Could not reassign the closer.');
+    }
   };
 
-  const handleSendApplicationForm = () => {
-    const updatedLead = {
-      ...lead,
-      applicationFormStatus: 'Sent to Lead'
-    };
-    dataService.saveLead(updatedLead);
-    loadLeadData();
-    db.logAudit(`Application Form sent to client ${lead.name} by Doc Officer.`);
+  const handleSendApplicationForm = async () => {
+    try {
+      const updatedLead = {
+        ...lead,
+        applicationFormStatus: 'Sent to Lead'
+      };
+      await dataService.saveLead(updatedLead);
+      loadLeadData();
+      db.logAudit(`Application Form sent to client ${lead.name} by Doc Officer.`);
+      notifySuccess('Application form sent.');
+    } catch (err) {
+      notifyError(err, 'Could not send the application form.');
+    }
   };
 
-  const handleSimulateClientSubmit = (appData) => {
-    const updatedLead = {
-      ...lead,
-      applicationFormStatus: 'Submitted',
-      applicationData: appData
-    };
-    dataService.saveLead(updatedLead);
-    loadLeadData();
-    dataService.saveActivity({
-      leadId: lead.id,
-      type: "Internal Note",
-      summary: `Simulation: Client filled and submitted the digital application form.`,
-      objections: "None",
-      feedback: "N/A",
-      nextStep: "Awaiting Doc Officer review and approval.",
-      loggedBy: "System (Simulation)"
-    });
+  const handleSimulateClientSubmit = async (appData) => {
+    try {
+      const updatedLead = {
+        ...lead,
+        applicationFormStatus: 'Submitted',
+        applicationData: appData
+      };
+      await dataService.saveLead(updatedLead);
+      loadLeadData();
+      await dataService.saveActivity({
+        leadId: lead.id,
+        type: "Internal Note",
+        summary: `Simulation: Client filled and submitted the digital application form.`,
+        objections: "None",
+        feedback: "N/A",
+        nextStep: "Awaiting Doc Officer review and approval.",
+        loggedBy: "System (Simulation)"
+      });
+    } catch (err) {
+      notifyError(err, 'Could not submit the application form.');
+    }
   };
 
-  const handleApproveApplicationForm = (appData) => {
-    const updatedLead = {
-      ...lead,
-      applicationFormStatus: 'Approved',
-      applicationData: appData
-    };
-    dataService.saveLead(updatedLead);
-    loadLeadData();
-    db.logAudit(`Application Form approved for client ${lead.name} by Doc Officer.`);
+  const handleApproveApplicationForm = async (appData) => {
+    try {
+      const updatedLead = {
+        ...lead,
+        applicationFormStatus: 'Approved',
+        applicationData: appData
+      };
+      await dataService.saveLead(updatedLead);
+      loadLeadData();
+      db.logAudit(`Application Form approved for client ${lead.name} by Doc Officer.`);
+      notifySuccess('Application form approved.');
+    } catch (err) {
+      notifyError(err, 'Could not approve the application form.');
+    }
   };
 
-  const handleSendOfferLetter = () => {
-    const updatedLead = {
-      ...lead,
-      offerLetterStatus: 'Sent'
-    };
-    dataService.saveLead(updatedLead);
-    loadLeadData();
-    db.logAudit(`Offer Letter sent to client ${lead.name} by Doc Officer.`);
+  const handleSendOfferLetter = async () => {
+    try {
+      const updatedLead = {
+        ...lead,
+        offerLetterStatus: 'Sent'
+      };
+      await dataService.saveLead(updatedLead);
+      loadLeadData();
+      db.logAudit(`Offer Letter sent to client ${lead.name} by Doc Officer.`);
+      notifySuccess('Offer letter sent.');
+    } catch (err) {
+      notifyError(err, 'Could not send the offer letter.');
+    }
   };
 
-  const handleSimulateClientAccept = (signatureText) => {
-    const updatedLead = {
-      ...lead,
-      offerLetterStatus: 'Accepted',
-      offerLetterSignature: signatureText,
-      offerLetterSignedDate: new Date().toISOString().split('T')[0]
-    };
-    dataService.saveLead(updatedLead);
-    loadLeadData();
-    dataService.saveActivity({
-      leadId: lead.id,
-      type: "Internal Note",
-      summary: `Simulation: Client reviewed, digitally signed and accepted the Offer Letter. Signature: ${signatureText}.`,
-      objections: "None",
-      feedback: "Client accepted offer terms.",
-      nextStep: "Proceed to payments configuration desk.",
-      loggedBy: "System (Simulation)"
-    });
+  const handleSimulateClientAccept = async (signatureText) => {
+    try {
+      const updatedLead = {
+        ...lead,
+        offerLetterStatus: 'Accepted',
+        offerLetterSignature: signatureText,
+        offerLetterSignedDate: new Date().toISOString().split('T')[0]
+      };
+      await dataService.saveLead(updatedLead);
+      loadLeadData();
+      await dataService.saveActivity({
+        leadId: lead.id,
+        type: "Internal Note",
+        summary: `Simulation: Client reviewed, digitally signed and accepted the Offer Letter. Signature: ${signatureText}.`,
+        objections: "None",
+        feedback: "Client accepted offer terms.",
+        nextStep: "Proceed to payments configuration desk.",
+        loggedBy: "System (Simulation)"
+      });
+    } catch (err) {
+      notifyError(err, 'Could not accept the offer letter.');
+    }
   };
 
   const handleCreatePaymentPlan = async (e) => {
@@ -293,9 +327,9 @@ export default function LeadProfile({
     const deposit = Number(payPlanForm.deposit) || 0;
     const months = payPlanForm.months !== undefined ? Number(payPlanForm.months) : 6;
 
-    if (!price || price <= 0) { alert("Please enter a valid property price."); return; }
-    if (deposit < 0 || deposit > price) { alert("Deposit must be between 0 and property price."); return; }
-    if (discount > 0 && !authCode) { alert("An Authorizing Manager Code is required for discounts."); return; }
+    if (!price || price <= 0) { notifyError(null, "Please enter a valid property price."); return; }
+    if (deposit < 0 || deposit > price) { notifyError(null, "Deposit must be between 0 and property price."); return; }
+    if (discount > 0 && !authCode) { notifyError(null, "An Authorizing Manager Code is required for discounts."); return; }
 
     const netPrice = price - discount;
     const balance = netPrice - deposit;
@@ -340,23 +374,28 @@ export default function LeadProfile({
       dateCreated: new Date().toISOString().split('T')[0]
     };
 
-    await dataService.savePaymentPlan(lead.id, payPlan, { stage: 'Payment' });
-    loadLeadData();
-    setShowPayPlanForm(false);
-    db.logAudit(`Payment plan configured for lead ${lead.name} at net price of ${formatPrice(netPrice)}.`);
+    try {
+      await dataService.savePaymentPlan(lead.id, payPlan, { stage: 'Payment' });
+      loadLeadData();
+      setShowPayPlanForm(false);
+      db.logAudit(`Payment plan configured for lead ${lead.name} at net price of ${formatPrice(netPrice)}.`);
+      notifySuccess('Payment plan created successfully.');
 
-    // Record discount in ledger if applicable
-    if (discount > 0) {
-      dataService.createDiscount({
-        leadId: lead.id,
-        clientName: lead.name,
-        propertyName: lead.propertyInterest || 'N/A',
-        regularPrice: price,
-        discountAmount: discount,
-        netPrice: netPrice,
-        authCode: authCode,
-        dateIssued: new Date().toISOString().split('T')[0]
-      });
+      // Record discount in ledger if applicable
+      if (discount > 0) {
+        await dataService.createDiscount({
+          leadId: lead.id,
+          clientName: lead.name,
+          propertyName: lead.propertyInterest || 'N/A',
+          regularPrice: price,
+          discountAmount: discount,
+          netPrice: netPrice,
+          authCode: authCode,
+          dateIssued: new Date().toISOString().split('T')[0]
+        });
+      }
+    } catch (err) {
+      notifyError(err, 'Could not create the payment plan.');
     }
   };
 
@@ -384,60 +423,66 @@ export default function LeadProfile({
     const allPaid = payPlan.installmentsList.every(i => i.status === 'Paid');
     const newStage = (allPaid && payPlan.balance === 0) ? 'Allocation' : undefined;
 
-    if (installmentRef !== null) {
-      await dataService.updateInstallment(lead.id, installmentRef, {
-        status: 'Paid',
-        balance: payPlan.balance,
-        stage: newStage,
-      });
-    } else {
-      // Deposit-only "payment" - no installment row to mark, just persist the
-      // (unchanged) plan so both modes go through the same call path.
-      await dataService.savePaymentPlan(lead.id, payPlan, { stage: newStage });
-    }
-    loadLeadData();
-
-    // Log Activity for transaction receipt
-    dataService.saveActivity({
-      leadId: lead.id,
-      type: "Call",
-      summary: paymentSummary,
-      objections: "None",
-      feedback: "N/A",
-      nextStep: allPaid ? "Issue physical allocation papers." : "Monitor next scheduled payment plan date.",
-      loggedBy: currentUser.name
-    });
-
-    // Record commission (5% of paymentAmount)
-    const commissionVal = Math.round(paymentAmount * 0.05);
-    if (commissionVal > 0) {
-      const closerName = closers.find(u => u.id === lead.assignedCloserId)?.name || 'Unassigned';
-      dataService.createCommission({
-        leadId: lead.id,
-        closerId: lead.assignedCloserId || null,
-        closerName: closerName,
-        clientName: lead.name,
-        propertyName: lead.propertyInterest || 'N/A',
-        totalSaleVal: payPlan.netPrice,
-        paidAmount: paymentAmount,
-        commissionVal: commissionVal,
-        scheduledDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-        status: 'Scheduled'
-      });
-    }
-
-    // Set document active for print preview immediately
-    setActivePrintDoc({
-      type: 'receipt',
-      data: {
-        clientName: lead.name,
-        property: lead.propertyInterest || 'N/A',
-        amount: paymentAmount,
-        date: new Date().toISOString().split('T')[0],
-        receiptNo: 'REC-' + Date.now().toString().slice(-6),
-        description: instIndex === -1 ? 'Initial Allocation Deposit' : `Installment #${instIndex} Payment`
+    try {
+      if (installmentRef !== null) {
+        await dataService.updateInstallment(lead.id, installmentRef, {
+          status: 'Paid',
+          balance: payPlan.balance,
+          stage: newStage,
+        });
+      } else {
+        // Deposit-only "payment" - no installment row to mark, just persist the
+        // (unchanged) plan so both modes go through the same call path.
+        await dataService.savePaymentPlan(lead.id, payPlan, { stage: newStage });
       }
-    });
+      loadLeadData();
+
+      // Log Activity for transaction receipt
+      await dataService.saveActivity({
+        leadId: lead.id,
+        type: "Call",
+        summary: paymentSummary,
+        objections: "None",
+        feedback: "N/A",
+        nextStep: allPaid ? "Issue physical allocation papers." : "Monitor next scheduled payment plan date.",
+        loggedBy: currentUser.name
+      });
+
+      // Record commission (5% of paymentAmount)
+      const commissionVal = Math.round(paymentAmount * 0.05);
+      if (commissionVal > 0) {
+        const closerName = closers.find(u => u.id === lead.assignedCloserId)?.name || 'Unassigned';
+        await dataService.createCommission({
+          leadId: lead.id,
+          closerId: lead.assignedCloserId || null,
+          closerName: closerName,
+          clientName: lead.name,
+          propertyName: lead.propertyInterest || 'N/A',
+          totalSaleVal: payPlan.netPrice,
+          paidAmount: paymentAmount,
+          commissionVal: commissionVal,
+          scheduledDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+          status: 'Scheduled'
+        });
+      }
+
+      notifySuccess('Payment logged successfully.');
+
+      // Set document active for print preview immediately
+      setActivePrintDoc({
+        type: 'receipt',
+        data: {
+          clientName: lead.name,
+          property: lead.propertyInterest || 'N/A',
+          amount: paymentAmount,
+          date: new Date().toISOString().split('T')[0],
+          receiptNo: 'REC-' + Date.now().toString().slice(-6),
+          description: instIndex === -1 ? 'Initial Allocation Deposit' : `Installment #${instIndex} Payment`
+        }
+      });
+    } catch (err) {
+      notifyError(err, 'Could not log this payment.');
+    }
   };
 
   const formatPrice = (val) => {

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
 import { db } from '../data/mockData';
 import { dataService } from '../data/dataService';
+import { notifySuccess, notifyError } from '../lib/toast';
 
 export default function LogActivityModal({ leadId, isOpen, onClose, onSaveComplete, currentUser }) {
   const [formData, setFormData] = useState({
@@ -20,6 +21,7 @@ export default function LogActivityModal({ leadId, isOpen, onClose, onSaveComple
 
   const [errors, setErrors] = useState({});
   const [isDirty, setIsDirty] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     if (isOpen && leadId) {
@@ -84,23 +86,31 @@ export default function LogActivityModal({ leadId, isOpen, onClose, onSaveComple
 
   const handleSave = async () => {
     if (!validate()) return;
+    if (isSaving) return;
 
-    await dataService.saveActivity({
-      leadId,
-      date: formData.date,
-      type: formData.type,
-      summary: formData.summary,
-      objections: formData.objections || 'None',
-      feedback: formData.feedback || 'N/A',
-      nextStep: formData.nextStep,
-      loggedBy: currentUser.name,
-      updateFollowUp: formData.updateFollowUp,
-      followUpDate: formData.followUpDate,
-      updateStage: formData.updateStage,
-      pipelineStage: formData.pipelineStage
-    });
-
-    onSaveComplete();
+    setIsSaving(true);
+    try {
+      await dataService.saveActivity({
+        leadId,
+        date: formData.date,
+        type: formData.type,
+        summary: formData.summary,
+        objections: formData.objections || 'None',
+        feedback: formData.feedback || 'N/A',
+        nextStep: formData.nextStep,
+        loggedBy: currentUser.name,
+        updateFollowUp: formData.updateFollowUp,
+        followUpDate: formData.followUpDate,
+        updateStage: formData.updateStage,
+        pipelineStage: formData.pipelineStage
+      });
+      notifySuccess('Activity logged successfully.');
+      onSaveComplete();
+    } catch (err) {
+      notifyError(err, 'Could not log this activity. Please try again.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -242,8 +252,10 @@ export default function LogActivityModal({ leadId, isOpen, onClose, onSaveComple
         </div>
 
         <div className="modal-footer">
-          <button className="btn" onClick={handleClose}>Cancel</button>
-          <button className="btn btn-primary" onClick={handleSave}>Log Activity</button>
+          <button className="btn" onClick={handleClose} disabled={isSaving}>Cancel</button>
+          <button className="btn btn-primary" onClick={handleSave} disabled={isSaving}>
+            {isSaving ? 'Logging...' : 'Log Activity'}
+          </button>
         </div>
       </div>
 

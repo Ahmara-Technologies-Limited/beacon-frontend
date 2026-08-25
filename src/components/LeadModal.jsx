@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, AlertTriangle } from 'lucide-react';
 import { db } from '../data/mockData';
 import { dataService } from '../data/dataService';
+import { notifySuccess, notifyError } from '../lib/toast';
 
 export default function LeadModal({ leadId, isOpen, onClose, onSaveComplete, onSaveAndLogActivity, currentUser }) {
   const [formData, setFormData] = useState({
@@ -26,6 +27,7 @@ export default function LeadModal({ leadId, isOpen, onClose, onSaveComplete, onS
   const [errors, setErrors] = useState({});
   const [duplicateWarning, setDuplicateWarning] = useState(null);
   const [potentialReferrers, setPotentialReferrers] = useState([]);
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -133,28 +135,38 @@ export default function LeadModal({ leadId, isOpen, onClose, onSaveComplete, onS
 
   const handleSave = async (bypassDuplicateCheck = false, requestLogActivity = false) => {
     if (!validate()) return;
+    if (isSaving) return;
 
-    // Check duplicate phone number (only for new leads or when phone is changed)
-    if (!bypassDuplicateCheck) {
-      const allLeads = await dataService.getLeads();
-      const duplicate = allLeads.find(l => l.phone === formData.phone && l.id !== leadId);
-      if (duplicate) {
-        setDuplicateWarning(duplicate);
-        return;
+    setIsSaving(true);
+    try {
+      // Check duplicate phone number (only for new leads or when phone is changed)
+      if (!bypassDuplicateCheck) {
+        const allLeads = await dataService.getLeads();
+        const duplicate = allLeads.find(l => l.phone === formData.phone && l.id !== leadId);
+        if (duplicate) {
+          setDuplicateWarning(duplicate);
+          setIsSaving(false);
+          return;
+        }
       }
-    }
 
-    const payload = {
-      ...formData,
-      id: leadId || undefined
-    };
+      const payload = {
+        ...formData,
+        id: leadId || undefined
+      };
 
-    const savedLead = await dataService.saveLead(payload);
+      const savedLead = await dataService.saveLead(payload);
+      notifySuccess(leadId ? 'Lead updated successfully.' : 'Lead created successfully.');
 
-    if (requestLogActivity) {
-      onSaveAndLogActivity(savedLead.id);
-    } else {
-      onSaveComplete();
+      if (requestLogActivity) {
+        onSaveAndLogActivity(savedLead.id);
+      } else {
+        onSaveComplete();
+      }
+    } catch (err) {
+      notifyError(err, 'Could not save this lead. Please check the form and try again.');
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -492,9 +504,9 @@ export default function LeadModal({ leadId, isOpen, onClose, onSaveComplete, onS
         </div>
 
         <div className="modal-footer">
-          <button className="btn" onClick={onClose}>Cancel</button>
-          <button className="btn btn-primary" onClick={() => handleSave(false, false)}>
-            Save Lead
+          <button className="btn" onClick={onClose} disabled={isSaving}>Cancel</button>
+          <button className="btn btn-primary" onClick={() => handleSave(false, false)} disabled={isSaving}>
+            {isSaving ? 'Saving...' : 'Save Lead'}
           </button>
         </div>
       </div>

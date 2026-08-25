@@ -28,6 +28,33 @@ const getBaseUrl = () => {
   return base.replace(/\/$/, '');
 };
 
+// DRF returns errors in different shapes depending on the failure:
+// - {"detail": "..."} for auth/permission/not-found errors
+// - {"field_name": ["error", ...], ...} for serializer validation errors
+// - ["non field error", ...] for validation errors raised without a field
+// Flatten all of these into one human-readable string instead of leaking
+// a generic "failed with status 400" that hides the real reason.
+function extractErrorMessage(body) {
+  if (!body) return null;
+  if (typeof body === 'string') return body;
+  if (body.detail) return body.detail;
+  if (body.message) return body.message;
+
+  if (Array.isArray(body)) {
+    return body.join(' ');
+  }
+
+  if (typeof body === 'object') {
+    const parts = Object.entries(body).map(([field, value]) => {
+      const text = Array.isArray(value) ? value.join(' ') : String(value);
+      return field === 'non_field_errors' ? text : `${field}: ${text}`;
+    });
+    if (parts.length > 0) return parts.join(' | ');
+  }
+
+  return null;
+}
+
 class ApiError extends Error {
   constructor(message, status, body) {
     super(message);
@@ -130,9 +157,7 @@ async function request(method, path, { body, params, headers = {}, _isRetry = fa
       clearTokens();
     }
 
-    const message =
-      (parsedBody && (parsedBody.detail || parsedBody.message)) ||
-      `Request to ${path} failed with status ${response.status}`;
+    const message = extractErrorMessage(parsedBody) || `Request to ${path} failed with status ${response.status}`;
     throw new ApiError(message, response.status, parsedBody);
   }
 
