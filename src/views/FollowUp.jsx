@@ -4,6 +4,7 @@ import { db } from '../data/mockData';
 import { dataService } from '../data/dataService';
 import { getPollInterval } from '../lib/demoMode';
 import { formatDateTime } from '../lib/format';
+import { notifySuccess, notifyError } from '../lib/toast';
 
 export default function FollowUp({ currentUser, setViewingLeadId, setCurrentTab }) {
   const [leads, setLeads] = useState([]);
@@ -34,7 +35,7 @@ export default function FollowUp({ currentUser, setViewingLeadId, setCurrentTab 
   const handleSendWarning = async (e, lead) => {
     e.stopPropagation();
     if (!lead.assignedCloserId) {
-      alert("Cannot send warning for unassigned lead.");
+      notifyError(null, "Cannot send warning for unassigned lead.");
       return;
     }
 
@@ -50,7 +51,7 @@ export default function FollowUp({ currentUser, setViewingLeadId, setCurrentTab 
     });
 
     db.logAudit(`Admin sent overdue follow-up warning to closer ${closerName} for lead '${lead.name}'.`);
-    alert(`Overdue follow-up warning sent to closer ${closerName} successfully.`);
+    notifySuccess(`Overdue follow-up warning sent to closer ${closerName} successfully.`);
   };
 
   useEffect(() => {
@@ -82,7 +83,7 @@ export default function FollowUp({ currentUser, setViewingLeadId, setCurrentTab 
 
   const handleSaveDone = async () => {
     if (!noFollowUpNeeded && !nextFollowUpDate) {
-      alert("What is the next follow-up date for this lead? Please select a date or check 'No follow-up needed'.");
+      notifyError(null, "What is the next follow-up date for this lead? Please select a date or check 'No follow-up needed'.");
       return;
     }
 
@@ -114,7 +115,7 @@ export default function FollowUp({ currentUser, setViewingLeadId, setCurrentTab 
 
   const handleSaveSnooze = async () => {
     if (!snoozeReason.trim()) {
-      alert("Please provide a reason note explaining why this follow-up is being snoozed.");
+      notifyError(null, "Please provide a reason note explaining why this follow-up is being snoozed.");
       return;
     }
 
@@ -125,7 +126,7 @@ export default function FollowUp({ currentUser, setViewingLeadId, setCurrentTab 
       snoozeTargetDate.setDate(snoozeTargetDate.getDate() + 2);
     } else {
       if (!snoozeCustomDate) {
-        alert("Please specify the custom snooze date.");
+        notifyError(null, "Please specify the custom snooze date.");
         return;
       }
       snoozeTargetDate = new Date(snoozeCustomDate);

@@ -13,6 +13,7 @@ import { getPollInterval } from '../lib/demoMode';
 import { formatBudget, parseBudgetNumber, formatDateTime } from '../lib/format';
 import { SkeletonCards } from '../components/Skeleton';
 import { onDataChange } from '../lib/dataEvents';
+import { notifySuccess, notifyError } from '../lib/toast';
 
 export default function Dashboard({ currentUser, setCurrentTab, setViewingLeadId, onAddLeadClick, onLogActivityClick, onBookInspectionClick, onEditLeadClick }) {
   const [leads, setLeads] = useState([]);
@@ -1059,7 +1060,7 @@ export default function Dashboard({ currentUser, setCurrentTab, setViewingLeadId
     const handleCreateQuickReferral = (e) => {
       e.preventDefault();
       if (!refName.trim() || !refPhone.trim() || !refClientSource) {
-        alert("Referral Name, Phone, and Referring Client are required.");
+        notifyError(null, "Referral Name, Phone, and Referring Client are required.");
         return;
       }
       
@@ -1228,7 +1229,7 @@ export default function Dashboard({ currentUser, setCurrentTab, setViewingLeadId
                                   followUpDate: new Date(Date.now() + 30*24*60*60*1000).toISOString().slice(0, 16) // next contact in 30 days
                                 };
                                 dataService.saveLead(updated);
-                                alert(`Quick call logged for ${c.name}! Next contact set to 30 days.`);
+                                notifySuccess(`Quick call logged for ${c.name}! Next contact set to 30 days.`);
                                 dataService.saveActivity({
                                   leadId: c.id,
                                   type: "Call",
@@ -1340,11 +1341,11 @@ export default function Dashboard({ currentUser, setCurrentTab, setViewingLeadId
                   <div style={{ display: 'flex', gap: '12px' }}>
                     <button className="btn btn-primary" onClick={() => {
                       db.logAudit(`Relationship Manager sent WhatsApp newsletter broadcast to all ${clients.length} clients.`);
-                      alert("Broadcast sent successfully to WhatsApp gateway simulation!");
+                      notifySuccess("Broadcast sent successfully to WhatsApp gateway simulation!");
                     }}>Simulate WhatsApp Newsletter Broadcast</button>
                     <button className="btn btn-secondary" onClick={() => {
                       db.logAudit(`Relationship Manager sent email campaign broadcast to all ${clients.length} clients.`);
-                      alert("Email Campaign launched successfully in simulation!");
+                      notifySuccess("Email Campaign launched successfully in simulation!");
                     }}>Launch Email Portfolio Campaign</button>
                   </div>
                 </div>
@@ -1409,7 +1410,7 @@ export default function Dashboard({ currentUser, setCurrentTab, setViewingLeadId
           branch: closer.branch || "Lekki Branch"
         };
         dataService.saveLead(updated);
-        alert(`Lead ${lead.name} successfully assigned to closer ${closer.name} (${closer.branch || 'No Branch'}).`);
+        notifySuccess(`Lead ${lead.name} successfully assigned to closer ${closer.name} (${closer.branch || 'No Branch'}).`);
         db.addNotification({
           type: "Lead Assigned",
           message: `Operations assigned lead '${lead.name}' to you.`,
@@ -1635,13 +1636,13 @@ export default function Dashboard({ currentUser, setCurrentTab, setViewingLeadId
                               {l.applicationFormStatus === 'Submitted' && (
                                 <button className="btn btn-xs btn-primary" onClick={() => {
                                   dataService.saveLead({ ...l, applicationFormStatus: 'Approved' });
-                                  alert(`Application approved for ${l.name}.`);
+                                  notifySuccess(`Application approved for ${l.name}.`);
                                 }}>Approve App</button>
                               )}
                               {l.offerLetterStatus === 'Sent' && (
                                 <button className="btn btn-xs" onClick={() => {
                                   dataService.saveLead({ ...l, offerLetterStatus: 'Accepted', offerLetterSignature: 'E-SIGNED', offerLetterSignedDate: new Date().toISOString().split('T')[0] });
-                                  alert(`Simulated client signature acceptance for ${l.name}!`);
+                                  notifySuccess(`Simulated client signature acceptance for ${l.name}!`);
                                 }}>Accept Offer</button>
                               )}
                               <button className="btn btn-xs" onClick={() => setViewingLeadId(l.id)}>Open Desk</button>
@@ -1725,7 +1726,7 @@ export default function Dashboard({ currentUser, setCurrentTab, setViewingLeadId
       const note = prompt(`Enter coaching instructions/feedback for ${closerName}:`);
       if (note && note.trim() !== '') {
         db.logAudit(`Branch Manager coached closer ${closerName}: "${note}"`);
-        alert(`Coaching note successfully dispatched to closer performance records.`);
+        notifySuccess(`Coaching note successfully dispatched to closer performance records.`);
       }
     };
 

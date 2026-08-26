@@ -3,6 +3,8 @@ import { ShieldCheck, Search, Trash2, X } from 'lucide-react';
 import { db } from '../data/mockData';
 import { dataService } from '../data/dataService';
 import { getPollInterval } from '../lib/demoMode';
+import { confirmDialog } from '../lib/confirm';
+import { notifySuccess, notifyError } from '../lib/toast';
 
 export default function AuditLogs({ currentUser }) {
   const [logs, setLogs] = useState([]);
@@ -19,10 +21,20 @@ export default function AuditLogs({ currentUser }) {
   }, []);
 
   const handleClearLogs = async () => {
-    if (window.confirm("Are you sure you want to permanently clear all system audit logs? This action is irreversible.")) {
+    const confirmed = await confirmDialog({
+      title: 'Clear all audit logs?',
+      message: 'This permanently clears all system audit logs. This action is irreversible.',
+      confirmLabel: 'Clear Logs',
+      danger: true,
+    });
+    if (!confirmed) return;
+    try {
       await dataService.clearAuditLogs();
       await dataService.logAudit("Cleared all system audit logs.");
       await loadLogs();
+      notifySuccess('Audit logs cleared.');
+    } catch (err) {
+      notifyError(err, 'Could not clear audit logs.');
     }
   };
 

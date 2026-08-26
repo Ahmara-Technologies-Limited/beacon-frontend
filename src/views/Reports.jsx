@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line } from 'recharts';
 import { Download, Mail, Calendar, BarChart3, PieChart, X } from 'lucide-react';
 import { db } from '../data/mockData';
+import { notifySuccess, notifyError } from '../lib/toast';
 
 export default function Reports({ currentUser }) {
   const [reportType, setReportType] = useState('Lead Summary');
@@ -46,10 +47,10 @@ export default function Reports({ currentUser }) {
 
   const handleScheduleReport = () => {
     if (!scheduleEmail || !/\S+@\S+\.\S+/.test(scheduleEmail)) {
-      alert("Please provide a valid recipient email address.");
+      notifyError(null, "Please provide a valid recipient email address.");
       return;
     }
-    alert(`Successfully scheduled automated ${scheduleFrequency.toLowerCase()} delivery of the '${reportType}' to: ${scheduleEmail}`);
+    notifySuccess(`Successfully scheduled automated ${scheduleFrequency.toLowerCase()} delivery of the '${reportType}' to: ${scheduleEmail}`);
     setShowScheduleModal(false);
     db.logAudit(`Scheduled auto-delivery of ${reportType} to ${scheduleEmail} (${scheduleFrequency}).`);
   };
@@ -367,7 +368,7 @@ export default function Reports({ currentUser }) {
             <Download size={16} />
             <span>Export Report (PDF)</span>
           </button>
-          <button className="btn btn-icon" onClick={() => setShowNotifications(false) || setShowScheduleModal(true)}>
+          <button className="btn btn-icon" onClick={() => setShowScheduleModal(true)}>
             <Mail size={16} />
             <span>Schedule E-mail</span>
           </button>

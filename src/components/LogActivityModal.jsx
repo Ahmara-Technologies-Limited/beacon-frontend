@@ -3,6 +3,7 @@ import { X } from 'lucide-react';
 import { db } from '../data/mockData';
 import { dataService } from '../data/dataService';
 import { notifySuccess, notifyError } from '../lib/toast';
+import { confirmDialog } from '../lib/confirm';
 
 export default function LogActivityModal({ leadId, isOpen, onClose, onSaveComplete, currentUser }) {
   const [formData, setFormData] = useState({
@@ -57,11 +58,16 @@ export default function LogActivityModal({ leadId, isOpen, onClose, onSaveComple
     setFormData(prev => ({ ...prev, [field]: val }));
   };
 
-  const handleClose = () => {
+  const handleClose = async () => {
     if (isDirty) {
-      if (window.confirm("You have unsaved changes. Are you sure you want to discard them?")) {
-        onClose();
-      }
+      const confirmed = await confirmDialog({
+        title: 'Discard unsaved changes?',
+        message: 'You have unsaved changes on this activity log. This cannot be undone.',
+        confirmLabel: 'Discard Changes',
+        cancelLabel: 'Keep Editing',
+        danger: true,
+      });
+      if (confirmed) onClose();
     } else {
       onClose();
     }

@@ -7,6 +7,7 @@ import { notifySuccess, notifyError } from '../lib/toast';
 import { SkeletonTableRows } from '../components/Skeleton';
 import { onDataChange } from '../lib/dataEvents';
 import { formatDateTime } from '../lib/format';
+import { confirmDialog } from '../lib/confirm';
 
 export default function UserManagement({ currentUser }) {
   const [users, setUsers] = useState([]);
@@ -162,6 +163,17 @@ export default function UserManagement({ currentUser }) {
     }
 
     const newStatus = user.status === 'Active' ? 'Inactive' : 'Active';
+
+    if (newStatus === 'Inactive') {
+      const confirmed = await confirmDialog({
+        title: `Deactivate ${user.name}?`,
+        message: 'They will immediately lose access to the system. You can reactivate this account later.',
+        confirmLabel: 'Deactivate',
+        danger: true,
+      });
+      if (!confirmed) return;
+    }
+
     try {
       await dataService.saveUser({
         ...user,

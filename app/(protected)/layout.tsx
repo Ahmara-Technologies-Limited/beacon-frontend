@@ -8,6 +8,7 @@ import Sidebar from '@/components/Sidebar';
 import Header from '@/components/Header';
 import { isRouteAllowed } from '@/lib/routes';
 import { useAppNavigate } from '@/lib/navigation';
+import { confirmDialog } from '@/lib/confirm';
 
 export default function ProtectedLayout({
   children,
@@ -29,7 +30,15 @@ export default function ProtectedLayout({
     }
   }, [loading, currentUser, allowed, dashboardAllowed, pathname, router]);
 
-  const handleSignOut = () => {
+  const handleSignOut = async () => {
+    const confirmed = await confirmDialog({
+      title: 'Sign out?',
+      message: "You'll need to sign in again to access your dashboard.",
+      confirmLabel: 'Sign Out',
+      cancelLabel: 'Stay Signed In',
+      danger: true,
+    });
+    if (!confirmed) return;
     logout();
     router.push('/login');
   };

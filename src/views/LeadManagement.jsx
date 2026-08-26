@@ -152,7 +152,7 @@ export default function LeadManagement({
 
   const handleCSVExport = () => {
     if (filteredLeads.length === 0) {
-      alert("No leads in the current filtered view to export.");
+      notifyError(null, "No leads in the current filtered view to export.");
       return;
     }
 

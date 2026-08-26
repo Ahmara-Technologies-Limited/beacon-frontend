@@ -3,6 +3,7 @@ import NextTopLoader from "nextjs-toploader";
 import { Toaster } from "react-hot-toast";
 import { AuthProvider } from "@/context/AuthContext";
 import { SkeletonStyles } from "@/components/Skeleton";
+import ConfirmDialogHost from "@/components/ConfirmDialogHost";
 import "@/index.css";
 
 export const metadata: Metadata = {
@@ -31,6 +32,7 @@ export default function RootLayout({
             error: { duration: 6000, style: { border: "1px solid #FEE4E2" } },
           }}
         />
+        <ConfirmDialogHost />
         <AuthProvider>{children}</AuthProvider>
       </body>
     </html>

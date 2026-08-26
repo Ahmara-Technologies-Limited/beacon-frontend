@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { ShieldCheck, Plus, Edit2, Trash2, X, Check, ChevronDown, ChevronUp } from 'lucide-react';
+import { confirmDialog } from '../lib/confirm';
 
 const ALL_PERMISSIONS = [
   { group: 'Leads', items: ['view_leads', 'create_leads', 'edit_leads', 'delete_leads', 'reassign_leads', 'archive_leads'] },
@@ -129,8 +130,14 @@ export default function RoleManagement() {
     setEditMode(false);
   };
 
-  const handleDeleteRole = (roleId) => {
-    if (!window.confirm('Are you sure you want to delete this role? This cannot be undone.')) return;
+  const handleDeleteRole = async (roleId) => {
+    const confirmed = await confirmDialog({
+      title: 'Delete this role?',
+      message: 'This cannot be undone.',
+      confirmLabel: 'Delete Role',
+      danger: true,
+    });
+    if (!confirmed) return;
     const updated = roles.filter(r => r.id !== roleId);
     setRoles(updated);
     saveRoles(updated);

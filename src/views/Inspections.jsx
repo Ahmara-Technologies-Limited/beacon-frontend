@@ -6,6 +6,7 @@ import { getPollInterval } from '../lib/demoMode';
 import { formatBudget, formatDate } from '../lib/format';
 import { SkeletonTableRows } from '../components/Skeleton';
 import { onDataChange } from '../lib/dataEvents';
+import { notifyError } from '../lib/toast';
 
 export default function Inspections({
   currentUser, 
@@ -134,7 +135,7 @@ export default function Inspections({
 
   const handleExportCSV = () => {
     if (filteredInspections.length === 0) {
-      alert("No inspections to export.");
+      notifyError(null, "No inspections to export.");
       return;
     }
 

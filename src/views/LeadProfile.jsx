@@ -9,6 +9,7 @@ import { dataService } from '../data/dataService';
 import { getPollInterval } from '../lib/demoMode';
 import { formatBudget } from '../lib/format';
 import { notifySuccess, notifyError } from '../lib/toast';
+import { confirmDialog } from '../lib/confirm';
 import { SkeletonBlock, SkeletonListRows } from '../components/Skeleton';
 import { onDataChange } from '../lib/dataEvents';
 
@@ -73,7 +74,7 @@ export default function LeadProfile({
     if (targetInspectionId) {
       onBookInspectionClick(lead.id, targetInspectionId);
     } else {
-      alert("No assigned inspection record found to update status for.");
+      notifyError(null, "No assigned inspection record found to update status for.");
     }
   };
 
@@ -191,7 +192,13 @@ export default function LeadProfile({
       return;
     }
 
-    if (window.confirm("Are you sure you want to archive this lead? It will be removed from active views but can be restored at any time.")) {
+    const confirmed = await confirmDialog({
+      title: 'Archive this lead?',
+      message: 'It will be removed from active views but can be restored at any time.',
+      confirmLabel: 'Archive Lead',
+      danger: true,
+    });
+    if (confirmed) {
       try {
         await dataService.archiveLead(lead.id);
         loadLeadData();
@@ -204,7 +211,12 @@ export default function LeadProfile({
 
   // Restore lead trigger
   const handleRestoreLead = async () => {
-    if (window.confirm("Restore this lead to active status?")) {
+    const confirmed = await confirmDialog({
+      title: 'Restore this lead?',
+      message: 'This will return the lead to active status.',
+      confirmLabel: 'Restore Lead',
+    });
+    if (confirmed) {
       try {
         await dataService.restoreLead(lead.id);
         notifySuccess("Lead restored successfully.");
@@ -1528,7 +1540,7 @@ export default function LeadProfile({
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
                 <span>WhatsApp</span>
               </a>
-              <a href={lead.email ? `mailto:${lead.email}` : '#'} onClick={(e) => { if (!lead.email) { e.preventDefault(); alert("No email address provided for this lead."); } }} className="btn btn-sm contact-action-btn email-btn" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontWeight: '600' }}>
+              <a href={lead.email ? `mailto:${lead.email}` : '#'} onClick={(e) => { if (!lead.email) { e.preventDefault(); notifyError(null, "No email address provided for this lead."); } }} className="btn btn-sm contact-action-btn email-btn" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontWeight: '600' }}>
                 <Mail size={14} />
                 <span>Email Lead</span>
               </a>

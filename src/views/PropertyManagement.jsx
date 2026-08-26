@@ -5,6 +5,7 @@ import { getPollInterval } from '../lib/demoMode';
 import { formatBudget } from '../lib/format';
 import { notifySuccess, notifyError } from '../lib/toast';
 import { SkeletonTableRows } from '../components/Skeleton';
+import { confirmDialog } from '../lib/confirm';
 import { onDataChange } from '../lib/dataEvents';
 
 export default function PropertyManagement({ currentUser }) {
@@ -83,7 +84,13 @@ export default function PropertyManagement({ currentUser }) {
 
   const handleDeleteProperty = async (e, id) => {
     e.stopPropagation();
-    if (window.confirm("Are you sure you want to delete this property? This action is permanent.")) {
+    const confirmed = await confirmDialog({
+      title: 'Delete this property?',
+      message: 'This action is permanent and cannot be undone.',
+      confirmLabel: 'Delete Property',
+      danger: true,
+    });
+    if (confirmed) {
       try {
         await dataService.deleteProperty(id);
         notifySuccess('Property deleted successfully.');
