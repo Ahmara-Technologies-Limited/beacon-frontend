@@ -633,6 +633,12 @@ a { text-decoration: none; color: inherit; }
 .highlight-lead-name { color: var(--primary-red); font-weight: 600; cursor: pointer; }
 .highlight-lead-name:hover { text-decoration: underline; }
 .closers-table { width: 100%; border-collapse: collapse; }
+
+/* Sub-tab bars (Dashboard.jsx role tabs, LeadProfile.jsx history tabs) sit
+   inside cards with overflow:hidden and scroll horizontally on narrow
+   screens - without this, flex's default shrink-to-fit would compress
+   button text instead of letting the row actually overflow into scroll. */
+.tab-btn { flex-shrink: 0; white-space: nowrap; }
 .closers-table th { padding: 10px 16px; font-size: 12px; font-weight: 600; color: var(--text-secondary); border-bottom: 1px solid var(--border-color); text-align: left; background: var(--table-header-bg); }
 .closers-table td { padding: 12px 16px; font-size: 13px; color: var(--text-secondary); border-bottom: 1px solid var(--border-color); }
 .closers-table tbody tr { transition: var(--transition-normal); cursor: pointer; }

@@ -1378,10 +1378,10 @@ export default function LeadProfile({
             <h3 className="section-title">Activity Log & Conversation History</h3>
 
             {/* Custom Tab Toggles */}
-            <div style={{ display: 'flex', borderBottom: '1px solid var(--border-color)', marginBottom: '20px', gap: '8px' }}>
-              <button 
+            <div style={{ display: 'flex', borderBottom: '1px solid var(--border-color)', marginBottom: '20px', gap: '8px', overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+              <button
                 type="button"
-                className={`tab-btn ${activeHistoryTab === 'conversation' ? 'active' : ''}`} 
+                className={`tab-btn ${activeHistoryTab === 'conversation' ? 'active' : ''}`}
                 onClick={() => setActiveHistoryTab('conversation')}
                 style={{ 
                   padding: '12px 20px', 

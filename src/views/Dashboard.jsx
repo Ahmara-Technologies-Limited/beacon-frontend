@@ -401,27 +401,29 @@ export default function Dashboard({ currentUser, setCurrentTab, setViewingLeadId
         <div className="dashboard-layout-row" style={{ marginTop: '24px' }}>
           <div className="card dashboard-table-half">
             <h3 className="section-title">Top 5 Closers (This Month)</h3>
-            <table className="closers-table">
-              <thead>
-                <tr>
-                  <th>Closer Name</th>
-                  <th>Sales Converted</th>
-                  <th>Active Portfolio</th>
-                </tr>
-              </thead>
-              <tbody>
-                {closersPerformance.map((c, i) => (
-                  <tr key={i}>
-                    <td className="closer-name-col">
-                      <div className="avatar-sm">{c.name.split(' ').map(n => n[0]).join('')}</div>
-                      <span>{c.name}</span>
-                    </td>
-                    <td><span className="badge badge-success">{c.converted} Converted</span></td>
-                    <td>{c.activeLeads} active</td>
+            <div className="table-container">
+              <table className="closers-table">
+                <thead>
+                  <tr>
+                    <th>Closer Name</th>
+                    <th>Sales Converted</th>
+                    <th>Active Portfolio</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {closersPerformance.map((c, i) => (
+                    <tr key={i}>
+                      <td className="closer-name-col">
+                        <div className="avatar-sm">{c.name.split(' ').map(n => n[0]).join('')}</div>
+                        <span>{c.name}</span>
+                      </td>
+                      <td><span className="badge badge-success">{c.converted} Converted</span></td>
+                      <td>{c.activeLeads} active</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
 
           <div className="card dashboard-alerts-half">
@@ -676,24 +678,26 @@ export default function Dashboard({ currentUser, setCurrentTab, setViewingLeadId
             {upcomingInspections.length === 0 ? (
               <div className="empty-table-state">No site inspections scheduled.</div>
             ) : (
-              <table className="closers-table">
-                <thead>
-                  <tr><th>Lead Name</th><th>Estate</th><th>Date / Time</th><th>Status</th></tr>
-                </thead>
-                <tbody>
-                  {upcomingInspections.map(i => {
-                    const lName = leads.find(l => l.id === i.leadId)?.name || "Unknown";
-                    return (
-                      <tr key={i.id} onClick={() => { setViewingLeadId(i.leadId); setCurrentTab('leads'); }}>
-                        <td className="lead-name-cell">{lName}</td>
-                        <td>{i.estate}</td>
-                        <td>{i.date} @ {i.time}</td>
-                        <td><span className={`badge ${i.status === 'Confirmed' ? 'badge-success' : 'badge-cold'}`}>{i.status}</span></td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+              <div className="table-container">
+                <table className="closers-table">
+                  <thead>
+                    <tr><th>Lead Name</th><th>Estate</th><th>Date / Time</th><th>Status</th></tr>
+                  </thead>
+                  <tbody>
+                    {upcomingInspections.map(i => {
+                      const lName = leads.find(l => l.id === i.leadId)?.name || "Unknown";
+                      return (
+                        <tr key={i.id} onClick={() => { setViewingLeadId(i.leadId); setCurrentTab('leads'); }}>
+                          <td className="lead-name-cell">{lName}</td>
+                          <td>{i.estate}</td>
+                          <td>{i.date} @ {i.time}</td>
+                          <td><span className={`badge ${i.status === 'Confirmed' ? 'badge-success' : 'badge-cold'}`}>{i.status}</span></td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
             )}
           </div>
 
@@ -837,6 +841,7 @@ export default function Dashboard({ currentUser, setCurrentTab, setViewingLeadId
           {todayInspections.length === 0 ? (
             <div className="empty-table-state">No site inspections scheduled for today.</div>
           ) : (
+            <div className="table-container">
             <table className="closers-table">
               <thead>
                 <tr>
@@ -901,6 +906,7 @@ export default function Dashboard({ currentUser, setCurrentTab, setViewingLeadId
                 })}
               </tbody>
             </table>
+            </div>
           )}
         </div>
       </div>
@@ -966,35 +972,37 @@ export default function Dashboard({ currentUser, setCurrentTab, setViewingLeadId
             {pendingAdminLeads.length === 0 ? (
               <div className="empty-table-state">No leads in reservation or payment stages.</div>
             ) : (
-              <table className="closers-table">
-                <thead>
-                  <tr>
-                    <th>Lead Name</th>
-                    <th>Assigned Closer</th>
-                    <th>Current Stage</th>
-                    <th>Last Activity</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {pendingAdminLeads.map(l => {
-                    const closerName = users.find(u => u.id === l.assignedCloserId)?.name || "Unassigned";
-                    return (
-                      <tr key={l.id} onClick={() => { setViewingLeadId(l.id); setCurrentTab('leads'); }}>
-                        <td className="lead-name-cell">{l.name}</td>
-                        <td>{closerName}</td>
-                        <td><span className="badge badge-grey">{l.stage}</span></td>
-                        <td>{new Date(l.lastActivityDate).toLocaleDateString()}</td>
-                        <td>
-                          <button className="btn btn-sm btn-primary">
-                            Log Internal Note
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+              <div className="table-container">
+                <table className="closers-table">
+                  <thead>
+                    <tr>
+                      <th>Lead Name</th>
+                      <th>Assigned Closer</th>
+                      <th>Current Stage</th>
+                      <th>Last Activity</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {pendingAdminLeads.map(l => {
+                      const closerName = users.find(u => u.id === l.assignedCloserId)?.name || "Unassigned";
+                      return (
+                        <tr key={l.id} onClick={() => { setViewingLeadId(l.id); setCurrentTab('leads'); }}>
+                          <td className="lead-name-cell">{l.name}</td>
+                          <td>{closerName}</td>
+                          <td><span className="badge badge-grey">{l.stage}</span></td>
+                          <td>{new Date(l.lastActivityDate).toLocaleDateString()}</td>
+                          <td>
+                            <button className="btn btn-sm btn-primary">
+                              Log Internal Note
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
             )}
           </div>
 
@@ -1154,7 +1162,7 @@ export default function Dashboard({ currentUser, setCurrentTab, setViewingLeadId
         )}
 
         <div className="card" style={{ padding: '0px', overflow: 'hidden' }}>
-          <div style={{ display: 'flex', borderBottom: '1px solid var(--border-color)', background: 'var(--table-header-bg)' }}>
+          <div style={{ display: 'flex', borderBottom: '1px solid var(--border-color)', background: 'var(--table-header-bg)', overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
             <button className={`tab-btn ${rmTab === 'clients' ? 'active' : ''}`} onClick={() => setRmTab('clients')} style={{ padding: '16px 24px', font: 'inherit', fontWeight: '600', border: 'none', background: 'none', borderBottom: rmTab === 'clients' ? '2px solid var(--primary-red)' : 'none', cursor: 'pointer', color: rmTab === 'clients' ? 'var(--primary-red)' : 'var(--text-secondary)' }}>
               Clients Portfolio ({clients.length})
             </button>
@@ -1485,7 +1493,7 @@ export default function Dashboard({ currentUser, setCurrentTab, setViewingLeadId
         )}
 
         <div className="card" style={{ padding: '0px', overflow: 'hidden' }}>
-          <div style={{ display: 'flex', borderBottom: '1px solid var(--border-color)', background: 'var(--table-header-bg)' }}>
+          <div style={{ display: 'flex', borderBottom: '1px solid var(--border-color)', background: 'var(--table-header-bg)', overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
             <button className={`tab-btn ${opsTab === 'leads' ? 'active' : ''}`} onClick={() => setOpsTab('leads')} style={{ padding: '16px 24px', font: 'inherit', fontWeight: '600', border: 'none', background: 'none', borderBottom: opsTab === 'leads' ? '2px solid var(--primary-red)' : 'none', cursor: 'pointer', color: opsTab === 'leads' ? 'var(--primary-red)' : 'var(--text-secondary)' }}>
               Unassigned Leads Flow ({unassignedLeads.length})
             </button>
@@ -1799,7 +1807,7 @@ export default function Dashboard({ currentUser, setCurrentTab, setViewingLeadId
         </div>
 
         <div className="card" style={{ padding: '0px', overflow: 'hidden' }}>
-          <div style={{ display: 'flex', borderBottom: '1px solid var(--border-color)', background: 'var(--table-header-bg)' }}>
+          <div style={{ display: 'flex', borderBottom: '1px solid var(--border-color)', background: 'var(--table-header-bg)', overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
             <button className={`tab-btn ${bmTab === 'team' ? 'active' : ''}`} onClick={() => setBmTab('team')} style={{ padding: '16px 24px', font: 'inherit', fontWeight: '600', border: 'none', background: 'none', borderBottom: bmTab === 'team' ? '2px solid var(--primary-red)' : 'none', cursor: 'pointer', color: bmTab === 'team' ? 'var(--primary-red)' : 'var(--text-secondary)' }}>
               Branch Team Dashboard
             </button>
@@ -2045,7 +2053,7 @@ export default function Dashboard({ currentUser, setCurrentTab, setViewingLeadId
         )}
 
         <div className="card" style={{ padding: '0px', overflow: 'hidden' }}>
-          <div style={{ display: 'flex', borderBottom: '1px solid var(--border-color)', background: 'var(--table-header-bg)' }}>
+          <div style={{ display: 'flex', borderBottom: '1px solid var(--border-color)', background: 'var(--table-header-bg)', overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
             <button className={`tab-btn ${gmTab === 'forecast' ? 'active' : ''}`} onClick={() => setGmTab('forecast')} style={{ padding: '16px 24px', font: 'inherit', fontWeight: '600', border: 'none', background: 'none', borderBottom: gmTab === 'forecast' ? '2px solid var(--primary-red)' : 'none', cursor: 'pointer', color: gmTab === 'forecast' ? 'var(--primary-red)' : 'var(--text-secondary)' }}>
               Revenue Forecasts
             </button>
