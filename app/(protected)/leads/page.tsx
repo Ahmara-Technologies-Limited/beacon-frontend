@@ -1,12 +1,13 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
+
 import { useAuth } from '@/context/AuthContext';
 import { useCrmUI } from '@/context/CrmUIContext';
 import LeadManagement from '@/views/LeadManagement';
+import { useAppNavigate } from '@/lib/navigation';
 
 export default function LeadsPage() {
-  const router = useRouter();
+  const router = useAppNavigate();
   const { currentUser } = useAuth();
   const { openEditLead, searchTerm } = useCrmUI();
 

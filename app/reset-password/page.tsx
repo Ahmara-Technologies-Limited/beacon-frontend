@@ -1,13 +1,14 @@
 'use client';
 
 import { Suspense, useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { Lock, Eye, EyeOff, AlertTriangle, Check } from 'lucide-react';
 import { dataService } from '@/data/dataService';
 import { ApiError } from '@/lib/apiClient';
+import { useAppNavigate } from '@/lib/navigation';
 
 function ResetPasswordForm() {
-  const router = useRouter();
+  const router = useAppNavigate();
   const searchParams = useSearchParams();
   const uid = searchParams.get('uid') || '';
   const token = searchParams.get('token') || '';

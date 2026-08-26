@@ -7,6 +7,7 @@ import { db } from '../data/mockData';
 import { dataService } from '../data/dataService';
 import { getPollInterval } from '../lib/demoMode';
 import { notifySuccess, notifyError } from '../lib/toast';
+import { SkeletonTableRows } from '../components/Skeleton';
 
 export default function LeadManagement({ 
   currentUser, 
@@ -42,6 +43,7 @@ export default function LeadManagement({
   const [bulkStatusMsg, setBulkStatusMsg] = useState('');
 
   const [importSummary, setImportSummary] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   const loadLeads = async () => {
     if (filterArchived === 'Archived') {
@@ -49,9 +51,11 @@ export default function LeadManagement({
     } else {
       setLeads(await dataService.getLeads());
     }
+    setIsLoading(false);
   };
 
   useEffect(() => {
+    setIsLoading(true);
     loadLeads();
     dataService.getUsers().then(users =>
       setClosers(users.filter(u => u.role === 'Sales Closer' && u.status === 'Active'))
@@ -557,7 +561,9 @@ export default function LeadManagement({
             </tr>
           </thead>
           <tbody>
-            {filteredLeads.length === 0 ? (
+            {isLoading ? (
+              <SkeletonTableRows columns={11} rows={8} />
+            ) : filteredLeads.length === 0 ? (
               <tr>
                 <td colSpan={11} className="empty-table-state">
                   No leads found. Try adjusting your search query or filters.

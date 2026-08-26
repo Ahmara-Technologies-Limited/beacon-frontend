@@ -11,6 +11,7 @@ import { db } from '../data/mockData';
 import { dataService } from '../data/dataService';
 import { getPollInterval } from '../lib/demoMode';
 import { formatBudget, parseBudgetNumber } from '../lib/format';
+import { SkeletonCards } from '../components/Skeleton';
 
 export default function Dashboard({ currentUser, setCurrentTab, setViewingLeadId, onAddLeadClick, onLogActivityClick, onBookInspectionClick, onEditLeadClick }) {
   const [leads, setLeads] = useState([]);
@@ -55,15 +56,19 @@ export default function Dashboard({ currentUser, setCurrentTab, setViewingLeadId
     </div>
   );
 
+  const [isLoading, setIsLoading] = useState(true);
+
   const loadDashboardData = () => {
-    dataService.getLeads().then(setLeads);
-    dataService.getInspections().then(setInspections);
-    dataService.getActivities().then(setActivities);
-    dataService.getUsers().then(setUsers);
+    return Promise.all([
+      dataService.getLeads().then(setLeads),
+      dataService.getInspections().then(setInspections),
+      dataService.getActivities().then(setActivities),
+      dataService.getUsers().then(setUsers),
+    ]);
   };
 
   useEffect(() => {
-    loadDashboardData();
+    loadDashboardData().finally(() => setIsLoading(false));
     setSettings(db.getSettings());
 
     const interval = setInterval(loadDashboardData, getPollInterval(1500));
@@ -2168,6 +2173,17 @@ export default function Dashboard({ currentUser, setCurrentTab, setViewingLeadId
       </div>
     );
   };
+
+  if (isLoading) {
+    return (
+      <div className="dashboard-page animate-slide">
+        <div className="dashboard-welcome-banner">
+          <p className="welcome-greeting">{getGreeting()}, {currentUser.name.split(' ')[0]} 👋</p>
+        </div>
+        <SkeletonCards count={4} />
+      </div>
+    );
+  }
 
   switch (currentUser?.role) {
     case 'Super Admin':

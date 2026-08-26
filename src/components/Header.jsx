@@ -1,16 +1,17 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { useRouter } from 'next/navigation';
+
 import { Bell, Search, X, Check, Eye, Sun, Moon, Menu } from 'lucide-react';
 import { db } from '../data/mockData';
 import { dataService } from '../data/dataService';
 import { getPollInterval } from '../lib/demoMode';
 import { useAuth } from '../context/AuthContext';
 import { useCrmUI } from '../context/CrmUIContext';
+import { useAppNavigate } from '@/lib/navigation';
 
 export default function Header() {
-  const router = useRouter();
+  const router = useAppNavigate();
   const { currentUser, login } = useAuth();
   const { darkMode, toggleDarkMode, mobileSidebarOpen, setMobileSidebarOpen, setSearchTerm } = useCrmUI();
   const [notifications, setNotifications] = useState([]);

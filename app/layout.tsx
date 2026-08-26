@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import NextTopLoader from "nextjs-toploader";
 import { Toaster } from "react-hot-toast";
 import { AuthProvider } from "@/context/AuthContext";
+import { SkeletonStyles } from "@/components/Skeleton";
 import "@/index.css";
 
 export const metadata: Metadata = {
@@ -20,6 +21,7 @@ export default function RootLayout({
     <html lang="en">
       <body>
         <NextTopLoader color="#D4262A" showSpinner={false} />
+        <SkeletonStyles />
         <Toaster
           position="top-right"
           toastOptions={{

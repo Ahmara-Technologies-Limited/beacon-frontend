@@ -1,13 +1,14 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
+
 import { useAuth } from '@/context/AuthContext';
 import { useCrmUI } from '@/context/CrmUIContext';
 import { routeForTab } from '@/lib/routes';
 import Dashboard from '@/views/Dashboard';
+import { useAppNavigate } from '@/lib/navigation';
 
 export default function DashboardPage() {
-  const router = useRouter();
+  const router = useAppNavigate();
   const { currentUser } = useAuth();
   const { openEditLead, openLogActivity, openBookInspection } = useCrmUI();
 

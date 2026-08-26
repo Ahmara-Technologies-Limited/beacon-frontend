@@ -1,13 +1,14 @@
 'use client';
 
-import { useParams, useRouter, useSearchParams } from 'next/navigation';
+import { useParams, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { useCrmUI } from '@/context/CrmUIContext';
 import { routeForTab } from '@/lib/routes';
 import LeadProfile from '@/views/LeadProfile';
+import { useAppNavigate } from '@/lib/navigation';
 
 export default function LeadProfilePage() {
-  const router = useRouter();
+  const router = useAppNavigate();
   const params = useParams<{ id: string }>();
   const searchParams = useSearchParams();
   const { currentUser } = useAuth();

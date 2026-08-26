@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard,
   Users,
@@ -19,10 +19,11 @@ import {
 } from 'lucide-react';
 import { TAB_ROUTES, TAB_ROLES } from '../lib/routes';
 import { useCrmUI } from '../context/CrmUIContext';
+import { useAppNavigate } from '@/lib/navigation';
 
 export default function Sidebar({ currentUser, onSignOut }) {
   const pathname = usePathname();
-  const router = useRouter();
+  const router = useAppNavigate();
   const { mobileSidebarOpen: mobileOpen, setMobileSidebarOpen: setMobileOpen } = useCrmUI();
 
   if (!currentUser) return null;

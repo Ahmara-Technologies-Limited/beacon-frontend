@@ -4,6 +4,7 @@ import { db } from '../data/mockData';
 import { dataService } from '../data/dataService';
 import { isDemoMode, getPollInterval } from '../lib/demoMode';
 import { notifySuccess, notifyError } from '../lib/toast';
+import { SkeletonTableRows } from '../components/Skeleton';
 
 export default function UserManagement({ currentUser }) {
   const [users, setUsers] = useState([]);
@@ -39,9 +40,12 @@ export default function UserManagement({ currentUser }) {
     'Relationship Manager', 'Head of Operations', 'Branch Manager', 'General Manager'
   ];
 
+  const [isLoading, setIsLoading] = useState(true);
+
   const loadUserData = async () => {
     setUsers(await dataService.getUsers());
     setLeads(await dataService.getLeads());
+    setIsLoading(false);
   };
 
   useEffect(() => {
@@ -259,7 +263,9 @@ export default function UserManagement({ currentUser }) {
             </tr>
           </thead>
           <tbody>
-            {filteredUsers.length === 0 ? (
+            {isLoading ? (
+              <SkeletonTableRows columns={7} rows={6} />
+            ) : filteredUsers.length === 0 ? (
               <tr>
                 <td colSpan={7} className="empty-table-state">
                   No users found matching the selected filters.

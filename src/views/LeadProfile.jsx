@@ -9,6 +9,7 @@ import { dataService } from '../data/dataService';
 import { getPollInterval } from '../lib/demoMode';
 import { formatBudget } from '../lib/format';
 import { notifySuccess, notifyError } from '../lib/toast';
+import { SkeletonBlock, SkeletonListRows } from '../components/Skeleton';
 
 /**
  * @param {{
@@ -31,6 +32,7 @@ export default function LeadProfile({
   onEditLeadClick
 }) {
   const [lead, setLead] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [activities, setActivities] = useState([]);
   const [inspections, setInspections] = useState([]);
   const [closers, setClosers] = useState([]);
@@ -135,9 +137,11 @@ export default function LeadProfile({
       setAssignedCloser(closer || null);
       setReassignCloserId(foundLead.assignedCloserId || '');
     }
+    setIsLoading(false);
   };
 
   useEffect(() => {
+    setIsLoading(true);
     loadLeadData();
     const interval = setInterval(() => {
       loadLeadData();
@@ -154,6 +158,15 @@ export default function LeadProfile({
   );
 
   const displayedActivities = activeHistoryTab === 'conversation' ? conversationActivities : systemActivities;
+
+  if (isLoading && !lead) {
+    return (
+      <div className="lead-profile-page animate-slide">
+        <SkeletonBlock width="240px" height="28px" style={{ marginBottom: '16px' }} />
+        <SkeletonListRows count={4} lines={3} />
+      </div>
+    );
+  }
 
   if (!lead) {
     return (

@@ -1,16 +1,17 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+
 import { Lock, Mail, Eye, EyeOff, AlertTriangle, Check } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { db } from '@/data/mockData';
 import { dataService } from '@/data/dataService';
 import { useDemoMode } from '@/lib/demoMode';
 import { ApiError } from '@/lib/apiClient';
+import { useAppNavigate } from '@/lib/navigation';
 
 export default function LoginPage() {
-  const router = useRouter();
+  const router = useAppNavigate();
   const { currentUser, login, loading } = useAuth();
 
   const [loginEmail, setLoginEmail] = useState('');

@@ -1,12 +1,13 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
+
 import { useAuth } from '@/context/AuthContext';
 import { routeForTab } from '@/lib/routes';
 import PipelineTracker from '@/views/PipelineTracker';
+import { useAppNavigate } from '@/lib/navigation';
 
 export default function PipelinePage() {
-  const router = useRouter();
+  const router = useAppNavigate();
   const { currentUser } = useAuth();
 
   return (

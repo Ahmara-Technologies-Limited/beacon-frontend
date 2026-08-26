@@ -1,12 +1,13 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
+
 import { useAuth } from '@/context/AuthContext';
 import { routeForTab } from '@/lib/routes';
 import FollowUp from '@/views/FollowUp';
+import { useAppNavigate } from '@/lib/navigation';
 
 export default function FollowUpPage() {
-  const router = useRouter();
+  const router = useAppNavigate();
   const { currentUser } = useAuth();
 
   return (

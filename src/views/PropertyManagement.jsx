@@ -4,6 +4,7 @@ import { dataService } from '../data/dataService';
 import { getPollInterval } from '../lib/demoMode';
 import { formatBudget } from '../lib/format';
 import { notifySuccess, notifyError } from '../lib/toast';
+import { SkeletonTableRows } from '../components/Skeleton';
 
 export default function PropertyManagement({ currentUser }) {
   const [properties, setProperties] = useState([]);
@@ -28,11 +29,13 @@ export default function PropertyManagement({ currentUser }) {
   });
   const [formErrors, setFormErrors] = useState({});
   const [isSavingProperty, setIsSavingProperty] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   const loadData = async () => {
     const [props, leadsList] = await Promise.all([dataService.getProperties(), dataService.getLeads()]);
     setProperties(props);
     setLeads(leadsList);
+    setIsLoading(false);
   };
 
   useEffect(() => {
@@ -383,7 +386,9 @@ export default function PropertyManagement({ currentUser }) {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredProps.length === 0 ? (
+                  {isLoading ? (
+                    <SkeletonTableRows columns={isEditable ? 9 : 8} rows={6} />
+                  ) : filteredProps.length === 0 ? (
                     <tr>
                       <td colSpan={isEditable ? 9 : 8} className="empty-table-state">
                         No properties found matching your search.

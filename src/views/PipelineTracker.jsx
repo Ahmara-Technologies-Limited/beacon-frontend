@@ -3,11 +3,13 @@ import { db } from '../data/mockData';
 import { dataService } from '../data/dataService';
 import { getPollInterval } from '../lib/demoMode';
 import { AlertCircle, Calendar } from 'lucide-react';
+import { SkeletonBlock } from '../components/Skeleton';
 
 export default function PipelineTracker({ currentUser, setViewingLeadId, setCurrentTab }) {
   const [leads, setLeads] = useState([]);
   const [closers, setClosers] = useState([]);
   const [filterCloserId, setFilterCloserId] = useState('All');
+  const [isLoading, setIsLoading] = useState(true);
 
   const STAGES = [
     "New Lead", 
@@ -29,6 +31,7 @@ export default function PipelineTracker({ currentUser, setViewingLeadId, setCurr
   const loadPipelineData = async () => {
     setLeads(await dataService.getLeads());
     setClosers((await dataService.getUsers()).filter(u => u.role === 'Sales Closer' && u.status === 'Active'));
+    setIsLoading(false);
   };
 
   useEffect(() => {
@@ -118,7 +121,18 @@ export default function PipelineTracker({ currentUser, setViewingLeadId, setCurr
 
       {/* Kanban Board Layout */}
       <div className="kanban-board-container">
-        {STAGES.map(stage => {
+        {isLoading ? (
+          STAGES.slice(0, 6).map(stage => (
+            <div key={stage} className="kanban-column">
+              <SkeletonBlock width="70%" height="16px" style={{ margin: '12px' }} />
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', padding: '0 12px' }}>
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <SkeletonBlock key={i} width="100%" height="70px" radius="8px" />
+                ))}
+              </div>
+            </div>
+          ))
+        ) : STAGES.map(stage => {
           const columnLeads = filteredLeads.filter(l => l.stage === stage);
           return (
             <div 

@@ -1,19 +1,20 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useRouter, usePathname } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { CrmUIProvider } from '@/context/CrmUIContext';
 import Sidebar from '@/components/Sidebar';
 import Header from '@/components/Header';
 import { isRouteAllowed } from '@/lib/routes';
+import { useAppNavigate } from '@/lib/navigation';
 
 export default function ProtectedLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const router = useRouter();
+  const router = useAppNavigate();
   const pathname = usePathname();
   const { currentUser, logout, loading } = useAuth();
 

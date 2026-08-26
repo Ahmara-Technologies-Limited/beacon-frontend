@@ -1,11 +1,12 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+
 import { useAuth } from '@/context/AuthContext';
+import { useAppNavigate } from '@/lib/navigation';
 
 export default function RootPage() {
-  const router = useRouter();
+  const router = useAppNavigate();
   const { currentUser, loading } = useAuth();
 
   useEffect(() => {

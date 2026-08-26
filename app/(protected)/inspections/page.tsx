@@ -1,13 +1,14 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
+
 import { useAuth } from '@/context/AuthContext';
 import { useCrmUI } from '@/context/CrmUIContext';
 import { routeForTab } from '@/lib/routes';
 import Inspections from '@/views/Inspections';
+import { useAppNavigate } from '@/lib/navigation';
 
 export default function InspectionsPage() {
-  const router = useRouter();
+  const router = useAppNavigate();
   const { currentUser } = useAuth();
   const { openBookInspection } = useCrmUI();
 

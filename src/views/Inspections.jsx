@@ -4,6 +4,7 @@ import { db } from '../data/mockData';
 import { dataService } from '../data/dataService';
 import { getPollInterval } from '../lib/demoMode';
 import { formatBudget } from '../lib/format';
+import { SkeletonTableRows } from '../components/Skeleton';
 
 export default function Inspections({
   currentUser, 
@@ -52,11 +53,14 @@ export default function Inspections({
     'Beacon Palms, Maitama'
   ];
 
+  const [isLoading, setIsLoading] = useState(true);
+
   const loadInspectionData = async () => {
     setInspections(await dataService.getInspections());
     setLeads(await dataService.getLeads());
     setUsers(await dataService.getUsers());
     setProperties(await dataService.getProperties());
+    setIsLoading(false);
   };
 
   useEffect(() => {
@@ -694,7 +698,9 @@ export default function Inspections({
               </tr>
             </thead>
             <tbody>
-              {filteredInspections.length === 0 ? (
+              {isLoading ? (
+                <SkeletonTableRows columns={9} rows={6} />
+              ) : filteredInspections.length === 0 ? (
                 <tr>
                   <td colSpan={9} className="empty-table-state">
                     No inspections scheduled or found with these filters.
