@@ -3,6 +3,7 @@ import { Phone, Calendar, Clock, User, X, Check, Eye, AlertTriangle, Filter } fr
 import { db } from '../data/mockData';
 import { dataService } from '../data/dataService';
 import { getPollInterval } from '../lib/demoMode';
+import { formatDateTime } from '../lib/format';
 
 export default function FollowUp({ currentUser, setViewingLeadId, setCurrentTab }) {
   const [leads, setLeads] = useState([]);
@@ -293,7 +294,7 @@ export default function FollowUp({ currentUser, setViewingLeadId, setCurrentTab 
                         {daysOver} days overdue
                       </td>
                       <td className="overdue-text-red">
-                        {new Date(lead.followUpDate).toLocaleDateString()}
+                        {formatDateTime(lead.followUpDate)}
                       </td>
                       <td onClick={(e) => e.stopPropagation()}>
                         <div className="queue-action-buttons">

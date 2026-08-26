@@ -9,6 +9,7 @@ import { getPollInterval } from '../lib/demoMode';
 import { notifySuccess, notifyError } from '../lib/toast';
 import { SkeletonTableRows } from '../components/Skeleton';
 import { onDataChange } from '../lib/dataEvents';
+import { formatDateTime } from '../lib/format';
 
 export default function LeadManagement({ 
   currentUser, 
@@ -630,11 +631,11 @@ export default function LeadManagement({
                       <div className="followup-cell">
                         {isFollowUpOverdue && <Flag size={14} className="overdue-flag-red" />}
                         <span className={isFollowUpOverdue ? 'overdue-text-red' : ''}>
-                          {lead.followUpDate ? new Date(lead.followUpDate).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' }) : '---'}
+                          {formatDateTime(lead.followUpDate)}
                         </span>
                       </div>
                     </td>
-                    <td>{new Date(lead.lastActivityDate).toLocaleDateString()}</td>
+                    <td>{formatDateTime(lead.lastActivityDate)}</td>
                     {filterArchived === 'Active' && currentUser.role !== 'Admin/Doc Officer' && (
                       <td onClick={(e) => e.stopPropagation()}>
                         <button className="btn btn-sm btn-icon" onClick={() => onEditLeadClick(lead.id)}>

@@ -6,6 +6,7 @@ import { isDemoMode, getPollInterval } from '../lib/demoMode';
 import { notifySuccess, notifyError } from '../lib/toast';
 import { SkeletonTableRows } from '../components/Skeleton';
 import { onDataChange } from '../lib/dataEvents';
+import { formatDateTime } from '../lib/format';
 
 export default function UserManagement({ currentUser }) {
   const [users, setUsers] = useState([]);
@@ -297,7 +298,7 @@ export default function UserManagement({ currentUser }) {
                         <span className={`status-label ${user.status.toLowerCase()}`}>{user.status}</span>
                       </div>
                     </td>
-                    <td>{user.dateAdded}</td>
+                    <td>{formatDateTime(user.dateAdded)}</td>
                     <td onClick={(e) => e.stopPropagation()}>
                       <div className="user-action-buttons">
                         <button className="icon-btn-action" onClick={() => handleTriggerResetPassword(user)} title="Send Password Reset Link">

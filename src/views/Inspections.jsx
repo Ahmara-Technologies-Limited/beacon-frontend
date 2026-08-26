@@ -3,7 +3,7 @@ import { Plus, Download, LayoutList, Calendar as CalendarIcon, X, Check, AlertCi
 import { db } from '../data/mockData';
 import { dataService } from '../data/dataService';
 import { getPollInterval } from '../lib/demoMode';
-import { formatBudget } from '../lib/format';
+import { formatBudget, formatDate } from '../lib/format';
 import { SkeletonTableRows } from '../components/Skeleton';
 import { onDataChange } from '../lib/dataEvents';
 
@@ -734,7 +734,7 @@ export default function Inspections({
                         {leadName}
                       </td>
                       <td>{i.estate}</td>
-                      <td>{i.date}</td>
+                      <td>{formatDate(i.date)}</td>
                       <td>{i.time}</td>
                       <td>{i.meetingPoint}</td>
                       <td>{closerName}</td>

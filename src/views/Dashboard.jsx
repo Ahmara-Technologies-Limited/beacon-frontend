@@ -10,7 +10,7 @@ import {
 import { db } from '../data/mockData';
 import { dataService } from '../data/dataService';
 import { getPollInterval } from '../lib/demoMode';
-import { formatBudget, parseBudgetNumber } from '../lib/format';
+import { formatBudget, parseBudgetNumber, formatDateTime } from '../lib/format';
 import { SkeletonCards } from '../components/Skeleton';
 import { onDataChange } from '../lib/dataEvents';
 
@@ -991,7 +991,7 @@ export default function Dashboard({ currentUser, setCurrentTab, setViewingLeadId
                           <td className="lead-name-cell">{l.name}</td>
                           <td>{closerName}</td>
                           <td><span className="badge badge-grey">{l.stage}</span></td>
-                          <td>{new Date(l.lastActivityDate).toLocaleDateString()}</td>
+                          <td>{formatDateTime(l.lastActivityDate)}</td>
                           <td>
                             <button className="btn btn-sm btn-primary">
                               Log Internal Note
@@ -1018,7 +1018,7 @@ export default function Dashboard({ currentUser, setCurrentTab, setViewingLeadId
                     <div key={act.id} className="closer-activity-row">
                       <div className="c-act-top">
                         <span className="badge badge-success">{act.type}</span>
-                        <span className="c-act-time">{new Date(act.date).toLocaleDateString()}</span>
+                        <span className="c-act-time">{formatDateTime(act.date)}</span>
                       </div>
                       <div className="c-act-summary">
                         <strong>{act.loggedBy}</strong> on <strong>{lName}</strong>: "{act.summary}"
@@ -1210,7 +1210,7 @@ export default function Dashboard({ currentUser, setCurrentTab, setViewingLeadId
                             </div>
                           </td>
                           <td style={{ padding: '12px', fontSize: '13px' }}>
-                            {c.lastContactDate ? new Date(c.lastContactDate).toLocaleDateString() : 'Never'}
+                            {c.lastContactDate ? formatDateTime(c.lastContactDate) : 'Never'}
                           </td>
                           <td style={{ padding: '12px', fontSize: '13px', color: new Date(c.followUpDate) < new Date() ? 'var(--primary-red)' : 'inherit' }}>
                             {c.followUpDate ? new Date(c.followUpDate).toLocaleString() : 'Not Set'}
@@ -1534,7 +1534,7 @@ export default function Dashboard({ currentUser, setCurrentTab, setViewingLeadId
                             <td style={{ padding: '12px', fontSize: '13px' }}>{l.source}</td>
                             <td style={{ padding: '12px' }}>{l.category}</td>
                             <td style={{ padding: '12px', fontSize: '13px', fontWeight: '600' }}>{formatBudget(l.budget)}</td>
-                            <td style={{ padding: '12px', fontSize: '12px' }}>{new Date(l.dateCreated).toLocaleDateString()}</td>
+                            <td style={{ padding: '12px', fontSize: '12px' }}>{formatDateTime(l.dateCreated)}</td>
                             <td style={{ padding: '12px' }}>
                               <select 
                                 className="form-control"
@@ -2043,7 +2043,7 @@ export default function Dashboard({ currentUser, setCurrentTab, setViewingLeadId
                 <div key={o.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', background: 'var(--card-bg)', border: '1px solid var(--border-color)', borderRadius: '8px' }}>
                   <div>
                     <span style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text-primary)' }}>{o.name}</span>
-                    <span style={{ fontSize: '11px', color: 'var(--text-secondary)', marginLeft: '12px' }}>Budget: {formatBudget(o.budget)} | Health: {o.relationshipStatus || 'Warm'} | Last Activity: {new Date(o.lastActivityDate).toLocaleDateString()}</span>
+                    <span style={{ fontSize: '11px', color: 'var(--text-secondary)', marginLeft: '12px' }}>Budget: {formatBudget(o.budget)} | Health: {o.relationshipStatus || 'Warm'} | Last Activity: {formatDateTime(o.lastActivityDate)}</span>
                   </div>
                   <button className="btn btn-xs btn-primary" onClick={() => setViewingLeadId(o.id)}>Inspect Lead Profile</button>
                 </div>
