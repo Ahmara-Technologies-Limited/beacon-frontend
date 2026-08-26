@@ -4,6 +4,7 @@ import { dataService } from '../data/dataService';
 import { getPollInterval } from '../lib/demoMode';
 import { AlertCircle, Calendar } from 'lucide-react';
 import { SkeletonBlock } from '../components/Skeleton';
+import { onDataChange } from '../lib/dataEvents';
 
 export default function PipelineTracker({ currentUser, setViewingLeadId, setCurrentTab }) {
   const [leads, setLeads] = useState([]);
@@ -37,7 +38,8 @@ export default function PipelineTracker({ currentUser, setViewingLeadId, setCurr
   useEffect(() => {
     loadPipelineData();
     const interval = setInterval(loadPipelineData, getPollInterval(2000));
-    return () => clearInterval(interval);
+    const unsubscribe = onDataChange(['leads'], () => loadPipelineData());
+    return () => { clearInterval(interval); unsubscribe(); };
   }, []);
 
   // Determine lead lists based on role and filters

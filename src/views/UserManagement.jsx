@@ -5,6 +5,7 @@ import { dataService } from '../data/dataService';
 import { isDemoMode, getPollInterval } from '../lib/demoMode';
 import { notifySuccess, notifyError } from '../lib/toast';
 import { SkeletonTableRows } from '../components/Skeleton';
+import { onDataChange } from '../lib/dataEvents';
 
 export default function UserManagement({ currentUser }) {
   const [users, setUsers] = useState([]);
@@ -51,7 +52,8 @@ export default function UserManagement({ currentUser }) {
   useEffect(() => {
     loadUserData();
     const interval = setInterval(loadUserData, getPollInterval(2000));
-    return () => clearInterval(interval);
+    const unsubscribe = onDataChange(['users', 'leads'], () => loadUserData());
+    return () => { clearInterval(interval); unsubscribe(); };
   }, []);
 
   const getFilteredUsers = () => {

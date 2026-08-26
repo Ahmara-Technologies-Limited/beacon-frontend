@@ -10,6 +10,7 @@ import { getPollInterval } from '../lib/demoMode';
 import { formatBudget } from '../lib/format';
 import { notifySuccess, notifyError } from '../lib/toast';
 import { SkeletonBlock, SkeletonListRows } from '../components/Skeleton';
+import { onDataChange } from '../lib/dataEvents';
 
 /**
  * @param {{
@@ -146,7 +147,8 @@ export default function LeadProfile({
     const interval = setInterval(() => {
       loadLeadData();
     }, getPollInterval(2000));
-    return () => clearInterval(interval);
+    const unsubscribe = onDataChange(['leads', 'inspections', 'activities', 'finance'], () => loadLeadData());
+    return () => { clearInterval(interval); unsubscribe(); };
   }, [leadId]);
 
   const conversationActivities = activities.filter(act => 
@@ -2395,14 +2397,15 @@ export default function LeadProfile({
 
         .stages-wrapper {
           overflow-x: auto;
-          padding: 10px 0;
+          padding: 10px 0 16px;
+          -webkit-overflow-scrolling: touch;
         }
 
         .stages-scroll-container {
           display: flex;
-          align-items: center;
-          min-width: 1200px;
-          justify-content: space-between;
+          align-items: flex-start;
+          width: max-content;
+          min-width: 100%;
         }
 
         .stage-step-item {
@@ -2410,7 +2413,10 @@ export default function LeadProfile({
           flex-direction: column;
           align-items: center;
           position: relative;
-          flex: 1;
+          flex: 0 0 116px;
+          width: 116px;
+          padding: 0 6px;
+          box-sizing: border-box;
         }
 
         .step-circle {
@@ -2435,14 +2441,17 @@ export default function LeadProfile({
           color: var(--text-secondary);
           margin-top: 8px;
           text-align: center;
-          white-space: nowrap;
+          white-space: normal;
+          line-height: 1.3;
+          word-break: normal;
+          overflow-wrap: break-word;
         }
 
         .step-connector {
           position: absolute;
           top: 14px;
           left: calc(50% + 14px);
-          right: calc(-50% + 14px);
+          width: calc(116px - 28px);
           height: 2px;
           background-color: var(--border-color);
           z-index: 1;

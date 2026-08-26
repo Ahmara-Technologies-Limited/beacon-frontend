@@ -12,6 +12,7 @@ import { dataService } from '../data/dataService';
 import { getPollInterval } from '../lib/demoMode';
 import { formatBudget, parseBudgetNumber } from '../lib/format';
 import { SkeletonCards } from '../components/Skeleton';
+import { onDataChange } from '../lib/dataEvents';
 
 export default function Dashboard({ currentUser, setCurrentTab, setViewingLeadId, onAddLeadClick, onLogActivityClick, onBookInspectionClick, onEditLeadClick }) {
   const [leads, setLeads] = useState([]);
@@ -72,8 +73,9 @@ export default function Dashboard({ currentUser, setCurrentTab, setViewingLeadId
     setSettings(db.getSettings());
 
     const interval = setInterval(loadDashboardData, getPollInterval(1500));
+    const unsubscribe = onDataChange(['leads', 'inspections', 'activities', 'users'], () => loadDashboardData());
 
-    return () => clearInterval(interval);
+    return () => { clearInterval(interval); unsubscribe(); };
   }, [])
   const filterByDate = (items, dateKey) => {
     if (dateFilter === 'All Time') return items;

@@ -5,6 +5,7 @@
 import { db } from './mockData';
 import { isDemoMode } from '../lib/demoMode';
 import { apiGet, apiPost, apiPatch, apiDelete, setTokens, clearTokens, getRefreshToken } from '../lib/apiClient';
+import { emitDataChange } from '../lib/dataEvents';
 
 /* ---- Field mapping helpers ---- */
 
@@ -463,16 +464,27 @@ export const dataService = {
   },
 
   saveUser: async (user) => {
-    if (isDemoMode()) return Promise.resolve(db.saveUser(user));
+    if (isDemoMode()) {
+      const res = db.saveUser(user);
+      emitDataChange('users');
+      return Promise.resolve(res);
+    }
     const isCreate = !user.id;
     const payload = userToApi(user, { isCreate });
     const res = isCreate ? await apiPost('/users/', payload) : await apiPatch(`/users/${user.id}/`, payload);
+    emitDataChange('users');
     return userFromApi(res);
   },
 
   deleteUser: async (id, reassignTo) => {
-    if (isDemoMode()) return Promise.resolve(db.deleteUser(id, reassignTo));
-    return apiDelete(`/users/${id}/`, reassignTo ? { reassignTo } : undefined);
+    if (isDemoMode()) {
+      const res = db.deleteUser(id, reassignTo);
+      emitDataChange('users');
+      return Promise.resolve(res);
+    }
+    const res = await apiDelete(`/users/${id}/`, reassignTo ? { reassignTo } : undefined);
+    emitDataChange('users');
+    return res;
   },
 
   changePassword: async (currentPassword, newPassword) => {
@@ -532,20 +544,37 @@ export const dataService = {
   },
 
   saveLead: async (lead) => {
-    if (isDemoMode()) return Promise.resolve(db.saveLead(lead));
+    if (isDemoMode()) {
+      const res = db.saveLead(lead);
+      emitDataChange('leads');
+      return Promise.resolve(res);
+    }
     const payload = leadToApi(lead);
     const res = lead.id ? await apiPatch(`/sales/leads/${lead.id}/`, payload) : await apiPost('/sales/leads/', payload);
+    emitDataChange('leads');
     return leadFromApi(res);
   },
 
   archiveLead: async (id) => {
-    if (isDemoMode()) return Promise.resolve(db.archiveLead(id));
-    return apiPost(`/sales/leads/${id}/archive/`);
+    if (isDemoMode()) {
+      const res = db.archiveLead(id);
+      emitDataChange('leads');
+      return Promise.resolve(res);
+    }
+    const res = await apiPost(`/sales/leads/${id}/archive/`);
+    emitDataChange('leads');
+    return res;
   },
 
   restoreLead: async (id) => {
-    if (isDemoMode()) return Promise.resolve(db.restoreLead(id));
-    return apiPost(`/sales/leads/${id}/restore/`);
+    if (isDemoMode()) {
+      const res = db.restoreLead(id);
+      emitDataChange('leads');
+      return Promise.resolve(res);
+    }
+    const res = await apiPost(`/sales/leads/${id}/restore/`);
+    emitDataChange('leads');
+    return res;
   },
 
   /* ---- Inspections ---- */
@@ -560,11 +589,20 @@ export const dataService = {
   },
 
   saveInspection: async (inspection) => {
-    if (isDemoMode()) return Promise.resolve(db.saveInspection(inspection));
+    if (isDemoMode()) {
+      const res = db.saveInspection(inspection);
+      emitDataChange('inspections');
+      return Promise.resolve(res);
+    }
     const payload = inspectionToApi(inspection);
     const res = inspection.id
       ? await apiPatch(`/sales/inspections/${inspection.id}/`, payload)
       : await apiPost('/sales/inspections/', payload);
+    // Booking/completing an inspection can auto-transition the lead's stage
+    // server-side (see Lead.handle_inspection_booked/completed), so lists
+    // keyed off lead stage need to refresh too, not just inspection lists.
+    emitDataChange('inspections');
+    emitDataChange('leads');
     return inspectionFromApi(res);
   },
 
@@ -580,9 +618,19 @@ export const dataService = {
   },
 
   saveActivity: async (activity) => {
-    if (isDemoMode()) return Promise.resolve(db.saveActivity(activity));
+    if (isDemoMode()) {
+      const res = db.saveActivity(activity);
+      emitDataChange('activities');
+      emitDataChange('leads');
+      return Promise.resolve(res);
+    }
     const payload = activityToApi(activity);
     const res = await apiPost('/sales/activities/', payload);
+    // Logging an activity touches the lead's lastActivityDate (and often its
+    // stage, via LogActivityModal's "update pipeline stage" option), so lead
+    // lists need to refresh alongside activity lists.
+    emitDataChange('activities');
+    emitDataChange('leads');
     return activityFromApi(res);
   },
 
@@ -601,23 +649,47 @@ export const dataService = {
   addNotification: (n) => Promise.resolve(db.addNotification(n)), // demo-only; backend creates notifications server-side
 
   markNotificationRead: async (id) => {
-    if (isDemoMode()) return Promise.resolve(db.markNotificationRead(id));
-    return apiPost(`/notifications/${id}/read/`);
+    if (isDemoMode()) {
+      const res = db.markNotificationRead(id);
+      emitDataChange('notifications');
+      return Promise.resolve(res);
+    }
+    const res = await apiPost(`/notifications/${id}/read/`);
+    emitDataChange('notifications');
+    return res;
   },
 
   dismissNotification: async (id) => {
-    if (isDemoMode()) return Promise.resolve(db.dismissNotification(id));
-    return apiPost(`/notifications/${id}/dismiss/`);
+    if (isDemoMode()) {
+      const res = db.dismissNotification(id);
+      emitDataChange('notifications');
+      return Promise.resolve(res);
+    }
+    const res = await apiPost(`/notifications/${id}/dismiss/`);
+    emitDataChange('notifications');
+    return res;
   },
 
   dismissAllNotifications: async () => {
-    if (isDemoMode()) return Promise.resolve(db.dismissAllNotifications());
-    return apiPost('/notifications/dismiss-all/');
+    if (isDemoMode()) {
+      const res = db.dismissAllNotifications();
+      emitDataChange('notifications');
+      return Promise.resolve(res);
+    }
+    const res = await apiPost('/notifications/dismiss-all/');
+    emitDataChange('notifications');
+    return res;
   },
 
   markAllNotificationsRead: async () => {
-    if (isDemoMode()) return Promise.resolve(db.markAllNotificationsRead());
-    return apiPost('/notifications/mark-all-read/');
+    if (isDemoMode()) {
+      const res = db.markAllNotificationsRead();
+      emitDataChange('notifications');
+      return Promise.resolve(res);
+    }
+    const res = await apiPost('/notifications/mark-all-read/');
+    emitDataChange('notifications');
+    return res;
   },
 
   /* ---- Properties ---- */
@@ -629,17 +701,28 @@ export const dataService = {
   },
 
   saveProperty: async (property) => {
-    if (isDemoMode()) return Promise.resolve(db.saveProperty(property));
+    if (isDemoMode()) {
+      const res = db.saveProperty(property);
+      emitDataChange('properties');
+      return Promise.resolve(res);
+    }
     const payload = propertyToApi(property);
     const res = property.id
       ? await apiPatch(`/properties/${property.id}/`, payload)
       : await apiPost('/properties/', payload);
+    emitDataChange('properties');
     return propertyFromApi(res);
   },
 
   deleteProperty: async (id) => {
-    if (isDemoMode()) return Promise.resolve(db.deleteProperty(id));
-    return apiDelete(`/properties/${id}/`);
+    if (isDemoMode()) {
+      const res = db.deleteProperty(id);
+      emitDataChange('properties');
+      return Promise.resolve(res);
+    }
+    const res = await apiDelete(`/properties/${id}/`);
+    emitDataChange('properties');
+    return res;
   },
 
   /* ---- Settings ---- */
@@ -650,9 +733,14 @@ export const dataService = {
   },
 
   saveSettings: async (settings) => {
-    if (isDemoMode()) return Promise.resolve(db.saveSettings(settings));
+    if (isDemoMode()) {
+      const res = db.saveSettings(settings);
+      emitDataChange('settings');
+      return Promise.resolve(res);
+    }
     const payload = settingsToApi(settings);
     const res = await apiPatch('/settings/', payload);
+    emitDataChange('settings');
     return settingsFromApi(res);
   },
 
@@ -665,8 +753,14 @@ export const dataService = {
   },
 
   clearAuditLogs: async () => {
-    if (isDemoMode()) return Promise.resolve(db.clearAuditLogs());
-    return apiDelete('/audit-logs/clear/');
+    if (isDemoMode()) {
+      const res = db.clearAuditLogs();
+      emitDataChange('auditLogs');
+      return Promise.resolve(res);
+    }
+    const res = await apiDelete('/audit-logs/clear/');
+    emitDataChange('auditLogs');
+    return res;
   },
 
   logAudit: (msg) => Promise.resolve(db.logAudit(msg)), // demo-only; backend logs audit entries server-side
@@ -698,6 +792,8 @@ export const dataService = {
     const res = plan.id
       ? await apiPatch(`/finance/payment-plans/${plan.id}/`, payload)
       : await apiPost('/finance/payment-plans/', payload);
+    emitDataChange('finance');
+    emitDataChange('leads');
     return paymentPlanFromApi(res);
   },
 
@@ -733,6 +829,8 @@ export const dataService = {
     if (updates.stage && leadId != null) {
       await apiPatch(`/sales/leads/${leadId}/`, { stage: updates.stage });
     }
+    emitDataChange('finance');
+    emitDataChange('leads');
     return installmentFromApi(res);
   },
 
@@ -757,10 +855,12 @@ export const dataService = {
       const record = { id: 'disc-' + Date.now(), ...discount };
       all.push(record);
       localStorage.setItem('beacon_discounts', JSON.stringify(all));
+      emitDataChange('finance');
       return Promise.resolve(record);
     }
     const payload = discountToApi(discount);
     const res = await apiPost('/finance/discounts/', payload);
+    emitDataChange('finance');
     return discountFromApi(res);
   },
 
@@ -785,10 +885,12 @@ export const dataService = {
       const record = { id: 'comm-' + Date.now(), ...commission };
       all.push(record);
       localStorage.setItem('beacon_commissions', JSON.stringify(all));
+      emitDataChange('finance');
       return Promise.resolve(record);
     }
     const payload = commissionToApi(commission);
     const res = await apiPost('/finance/commissions/', payload);
+    emitDataChange('finance');
     return commissionFromApi(res);
   },
 
@@ -797,9 +899,11 @@ export const dataService = {
       const all = JSON.parse(localStorage.getItem('beacon_commissions')) || [];
       const updated = all.map(c => (c.id === id ? { ...c, status } : c));
       localStorage.setItem('beacon_commissions', JSON.stringify(updated));
+      emitDataChange('finance');
       return Promise.resolve(updated.find(c => c.id === id));
     }
     const res = await apiPatch(`/finance/commissions/${id}/`, { status });
+    emitDataChange('finance');
     return commissionFromApi(res);
   },
 
@@ -819,10 +923,12 @@ export const dataService = {
       const record = { id: 'ref-' + Date.now(), status: 'Pending Review', ...refund };
       all.unshift(record);
       localStorage.setItem('beacon_refunds', JSON.stringify(all));
+      emitDataChange('finance');
       return Promise.resolve(record);
     }
     const payload = refundToApi(refund);
     const res = await apiPost('/finance/refunds/', payload);
+    emitDataChange('finance');
     return refundFromApi(res);
   },
 
@@ -831,9 +937,11 @@ export const dataService = {
       const all = JSON.parse(localStorage.getItem('beacon_refunds')) || [];
       const updated = all.map(r => (r.id === id ? { ...r, status } : r));
       localStorage.setItem('beacon_refunds', JSON.stringify(updated));
+      emitDataChange('finance');
       return Promise.resolve(updated.find(r => r.id === id));
     }
     const res = await apiPatch(`/finance/refunds/${id}/`, { status });
+    emitDataChange('finance');
     return refundFromApi(res);
   },
 };

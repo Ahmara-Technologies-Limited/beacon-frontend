@@ -5,6 +5,7 @@ import { getPollInterval } from '../lib/demoMode';
 import { formatBudget } from '../lib/format';
 import { notifySuccess, notifyError } from '../lib/toast';
 import { SkeletonTableRows } from '../components/Skeleton';
+import { onDataChange } from '../lib/dataEvents';
 
 export default function PropertyManagement({ currentUser }) {
   const [properties, setProperties] = useState([]);
@@ -41,7 +42,8 @@ export default function PropertyManagement({ currentUser }) {
   useEffect(() => {
     loadData();
     const interval = setInterval(loadData, getPollInterval(2000));
-    return () => clearInterval(interval);
+    const unsubscribe = onDataChange(['properties', 'leads'], () => loadData());
+    return () => { clearInterval(interval); unsubscribe(); };
   }, []);
 
   const handleOpenCreateModal = () => {

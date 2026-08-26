@@ -8,6 +8,7 @@ import { dataService } from '../data/dataService';
 import { getPollInterval } from '../lib/demoMode';
 import { notifySuccess, notifyError } from '../lib/toast';
 import { SkeletonTableRows } from '../components/Skeleton';
+import { onDataChange } from '../lib/dataEvents';
 
 export default function LeadManagement({ 
   currentUser, 
@@ -70,7 +71,13 @@ export default function LeadManagement({
       loadLeads();
     }, getPollInterval(2000));
 
-    return () => clearInterval(interval);
+    // Lead saves/archives/inspections can also happen from the globally
+    // mounted LeadModal/InspectionModal/LogActivityModal (see CrmUIContext),
+    // which are decoupled from this view - refetch immediately when that
+    // happens instead of waiting up to 30s for the next poll tick.
+    const unsubscribe = onDataChange(['leads'], () => loadLeads());
+
+    return () => { clearInterval(interval); unsubscribe(); };
   }, [filterArchived]);
 
   const toggleSelectAll = () => {

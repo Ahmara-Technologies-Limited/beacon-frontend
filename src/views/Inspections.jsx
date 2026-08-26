@@ -5,6 +5,7 @@ import { dataService } from '../data/dataService';
 import { getPollInterval } from '../lib/demoMode';
 import { formatBudget } from '../lib/format';
 import { SkeletonTableRows } from '../components/Skeleton';
+import { onDataChange } from '../lib/dataEvents';
 
 export default function Inspections({
   currentUser, 
@@ -86,7 +87,8 @@ export default function Inspections({
   useEffect(() => {
     loadInspectionData();
     const interval = setInterval(loadInspectionData, getPollInterval(2000));
-    return () => clearInterval(interval);
+    const unsubscribe = onDataChange(['inspections', 'leads'], () => loadInspectionData());
+    return () => { clearInterval(interval); unsubscribe(); };
   }, []);
 
   useEffect(() => {
