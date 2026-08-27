@@ -366,28 +366,30 @@ export default function Dashboard({ currentUser, setCurrentTab, setViewingLeadId
             </div>
           </div>
 
-          <div className="card dashboard-side-chart">
+          <div className="card dashboard-side-chart" style={{ position: 'relative', overflow: 'hidden' }}>
             <h3 className="section-title">Lead Acquisition Sources</h3>
-            <div style={{ width: '100%', height: 220, display: 'flex', alignItems: 'center' }}>
-              <ResponsiveContainer width="50%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={sourceChartData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={55}
-                    outerRadius={80}
-                    paddingAngle={3}
-                    dataKey="value"
-                  >
-                    {sourceChartData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
-              <div className="pie-chart-legend">
+            <div style={{ width: '100%', height: 220, display: 'flex', alignItems: 'center', marginTop: 8 }}>
+              <div style={{ flex: '0 0 50%', minWidth: 0, height: '100%' }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={sourceChartData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={55}
+                      outerRadius={80}
+                      paddingAngle={3}
+                      dataKey="value"
+                    >
+                      {sourceChartData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="pie-chart-legend" style={{ minWidth: 0 }}>
                 {sourceChartData.map((entry, idx) => (
                   <div key={entry.name} className="legend-item">
                     <span className="legend-dot" style={{ backgroundColor: COLORS[idx % COLORS.length] }} />
