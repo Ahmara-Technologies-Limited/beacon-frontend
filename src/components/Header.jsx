@@ -5,6 +5,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Bell, Search, X, Check, Eye, Sun, Moon, Menu } from 'lucide-react';
 import { dataService } from '../data/dataService';
 import { getPollInterval } from '../lib/demoMode';
+import { notifyError } from '@/lib/toast';
 import { useAuth } from '../context/AuthContext';
 import { useCrmUI } from '../context/CrmUIContext';
 import { useAppNavigate } from '@/lib/navigation';
@@ -51,8 +52,13 @@ export default function Header() {
   const unreadCount = visibleNotifications.filter(n => !n.read).length;
 
   const handleNotificationClick = async (n) => {
-    await dataService.markNotificationRead(n.id);
-    setNotifications(await dataService.getNotifications());
+    try {
+      await dataService.markNotificationRead(n.id);
+      setNotifications(await dataService.getNotifications());
+    } catch (err) {
+      notifyError(err, 'Could not update notification.');
+      return;
+    }
     setShowNotifications(false);
 
     if (n.link) {
@@ -66,19 +72,31 @@ export default function Header() {
   };
 
   const handleMarkAllRead = async () => {
-    await dataService.markAllNotificationsRead();
-    setNotifications(await dataService.getNotifications());
+    try {
+      await dataService.markAllNotificationsRead();
+      setNotifications(await dataService.getNotifications());
+    } catch (err) {
+      notifyError(err, 'Could not mark notifications as read.');
+    }
   };
 
   const handleDismissAll = async () => {
-    await dataService.dismissAllNotifications();
-    setNotifications([]);
+    try {
+      await dataService.dismissAllNotifications();
+      setNotifications([]);
+    } catch (err) {
+      notifyError(err, 'Could not dismiss notifications.');
+    }
   };
 
   const handleDismiss = async (e, id) => {
     e.stopPropagation();
-    await dataService.dismissNotification(id);
-    setNotifications(await dataService.getNotifications());
+    try {
+      await dataService.dismissNotification(id);
+      setNotifications(await dataService.getNotifications());
+    } catch (err) {
+      notifyError(err, 'Could not dismiss notification.');
+    }
   };
 
   return (

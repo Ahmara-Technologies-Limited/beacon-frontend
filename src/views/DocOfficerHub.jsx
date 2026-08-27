@@ -3,6 +3,7 @@ import { db } from '../data/mockData';
 import { dataService } from '../data/dataService';
 import { getPollInterval } from '../lib/demoMode';
 import { DollarSign, FileText, CheckCircle, Clock, Plus, Upload, Trash2, X, FileMinus, ArrowUpRight, Clipboard } from 'lucide-react';
+import { notifySuccess, notifyError } from '@/lib/toast';
 
 export default function DocOfficerHub({ currentUser }) {
   const [activeSubTab, setActiveSubTab] = useState('accounts');
@@ -98,38 +99,53 @@ export default function DocOfficerHub({ currentUser }) {
 
     const lead = leads.find(l => l.id === refundData.leadId);
 
-    const newRefund = await dataService.createRefundRequest({
-      leadId: refundData.leadId,
-      clientName: lead?.name || 'Unknown Client',
-      propertyInterest: lead?.propertyInterest || 'N/A',
-      amount: Number(refundData.amount),
-      reason: refundData.reason.trim(),
-      letterText: refundData.letterText.trim(),
-      fileName: refundData.fileName,
-      fileSize: refundData.fileSize,
-      dateRequested: new Date().toISOString().split('T')[0],
-      status: 'Pending Review' // Pending Review, Approved, Paid
-    });
+    try {
+      const newRefund = await dataService.createRefundRequest({
+        leadId: refundData.leadId,
+        clientName: lead?.name || 'Unknown Client',
+        propertyInterest: lead?.propertyInterest || 'N/A',
+        amount: Number(refundData.amount),
+        reason: refundData.reason.trim(),
+        letterText: refundData.letterText.trim(),
+        fileName: refundData.fileName,
+        fileSize: refundData.fileSize,
+        dateRequested: new Date().toISOString().split('T')[0],
+        status: 'Pending Review' // Pending Review, Approved, Paid
+      });
 
-    setRefunds(prev => [newRefund, ...prev]);
-    db.logAudit(`Refund request for ${formatPrice(newRefund.amount)} logged for client ${newRefund.clientName}.`); // demo-only; live mode logs server-side via AuditLogMixin
+      setRefunds(prev => [newRefund, ...prev]);
+      db.logAudit(`Refund request for ${formatPrice(newRefund.amount)} logged for client ${newRefund.clientName}.`); // demo-only; live mode logs server-side via AuditLogMixin
 
-    setRefundModalOpen(false);
-    setRefundData({ leadId: '', amount: '', reason: '', letterText: '', fileName: '', fileSize: '' });
+      setRefundModalOpen(false);
+      setRefundData({ leadId: '', amount: '', reason: '', letterText: '', fileName: '', fileSize: '' });
+      notifySuccess('Refund request submitted.');
+    } catch (err) {
+      notifyError(err, 'Could not submit refund request.');
+    }
   };
 
   const handleUpdateRefundStatus = async (id, newStatus) => {
     const target = refunds.find(r => r.id === id);
-    await dataService.updateRefundStatus(id, newStatus);
-    if (target) db.logAudit(`Refund request status updated to ${newStatus} for ${target.clientName}.`); // demo-only; live mode logs server-side
-    setRefunds(prev => prev.map(r => (r.id === id ? { ...r, status: newStatus } : r)));
+    try {
+      await dataService.updateRefundStatus(id, newStatus);
+      if (target) db.logAudit(`Refund request status updated to ${newStatus} for ${target.clientName}.`); // demo-only; live mode logs server-side
+      setRefunds(prev => prev.map(r => (r.id === id ? { ...r, status: newStatus } : r)));
+      notifySuccess(`Refund status updated to ${newStatus}.`);
+    } catch (err) {
+      notifyError(err, 'Could not update refund status.');
+    }
   };
 
   const handleUpdateCommissionStatus = async (id, newStatus) => {
     const target = commissions.find(c => c.id === id);
-    await dataService.updateCommissionStatus(id, newStatus);
-    if (target) db.logAudit(`Commission payout status updated to ${newStatus} for closer ${target.closerName}.`); // demo-only; live mode logs server-side
-    setCommissions(prev => prev.map(c => (c.id === id ? { ...c, status: newStatus } : c)));
+    try {
+      await dataService.updateCommissionStatus(id, newStatus);
+      if (target) db.logAudit(`Commission payout status updated to ${newStatus} for closer ${target.closerName}.`); // demo-only; live mode logs server-side
+      setCommissions(prev => prev.map(c => (c.id === id ? { ...c, status: newStatus } : c)));
+      notifySuccess(`Commission status updated to ${newStatus}.`);
+    } catch (err) {
+      notifyError(err, 'Could not update commission status.');
+    }
   };
 
   const formatPrice = (val) => {
