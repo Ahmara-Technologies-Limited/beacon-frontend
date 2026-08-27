@@ -3,7 +3,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 
 import { Bell, Search, X, Check, Eye, Sun, Moon, Menu } from 'lucide-react';
-import { db } from '../data/mockData';
 import { dataService } from '../data/dataService';
 import { getPollInterval } from '../lib/demoMode';
 import { useAuth } from '../context/AuthContext';
@@ -12,17 +11,15 @@ import { useAppNavigate } from '@/lib/navigation';
 
 export default function Header() {
   const router = useAppNavigate();
-  const { currentUser, login } = useAuth();
+  const { currentUser } = useAuth();
   const { darkMode, toggleDarkMode, mobileSidebarOpen, setMobileSidebarOpen, setSearchTerm } = useCrmUI();
   const [notifications, setNotifications] = useState([]);
   const [showNotifications, setShowNotifications] = useState(false);
-  const [users, setUsers] = useState([]);
   const notificationRef = useRef(null);
 
   useEffect(() => {
-    // Get notifications and all users for role switcher
+    // Get notifications
     dataService.getNotifications().then(setNotifications);
-    setUsers(db.getUsers());
 
     // Listen for custom database changes (like added activity logs or reassigned leads)
     const handleStorageChange = () => {
@@ -84,16 +81,6 @@ export default function Header() {
     setNotifications(await dataService.getNotifications());
   };
 
-  const handleRoleChange = (e) => {
-    const selectedUserId = e.target.value;
-    const selectedUser = users.find(u => u.id === selectedUserId);
-    if (selectedUser) {
-      login(selectedUser);
-      // Reset to dashboard to avoid permission mismatch on role switch
-      router.push('/dashboard');
-    }
-  };
-
   return (
     <header className="app-header">
       <div className="header-left">
@@ -104,22 +91,6 @@ export default function Header() {
         >
           <Menu size={20} />
         </button>
-        {/* Role Switcher Widget for Testing */}
-        <div className="role-switcher-container">
-          <label htmlFor="role-select" className="role-switcher-label">Acting User:</label>
-          <select 
-            id="role-select" 
-            className="role-switcher-select" 
-            value={currentUser?.id || ""} 
-            onChange={handleRoleChange}
-          >
-            {users.map(u => (
-              <option key={u.id} value={u.id}>
-                {u.name} ({u.role})
-              </option>
-            ))}
-          </select>
-        </div>
       </div>
 
       <div className="header-right">
