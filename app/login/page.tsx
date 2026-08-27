@@ -9,9 +9,11 @@ import { dataService } from '@/data/dataService';
 import { useDemoMode } from '@/lib/demoMode';
 import { ApiError } from '@/lib/apiClient';
 import { useAppNavigate } from '@/lib/navigation';
+import { useTopLoader } from 'nextjs-toploader';
 
 export default function LoginPage() {
   const router = useAppNavigate();
+  const topLoader = useTopLoader();
   const { currentUser, login, loading } = useAuth();
 
   const [loginEmail, setLoginEmail] = useState('');
@@ -70,14 +72,15 @@ export default function LoginPage() {
 
     if (demoMode) {
       setLoginLoading(true);
+      topLoader.start();
       setTimeout(() => {
         const users = db.getUsers();
         const userMatch = users.find((u: any) => u.email.toLowerCase() === loginEmail.toLowerCase());
 
-        if (!userMatch) { recordFailedAttempt(); setLoginError('Incorrect email or password.'); setLoginLoading(false); return; }
-        if (userMatch.status === 'Inactive') { setLoginError('Account inactive. Contact your administrator.'); setLoginLoading(false); return; }
+        if (!userMatch) { recordFailedAttempt(); setLoginError('Incorrect email or password.'); setLoginLoading(false); topLoader.done(); return; }
+        if (userMatch.status === 'Inactive') { setLoginError('Account inactive. Contact your administrator.'); setLoginLoading(false); topLoader.done(); return; }
         const expectedPassword = userMatch.password || 'password';
-        if (loginPassword !== expectedPassword) { recordFailedAttempt(); setLoginError('Incorrect email or password.'); setLoginLoading(false); return; }
+        if (loginPassword !== expectedPassword) { recordFailedAttempt(); setLoginError('Incorrect email or password.'); setLoginLoading(false); topLoader.done(); return; }
 
         setFailedAttempts(0);
         login(userMatch);
@@ -89,6 +92,7 @@ export default function LoginPage() {
 
     // Live Mode: skip local mock validation entirely and hit the real API.
     setLoginLoading(true);
+    topLoader.start();
     (async () => {
       try {
         const user = await login(loginEmail, loginPassword);
@@ -96,6 +100,7 @@ export default function LoginPage() {
           recordFailedAttempt();
           setLoginError('Incorrect email or password.');
           setLoginLoading(false);
+          topLoader.done();
           return;
         }
         setFailedAttempts(0);
@@ -103,6 +108,7 @@ export default function LoginPage() {
         router.push('/dashboard');
       } catch (err) {
         setLoginLoading(false);
+        topLoader.done();
         if (err instanceof ApiError) {
           if (err.status === 401) {
             recordFailedAttempt();
@@ -252,7 +258,7 @@ export default function LoginPage() {
             </div>
 
             <button type="submit" className={`btn btn-primary login-submit ${loginLoading ? 'btn-loading' : ''}`} disabled={loginLoading}>
-              {loginLoading ? 'Signing in…' : 'Sign in'}
+              {loginLoading ? <span className="btn-spinner" aria-label="Signing in" /> : 'Sign in'}
             </button>
           </form>
 
@@ -284,7 +290,7 @@ export default function LoginPage() {
                     />
                   </div>
                   <button type="submit" className={`btn btn-primary login-submit ${forgotLoading ? 'btn-loading' : ''}`} disabled={forgotLoading} style={{ marginTop: 12 }}>
-                    {forgotLoading ? 'Sending…' : 'Send reset link'}
+                    {forgotLoading ? <span className="btn-spinner" aria-label="Sending" /> : 'Send reset link'}
                   </button>
                 </form>
               )}
