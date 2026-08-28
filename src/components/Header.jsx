@@ -109,6 +109,12 @@ export default function Header() {
         >
           <Menu size={20} />
         </button>
+        {currentUser && (
+          <div className="header-user-badge">
+            <span className="header-user-name">{currentUser.name}</span>
+            <span className="header-user-role">({currentUser.role})</span>
+          </div>
+        )}
       </div>
 
       <div className="header-right">

@@ -127,9 +127,8 @@
 [data-theme="dark"] .notification-item:hover {
   background-color: var(--table-hover-bg);
 }
-[data-theme="dark"] .role-switcher-select {
+[data-theme="dark"] .header-user-role {
   color: #FF7875;
-  background-color: transparent;
 }
 
 /* =====================================================
@@ -915,6 +914,26 @@ a { text-decoration: none; color: inherit; }
 }
 .mobile-menu-trigger:hover {
   background-color: var(--color-grey-bg);
+}
+
+.header-user-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  border-radius: 20px;
+  background: var(--color-grey-bg);
+  border: 1px solid var(--border-color);
+  font-size: 13px;
+  white-space: nowrap;
+}
+.header-user-name {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.header-user-role {
+  font-weight: 700;
+  color: var(--primary-red);
 }
 
 /* Tablet tier: no room for a permanent 260px sidebar or side-by-side
