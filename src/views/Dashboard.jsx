@@ -368,8 +368,8 @@ export default function Dashboard({ currentUser, setCurrentTab, setViewingLeadId
 
           <div className="card dashboard-side-chart" style={{ position: 'relative', overflow: 'hidden' }}>
             <h3 className="section-title">Lead Acquisition Sources</h3>
-            <div style={{ width: '100%', height: 220, display: 'flex', alignItems: 'center', marginTop: 8 }}>
-              <div style={{ flex: '0 0 50%', minWidth: 0, height: '100%' }}>
+            <div style={{ width: '100%', height: 220, display: 'flex', alignItems: 'stretch', marginTop: 8 }}>
+              <div style={{ flex: '0 0 50%', minWidth: 0, height: '100%', display: 'flex', alignItems: 'center' }}>
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
@@ -389,7 +389,7 @@ export default function Dashboard({ currentUser, setCurrentTab, setViewingLeadId
                   </PieChart>
                 </ResponsiveContainer>
               </div>
-              <div className="pie-chart-legend" style={{ minWidth: 0 }}>
+              <div className="pie-chart-legend" style={{ minWidth: 0, height: '100%', overflowY: 'auto' }}>
                 {sourceChartData.map((entry, idx) => (
                   <div key={entry.name} className="legend-item">
                     <span className="legend-dot" style={{ backgroundColor: COLORS[idx % COLORS.length] }} />
