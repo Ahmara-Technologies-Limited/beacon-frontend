@@ -58,11 +58,16 @@ export default function Inspections({
   const [isLoading, setIsLoading] = useState(true);
 
   const loadInspectionData = async () => {
-    setInspections(await dataService.getInspections());
-    setLeads(await dataService.getLeads());
-    setUsers(await dataService.getUsers());
-    setProperties(await dataService.getProperties());
-    setIsLoading(false);
+    try {
+      setInspections(await dataService.getInspections());
+      setLeads(await dataService.getLeads());
+      setUsers(await dataService.getUsers());
+      setProperties(await dataService.getProperties());
+    } catch (err) {
+      notifyError(err, 'Could not load inspections.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   useEffect(() => {

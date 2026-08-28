@@ -11,7 +11,11 @@ export default function AuditLogs({ currentUser }) {
   const [searchQuery, setSearchQuery] = useState('');
 
   const loadLogs = async () => {
-    setLogs(await dataService.getAuditLogs());
+    try {
+      setLogs(await dataService.getAuditLogs());
+    } catch (err) {
+      notifyError(err, 'Could not load audit logs.');
+    }
   };
 
   useEffect(() => {

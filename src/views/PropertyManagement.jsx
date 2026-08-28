@@ -34,10 +34,15 @@ export default function PropertyManagement({ currentUser }) {
   const [isLoading, setIsLoading] = useState(true);
 
   const loadData = async () => {
-    const [props, leadsList] = await Promise.all([dataService.getProperties(), dataService.getLeads()]);
-    setProperties(props);
-    setLeads(leadsList);
-    setIsLoading(false);
+    try {
+      const [props, leadsList] = await Promise.all([dataService.getProperties(), dataService.getLeads()]);
+      setProperties(props);
+      setLeads(leadsList);
+    } catch (err) {
+      notifyError(err, 'Could not load properties.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   useEffect(() => {

@@ -5,6 +5,7 @@ import { getPollInterval } from '../lib/demoMode';
 import { AlertCircle, Calendar } from 'lucide-react';
 import { SkeletonBlock } from '../components/Skeleton';
 import { onDataChange } from '../lib/dataEvents';
+import { notifyError } from '../lib/toast';
 
 export default function PipelineTracker({ currentUser, setViewingLeadId, setCurrentTab }) {
   const [leads, setLeads] = useState([]);
@@ -30,9 +31,14 @@ export default function PipelineTracker({ currentUser, setViewingLeadId, setCurr
   ];
 
   const loadPipelineData = async () => {
-    setLeads(await dataService.getLeads());
-    setClosers((await dataService.getUsers()).filter(u => u.role === 'Sales Closer' && u.status === 'Active'));
-    setIsLoading(false);
+    try {
+      setLeads(await dataService.getLeads());
+      setClosers((await dataService.getUsers()).filter(u => u.role === 'Sales Closer' && u.status === 'Active'));
+    } catch (err) {
+      notifyError(err, 'Could not load pipeline data.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   useEffect(() => {

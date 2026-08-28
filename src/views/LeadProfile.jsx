@@ -100,46 +100,51 @@ export default function LeadProfile({
   ];
 
   const loadLeadData = async () => {
-    const [activeLeads, archivedLeads, allActivitiesRaw, allInspectionsRaw, allUsersRaw] = await Promise.all([
-      dataService.getLeads(),
-      dataService.getArchivedLeads(),
-      dataService.getActivities(),
-      dataService.getInspections(),
-      dataService.getUsers(),
-    ]);
+    try {
+      const [activeLeads, archivedLeads, allActivitiesRaw, allInspectionsRaw, allUsersRaw] = await Promise.all([
+        dataService.getLeads(),
+        dataService.getArchivedLeads(),
+        dataService.getActivities(),
+        dataService.getInspections(),
+        dataService.getUsers(),
+      ]);
 
-    setAllLeads(activeLeads.concat(archivedLeads));
-    setAllUsers(allUsersRaw);
+      setAllLeads(activeLeads.concat(archivedLeads));
+      setAllUsers(allUsersRaw);
 
-    const foundLead = activeLeads.find(l => l.id === leadId) || archivedLeads.find(l => l.id === leadId);
+      const foundLead = activeLeads.find(l => l.id === leadId) || archivedLeads.find(l => l.id === leadId);
 
-    if (foundLead) {
-      // Demo mode: db.getLeads() already embeds `paymentPlan` on the lead.
-      // Live mode: the API's lead payload has no such field, so fetch it
-      // separately from the finance endpoint (mirrors DocOfficerHub.jsx's
-      // loadHubData, which does the same thing for its lead list).
-      if (foundLead.paymentPlan === undefined) {
-        foundLead.paymentPlan = await dataService.getPaymentPlan(foundLead.id);
+      if (foundLead) {
+        // Demo mode: db.getLeads() already embeds `paymentPlan` on the lead.
+        // Live mode: the API's lead payload has no such field, so fetch it
+        // separately from the finance endpoint (mirrors DocOfficerHub.jsx's
+        // loadHubData, which does the same thing for its lead list).
+        if (foundLead.paymentPlan === undefined) {
+          foundLead.paymentPlan = await dataService.getPaymentPlan(foundLead.id);
+        }
+        setLead(foundLead);
+
+        // Load activities
+        const allActivities = allActivitiesRaw.filter(a => a.leadId === foundLead.id);
+        setActivities(allActivities);
+
+        // Load inspections
+        const allInspections = allInspectionsRaw.filter(i => i.leadId === foundLead.id);
+        setInspections(allInspections);
+
+        // Load closers
+        const allClosers = allUsersRaw.filter(u => u.role === 'Sales Closer' && u.status === 'Active');
+        setClosers(allClosers);
+
+        const closer = allClosers.find(u => u.id === foundLead.assignedCloserId);
+        setAssignedCloser(closer || null);
+        setReassignCloserId(foundLead.assignedCloserId || '');
       }
-      setLead(foundLead);
-
-      // Load activities
-      const allActivities = allActivitiesRaw.filter(a => a.leadId === foundLead.id);
-      setActivities(allActivities);
-
-      // Load inspections
-      const allInspections = allInspectionsRaw.filter(i => i.leadId === foundLead.id);
-      setInspections(allInspections);
-
-      // Load closers
-      const allClosers = allUsersRaw.filter(u => u.role === 'Sales Closer' && u.status === 'Active');
-      setClosers(allClosers);
-
-      const closer = allClosers.find(u => u.id === foundLead.assignedCloserId);
-      setAssignedCloser(closer || null);
-      setReassignCloserId(foundLead.assignedCloserId || '');
+    } catch (err) {
+      notifyError(err, 'Could not load lead profile.');
+    } finally {
+      setIsLoading(false);
     }
-    setIsLoading(false);
   };
 
   useEffect(() => {

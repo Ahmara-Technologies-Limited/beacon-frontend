@@ -28,8 +28,12 @@ export default function FollowUp({ currentUser, setViewingLeadId, setCurrentTab 
   const [snoozeDays, setSnoozeDays] = useState('1'); // values: '1', '2', or 'custom'
   const [snoozeCustomDate, setSnoozeCustomDate] = useState('');
   const loadFollowUpData = async () => {
-    setLeads(await dataService.getLeads());
-    setClosers((await dataService.getUsers()).filter(u => u.role === 'Sales Closer' && u.status === 'Active'));
+    try {
+      setLeads(await dataService.getLeads());
+      setClosers((await dataService.getUsers()).filter(u => u.role === 'Sales Closer' && u.status === 'Active'));
+    } catch (err) {
+      notifyError(err, 'Could not load follow-ups.');
+    }
   };
 
   const handleSendWarning = async (e, lead) => {

@@ -46,9 +46,14 @@ export default function UserManagement({ currentUser }) {
   const [isLoading, setIsLoading] = useState(true);
 
   const loadUserData = async () => {
-    setUsers(await dataService.getUsers());
-    setLeads(await dataService.getLeads());
-    setIsLoading(false);
+    try {
+      setUsers(await dataService.getUsers());
+      setLeads(await dataService.getLeads());
+    } catch (err) {
+      notifyError(err, 'Could not load users.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   useEffect(() => {

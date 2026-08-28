@@ -48,12 +48,17 @@ export default function LeadManagement({
   const [isLoading, setIsLoading] = useState(true);
 
   const loadLeads = async () => {
-    if (filterArchived === 'Archived') {
-      setLeads(await dataService.getArchivedLeads());
-    } else {
-      setLeads(await dataService.getLeads());
+    try {
+      if (filterArchived === 'Archived') {
+        setLeads(await dataService.getArchivedLeads());
+      } else {
+        setLeads(await dataService.getLeads());
+      }
+    } catch (err) {
+      notifyError(err, 'Could not load leads.');
+    } finally {
+      setIsLoading(false);
     }
-    setIsLoading(false);
   };
 
   useEffect(() => {
