@@ -3,6 +3,7 @@ import { Phone, Calendar, Clock, User, X, Check, Eye, AlertTriangle, Filter } fr
 import { db } from '../data/mockData';
 import { dataService } from '../data/dataService';
 import { getPollInterval } from '../lib/demoMode';
+import { usePolling } from '../lib/usePolling';
 import { formatDateTime } from '../lib/format';
 import { notifySuccess, notifyError } from '../lib/toast';
 
@@ -58,11 +59,7 @@ export default function FollowUp({ currentUser, setViewingLeadId, setCurrentTab 
     notifySuccess(`Overdue follow-up warning sent to closer ${closerName} successfully.`);
   };
 
-  useEffect(() => {
-    loadFollowUpData();
-    const interval = setInterval(loadFollowUpData, getPollInterval(2000));
-    return () => clearInterval(interval);
-  }, []);
+  usePolling(loadFollowUpData, getPollInterval(2000));
 
   const handleReassign = async (leadId, targetCloserId) => {
     if (!targetCloserId) return;

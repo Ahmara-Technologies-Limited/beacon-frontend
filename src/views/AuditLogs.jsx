@@ -3,6 +3,7 @@ import { ShieldCheck, Search, Trash2, X } from 'lucide-react';
 import { db } from '../data/mockData';
 import { dataService } from '../data/dataService';
 import { getPollInterval } from '../lib/demoMode';
+import { usePolling } from '../lib/usePolling';
 import { confirmDialog } from '../lib/confirm';
 import { notifySuccess, notifyError } from '../lib/toast';
 
@@ -18,11 +19,7 @@ export default function AuditLogs({ currentUser }) {
     }
   };
 
-  useEffect(() => {
-    loadLogs();
-    const interval = setInterval(loadLogs, getPollInterval(2000));
-    return () => clearInterval(interval);
-  }, []);
+  usePolling(loadLogs, getPollInterval(2000));
 
   const handleClearLogs = async () => {
     const confirmed = await confirmDialog({

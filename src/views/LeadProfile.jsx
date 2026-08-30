@@ -7,6 +7,7 @@ import {
 import { db } from '../data/mockData';
 import { dataService } from '../data/dataService';
 import { getPollInterval } from '../lib/demoMode';
+import { usePolling } from '../lib/usePolling';
 import { formatBudget } from '../lib/format';
 import { notifySuccess, notifyError } from '../lib/toast';
 import { confirmDialog } from '../lib/confirm';
@@ -150,12 +151,11 @@ export default function LeadProfile({
   useEffect(() => {
     setIsLoading(true);
     loadLeadData();
-    const interval = setInterval(() => {
-      loadLeadData();
-    }, getPollInterval(2000));
     const unsubscribe = onDataChange(['leads', 'inspections', 'activities', 'finance'], () => loadLeadData());
-    return () => { clearInterval(interval); unsubscribe(); };
+    return unsubscribe;
   }, [leadId]);
+
+  usePolling(loadLeadData, getPollInterval(2000));
 
   const conversationActivities = activities.filter(act => 
     ['Call', 'WhatsApp', 'SMS', 'Email', 'Voice Note', 'Meeting'].includes(act.type)

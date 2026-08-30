@@ -5,6 +5,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Bell, Search, X, Check, Eye, Sun, Moon, Menu } from 'lucide-react';
 import { dataService } from '../data/dataService';
 import { getPollInterval } from '../lib/demoMode';
+import { usePolling } from '@/lib/usePolling';
 import { notifyError } from '@/lib/toast';
 import { useAuth } from '../context/AuthContext';
 import { useCrmUI } from '../context/CrmUIContext';
@@ -18,25 +19,22 @@ export default function Header() {
   const [showNotifications, setShowNotifications] = useState(false);
   const notificationRef = useRef(null);
 
+  const loadNotifications = () => {
+    dataService.getNotifications().then(setNotifications).catch(() => {
+      // Silent - this runs on every page on a timer, a transient failure
+      // shouldn't toast-spam the user every poll cycle.
+    });
+  };
+
   useEffect(() => {
-    // Get notifications
-    dataService.getNotifications().then(setNotifications);
-
     // Listen for custom database changes (like added activity logs or reassigned leads)
-    const handleStorageChange = () => {
-      dataService.getNotifications().then(setNotifications);
-    };
-    window.addEventListener('storage', handleStorageChange);
-    // Custom check timer for updates within same window
-    const interval = setInterval(() => {
-      dataService.getNotifications().then(setNotifications);
-    }, getPollInterval(1000));
-
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-      clearInterval(interval);
-    };
+    window.addEventListener('storage', loadNotifications);
+    return () => window.removeEventListener('storage', loadNotifications);
   }, []);
+
+  // Header is mounted on every page, so this timer is always running -
+  // usePolling pausing on tab-hidden matters most here.
+  usePolling(loadNotifications, getPollInterval(1000));
 
   useEffect(() => {
     function handleClickOutside(event) {

@@ -10,6 +10,7 @@ import {
 import { db } from '../data/mockData';
 import { dataService } from '../data/dataService';
 import { getPollInterval } from '../lib/demoMode';
+import { usePolling } from '../lib/usePolling';
 import { formatBudget, parseBudgetNumber, formatDateTime } from '../lib/format';
 import { SkeletonCards } from '../components/Skeleton';
 import { onDataChange } from '../lib/dataEvents';
@@ -70,14 +71,12 @@ export default function Dashboard({ currentUser, setCurrentTab, setViewingLeadId
   };
 
   useEffect(() => {
-    loadDashboardData().finally(() => setIsLoading(false));
     setSettings(db.getSettings());
-
-    const interval = setInterval(loadDashboardData, getPollInterval(1500));
     const unsubscribe = onDataChange(['leads', 'inspections', 'activities', 'users'], () => loadDashboardData());
-
-    return () => { clearInterval(interval); unsubscribe(); };
+    return unsubscribe;
   }, [])
+
+  usePolling(() => loadDashboardData().finally(() => setIsLoading(false)), getPollInterval(1500));
   const filterByDate = (items, dateKey) => {
     if (dateFilter === 'All Time') return items;
     if (dateFilter === 'Custom') {

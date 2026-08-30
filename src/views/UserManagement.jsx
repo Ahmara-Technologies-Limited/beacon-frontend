@@ -3,6 +3,7 @@ import { Plus, Search, Edit2, ToggleLeft, ToggleRight, Key, X, AlertTriangle, Fi
 import { db } from '../data/mockData';
 import { dataService } from '../data/dataService';
 import { isDemoMode, getPollInterval } from '../lib/demoMode';
+import { usePolling } from '../lib/usePolling';
 import { notifySuccess, notifyError } from '../lib/toast';
 import { SkeletonTableRows } from '../components/Skeleton';
 import { onDataChange } from '../lib/dataEvents';
@@ -57,11 +58,11 @@ export default function UserManagement({ currentUser }) {
   };
 
   useEffect(() => {
-    loadUserData();
-    const interval = setInterval(loadUserData, getPollInterval(2000));
     const unsubscribe = onDataChange(['users', 'leads'], () => loadUserData());
-    return () => { clearInterval(interval); unsubscribe(); };
+    return unsubscribe;
   }, []);
+
+  usePolling(loadUserData, getPollInterval(2000));
 
   const getFilteredUsers = () => {
     let result = users;

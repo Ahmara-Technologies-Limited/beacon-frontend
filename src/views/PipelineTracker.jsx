@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { db } from '../data/mockData';
 import { dataService } from '../data/dataService';
 import { getPollInterval } from '../lib/demoMode';
+import { usePolling } from '../lib/usePolling';
 import { AlertCircle, Calendar } from 'lucide-react';
 import { SkeletonBlock } from '../components/Skeleton';
 import { onDataChange } from '../lib/dataEvents';
@@ -42,11 +43,11 @@ export default function PipelineTracker({ currentUser, setViewingLeadId, setCurr
   };
 
   useEffect(() => {
-    loadPipelineData();
-    const interval = setInterval(loadPipelineData, getPollInterval(2000));
     const unsubscribe = onDataChange(['leads'], () => loadPipelineData());
-    return () => { clearInterval(interval); unsubscribe(); };
+    return unsubscribe;
   }, []);
+
+  usePolling(loadPipelineData, getPollInterval(2000));
 
   // Determine lead lists based on role and filters
   const getFilteredLeads = () => {

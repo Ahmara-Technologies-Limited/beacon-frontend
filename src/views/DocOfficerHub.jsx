@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { db } from '../data/mockData';
 import { dataService } from '../data/dataService';
 import { getPollInterval } from '../lib/demoMode';
+import { usePolling } from '../lib/usePolling';
+import { onDataChange } from '../lib/dataEvents';
 import { DollarSign, FileText, CheckCircle, Clock, Plus, Upload, Trash2, X, FileMinus, ArrowUpRight, Clipboard } from 'lucide-react';
 import { notifySuccess, notifyError } from '@/lib/toast';
 
@@ -60,15 +62,15 @@ export default function DocOfficerHub({ currentUser }) {
   };
 
   useEffect(() => {
-    loadHubData();
-    // NOTE: 2s polling is a crude "live update" mechanism kept for parity
-    // with the previous localStorage-polling behavior (still needed in
-    // demo mode). In live mode this just re-fetches the same endpoints on
-    // an interval - a future improvement would replace this with
-    // websockets/SSE push updates instead of polling.
-    const interval = setInterval(loadHubData, getPollInterval(2000));
-    return () => clearInterval(interval);
+    const unsubscribe = onDataChange(['leads', 'finance'], () => loadHubData());
+    return unsubscribe;
   }, []);
+
+  // Polling is a safety-net fallback for changes made by other users/
+  // sessions; onDataChange above handles the common case (this session's own
+  // mutations) immediately. usePolling pauses entirely while the tab is
+  // hidden instead of hammering the API in a background tab forever.
+  usePolling(loadHubData, getPollInterval(2000));
 
   const handleSimulateUpload = (e) => {
     const file = e.target.files[0];

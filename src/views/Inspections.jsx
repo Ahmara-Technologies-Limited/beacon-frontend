@@ -3,6 +3,7 @@ import { Plus, Download, LayoutList, Calendar as CalendarIcon, X, Check, AlertCi
 import { db } from '../data/mockData';
 import { dataService } from '../data/dataService';
 import { getPollInterval } from '../lib/demoMode';
+import { usePolling } from '../lib/usePolling';
 import { formatBudget, formatDate } from '../lib/format';
 import { SkeletonTableRows } from '../components/Skeleton';
 import { onDataChange } from '../lib/dataEvents';
@@ -91,11 +92,11 @@ export default function Inspections({
   };
 
   useEffect(() => {
-    loadInspectionData();
-    const interval = setInterval(loadInspectionData, getPollInterval(2000));
     const unsubscribe = onDataChange(['inspections', 'leads'], () => loadInspectionData());
-    return () => { clearInterval(interval); unsubscribe(); };
+    return unsubscribe;
   }, []);
+
+  usePolling(loadInspectionData, getPollInterval(2000));
 
   useEffect(() => {
     if (viewingInspectionId) {

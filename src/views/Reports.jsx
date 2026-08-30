@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line } from 'recharts';
 import { Download, Mail, Calendar, BarChart3, PieChart, X } from 'lucide-react';
 import { db } from '../data/mockData';
+import { getPollInterval } from '../lib/demoMode';
+import { usePolling } from '../lib/usePolling';
 import { notifySuccess, notifyError } from '../lib/toast';
 
 export default function Reports({ currentUser }) {
@@ -25,11 +27,10 @@ export default function Reports({ currentUser }) {
     setUsers(db.getUsers());
   };
 
-  useEffect(() => {
-    loadReportData();
-    const interval = setInterval(loadReportData, 2000);
-    return () => clearInterval(interval);
-  }, []);
+  // NOTE: this view still reads from db.* (the local demo/mock layer)
+  // directly rather than dataService, so it shows demo data even in Live
+  // Mode - a separate, larger fix than the polling cleanup done here.
+  usePolling(loadReportData, getPollInterval(2000));
 
   const getFilteredLeads = () => {
     let result = leads;
