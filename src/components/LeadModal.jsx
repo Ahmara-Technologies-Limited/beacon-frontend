@@ -546,21 +546,6 @@ export default function LeadModal({ leadId, isOpen, onClose, onSaveComplete, onS
       </div>
 
       <style>{`
-        .modal-loading-overlay {
-          position: absolute;
-          inset: 0;
-          z-index: 5;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          gap: 10px;
-          background: rgba(255, 255, 255, 0.85);
-          font-size: 13px;
-          font-weight: 600;
-          color: var(--text-secondary);
-        }
-
         .lead-form-grid {
           display: grid;
           grid-template-columns: repeat(2, 1fr);

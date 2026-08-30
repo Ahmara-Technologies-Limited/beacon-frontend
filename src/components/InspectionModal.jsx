@@ -27,6 +27,7 @@ export default function InspectionModal({ leadId, inspectionId, isOpen, onClose,
   const [errors, setErrors] = useState({});
   const [activeInspectionWarning, setActiveInspectionWarning] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [isPopulating, setIsPopulating] = useState(false);
 
   const ESTATES = [
     'Beacon Heights, Lekki',
@@ -38,65 +39,90 @@ export default function InspectionModal({ leadId, inspectionId, isOpen, onClose,
   ];
 
   useEffect(() => {
-    if (isOpen) {
-      Promise.all([dataService.getLeads(), dataService.getUsers()]).then(([activeLeads, allUsers]) => {
-        const activeClosers = allUsers.filter(u => u.role === 'Sales Closer' && u.status === 'Active');
-        const activeOfficers = allUsers.filter(u => u.role === 'Inspection Officer' && u.status === 'Active');
+    if (!isOpen) return undefined;
 
-        setLeads(activeLeads);
-        setClosers(activeClosers);
-        setOfficers(activeOfficers);
+    // Show a loading state instead of a stale/blank form while we fetch the
+    // real data for whichever inspection (or blank "new booking" form) is
+    // being opened right now.
+    setIsPopulating(true);
 
-        if (inspectionId) {
-          dataService.getInspections().then(list => {
-            const inspection = list.find(i => i.id === inspectionId);
-            if (inspection) {
-              setFormData({
-                leadId: inspection.leadId,
-                estate: inspection.estate,
-                date: inspection.date,
-                time: inspection.time,
-                meetingPoint: inspection.meetingPoint,
-                assignedCloserId: inspection.assignedCloserId,
-                inspectionOfficerId: inspection.inspectionOfficerId,
-                status: inspection.status,
-                internalNotes: inspection.internalNotes || '',
-                noShowNote: inspection.noShowNote || '',
-                report: inspection.report || '',
-                feedback: inspection.feedback || '',
-                nextStepRecommendation: inspection.nextStepRecommendation || ''
-              });
-            }
-          });
-        } else {
-          let defaultCloserId = '';
-          if (leadId) {
-            const lead = activeLeads.find(l => l.id === leadId);
-            if (lead) {
-              defaultCloserId = lead.assignedCloserId || '';
-            }
+    // Guard against out-of-order async resolution: this modal is mounted
+    // once globally (CrmUIContext) and reused across inspections, so
+    // switching from editing inspection A to inspection B while A's fetch
+    // is still in flight could otherwise let A's response land after B's
+    // and silently overwrite B's freshly-populated form with A's stale
+    // data - the same bug class found and fixed in LeadModal.
+    let cancelled = false;
+
+    Promise.all([dataService.getLeads(), dataService.getUsers()]).then(([activeLeads, allUsers]) => {
+      if (cancelled) return;
+      const activeClosers = allUsers.filter(u => u.role === 'Sales Closer' && u.status === 'Active');
+      const activeOfficers = allUsers.filter(u => u.role === 'Inspection Officer' && u.status === 'Active');
+
+      setLeads(activeLeads);
+      setClosers(activeClosers);
+      setOfficers(activeOfficers);
+
+      if (inspectionId) {
+        dataService.getInspections().then(list => {
+          if (cancelled) return;
+          const inspection = list.find(i => i.id === inspectionId);
+          if (inspection) {
+            setFormData({
+              leadId: inspection.leadId,
+              estate: inspection.estate,
+              date: inspection.date,
+              time: inspection.time,
+              meetingPoint: inspection.meetingPoint,
+              assignedCloserId: inspection.assignedCloserId,
+              inspectionOfficerId: inspection.inspectionOfficerId,
+              status: inspection.status,
+              internalNotes: inspection.internalNotes || '',
+              noShowNote: inspection.noShowNote || '',
+              report: inspection.report || '',
+              feedback: inspection.feedback || '',
+              nextStepRecommendation: inspection.nextStepRecommendation || ''
+            });
           }
-
-          setFormData({
-            leadId: leadId || '',
-            estate: ESTATES[0],
-            date: '',
-            time: '',
-            meetingPoint: '',
-            assignedCloserId: defaultCloserId,
-            inspectionOfficerId: activeOfficers.length > 0 ? activeOfficers[0].id : '',
-            status: 'Scheduled',
-            internalNotes: '',
-            noShowNote: '',
-            report: '',
-            feedback: '',
-            nextStepRecommendation: ''
-          });
+          setIsPopulating(false);
+        }).catch(() => {
+          if (!cancelled) setIsPopulating(false);
+        });
+      } else {
+        let defaultCloserId = '';
+        if (leadId) {
+          const lead = activeLeads.find(l => l.id === leadId);
+          if (lead) {
+            defaultCloserId = lead.assignedCloserId || '';
+          }
         }
-      });
-      setErrors({});
-      setActiveInspectionWarning(null);
-    }
+
+        setFormData({
+          leadId: leadId || '',
+          estate: ESTATES[0],
+          date: '',
+          time: '',
+          meetingPoint: '',
+          assignedCloserId: defaultCloserId,
+          inspectionOfficerId: activeOfficers.length > 0 ? activeOfficers[0].id : '',
+          status: 'Scheduled',
+          internalNotes: '',
+          noShowNote: '',
+          report: '',
+          feedback: '',
+          nextStepRecommendation: ''
+        });
+        setIsPopulating(false);
+      }
+    }).catch(() => {
+      if (!cancelled) setIsPopulating(false);
+    });
+    setErrors({});
+    setActiveInspectionWarning(null);
+
+    return () => {
+      cancelled = true;
+    };
   }, [leadId, inspectionId, isOpen]);
 
   if (!isOpen) return null;
@@ -184,7 +210,13 @@ export default function InspectionModal({ leadId, inspectionId, isOpen, onClose,
           </button>
         </div>
 
-        <div className="modal-body">
+        <div className="modal-body" style={{ position: 'relative' }}>
+          {isPopulating && (
+            <div className="modal-loading-overlay">
+              <span className="btn-spinner" style={{ width: 28, height: 28, borderWidth: 3, color: 'var(--primary-red)' }} />
+              <span>Loading inspection details…</span>
+            </div>
+          )}
           {activeInspectionWarning && (
             <div className="duplicate-alert-banner">
               <AlertTriangle size={20} className="duplicate-alert-icon" />
@@ -207,7 +239,7 @@ export default function InspectionModal({ leadId, inspectionId, isOpen, onClose,
           )}
 
           {currentUser.role === 'Inspection Officer' ? (
-            <div className="inspection-officer-modal-view" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div className="inspection-officer-modal-view" style={{ display: 'flex', flexDirection: 'column', gap: '16px', ...(isPopulating ? { opacity: 0.35, pointerEvents: 'none' } : {}) }}>
               <div className="card" style={{ padding: '16px', background: 'var(--color-grey-bg)', border: '1px solid var(--border-color)', borderRadius: '8px', marginBottom: '0' }}>
                 <h4 style={{ fontSize: '12px', fontWeight: '800', color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '12px', letterSpacing: '0.5px' }}>
                   Inspection Assignment Details
@@ -350,7 +382,7 @@ export default function InspectionModal({ leadId, inspectionId, isOpen, onClose,
               </div>
             </div>
           ) : (
-            <div className="inspection-form-grid">
+            <div className="inspection-form-grid" style={isPopulating ? { opacity: 0.35, pointerEvents: 'none' } : undefined}>
               <div className="form-group full-width">
                 <label className="form-label">Client / Lead *</label>
                 {leadId ? (

@@ -25,30 +25,42 @@ export default function LogActivityModal({ leadId, isOpen, onClose, onSaveComple
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
-    if (isOpen && leadId) {
-      dataService.getLeads().then(leads => {
-        const lead = leads.find(l => l.id === leadId);
+    if (!isOpen || !leadId) return undefined;
 
-        const now = new Date();
-        const formattedNow = now.toISOString().slice(0, 16);
+    // Same out-of-order-resolution guard as LeadModal/InspectionModal: this
+    // modal is mounted once globally and reused across leads, so switching
+    // to a different lead while the previous getLeads() call is still in
+    // flight could otherwise overwrite the new form with the old lead's
+    // nextAction/stage defaults.
+    let cancelled = false;
 
-        setFormData({
-          type: 'Call',
-          date: formattedNow,
-          summary: '',
-          objections: '',
-          feedback: '',
-          outcome: '',
-          nextStep: lead ? lead.nextAction : '',
-          updateFollowUp: false,
-          followUpDate: '',
-          updateStage: false,
-          pipelineStage: lead ? lead.stage : 'New Lead'
-        });
-        setErrors({});
-        setIsDirty(false);
+    dataService.getLeads().then(leads => {
+      if (cancelled) return;
+      const lead = leads.find(l => l.id === leadId);
+
+      const now = new Date();
+      const formattedNow = now.toISOString().slice(0, 16);
+
+      setFormData({
+        type: 'Call',
+        date: formattedNow,
+        summary: '',
+        objections: '',
+        feedback: '',
+        outcome: '',
+        nextStep: lead ? lead.nextAction : '',
+        updateFollowUp: false,
+        followUpDate: '',
+        updateStage: false,
+        pipelineStage: lead ? lead.stage : 'New Lead'
       });
-    }
+      setErrors({});
+      setIsDirty(false);
+    });
+
+    return () => {
+      cancelled = true;
+    };
   }, [leadId, isOpen]);
 
   if (!isOpen) return null;

@@ -130,6 +130,9 @@
 [data-theme="dark"] .header-user-role {
   color: #FF7875;
 }
+[data-theme="dark"] .modal-loading-overlay {
+  background: rgba(22, 27, 34, 0.9);
+}
 
 /* =====================================================
    RESET & GLOBAL
@@ -645,6 +648,25 @@ a { text-decoration: none; color: inherit; }
 .closer-name-col { display: flex; align-items: center; gap: 10px; }
 /* Reusable inline loading spinner for buttons - inherits the button's
    text color via currentColor so it drops into any btn-* variant. */
+/* Shared blocking loading overlay for modals that populate a form
+   asynchronously (LeadModal, InspectionModal, etc.) - dims/covers the modal
+   body with a spinner + message while the real data is being fetched,
+   instead of the user staring at a stale or blank form with no feedback. */
+.modal-loading-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: rgba(255, 255, 255, 0.85);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
 .btn-spinner {
   display: inline-block;
   width: 15px;
