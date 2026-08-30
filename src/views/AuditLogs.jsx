@@ -6,10 +6,14 @@ import { getPollInterval } from '../lib/demoMode';
 import { usePolling } from '../lib/usePolling';
 import { confirmDialog } from '../lib/confirm';
 import { notifySuccess, notifyError } from '../lib/toast';
+import Pagination, { paginate } from '../components/Pagination';
+
+const PAGE_SIZE = 25;
 
 export default function AuditLogs({ currentUser }) {
   const [logs, setLogs] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [page, setPage] = useState(1);
 
   const loadLogs = async () => {
     try {
@@ -50,6 +54,11 @@ export default function AuditLogs({ currentUser }) {
   };
 
   const filteredLogs = getFilteredLogs();
+  const pagedLogs = paginate(filteredLogs, page, PAGE_SIZE);
+
+  useEffect(() => {
+    setPage(1);
+  }, [searchQuery]);
 
   return (
     <div className="audit-logs-page">
@@ -103,7 +112,7 @@ export default function AuditLogs({ currentUser }) {
                 </td>
               </tr>
             ) : (
-              filteredLogs.map(log => (
+              pagedLogs.map(log => (
                 <tr key={log.id} style={{ cursor: 'default' }}>
                   <td style={{ fontWeight: '500' }}>
                     {new Date(log.timestamp).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}
@@ -127,6 +136,7 @@ export default function AuditLogs({ currentUser }) {
             )}
           </tbody>
         </table>
+        <Pagination page={page} pageSize={PAGE_SIZE} totalItems={filteredLogs.length} onPageChange={setPage} />
       </div>
     </div>
   );

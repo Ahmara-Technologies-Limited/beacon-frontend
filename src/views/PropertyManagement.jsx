@@ -8,6 +8,9 @@ import { notifySuccess, notifyError } from '../lib/toast';
 import { SkeletonTableRows } from '../components/Skeleton';
 import { confirmDialog } from '../lib/confirm';
 import { onDataChange } from '../lib/dataEvents';
+import Pagination, { paginate } from '../components/Pagination';
+
+const PAGE_SIZE = 25;
 
 export default function PropertyManagement({ currentUser }) {
   const [properties, setProperties] = useState([]);
@@ -33,6 +36,7 @@ export default function PropertyManagement({ currentUser }) {
   const [formErrors, setFormErrors] = useState({});
   const [isSavingProperty, setIsSavingProperty] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [page, setPage] = useState(1);
 
   const loadData = async () => {
     try {
@@ -180,7 +184,12 @@ export default function PropertyManagement({ currentUser }) {
   };
 
   const filteredProps = getFilteredProperties();
+  const pagedProps = paginate(filteredProps, page, PAGE_SIZE);
   const propertyTypes = Array.from(new Set(properties.map(p => p.type)));
+
+  useEffect(() => {
+    setPage(1);
+  }, [searchTerm, filterType, filterStatus]);
 
   const getAllocations = (prop) => {
     if (!prop) return [];
@@ -410,7 +419,7 @@ export default function PropertyManagement({ currentUser }) {
                       </td>
                     </tr>
                   ) : (
-                    filteredProps.map(prop => {
+                    pagedProps.map(prop => {
                       const count = getLeadCount(prop);
                       return (
                         <tr key={prop.id} onClick={() => setSelectedProperty(prop)} style={{ cursor: 'pointer' }}>
@@ -444,6 +453,7 @@ export default function PropertyManagement({ currentUser }) {
                   )}
                 </tbody>
               </table>
+              <Pagination page={page} pageSize={PAGE_SIZE} totalItems={filteredProps.length} onPageChange={setPage} />
             </div>
           </div>
         </>

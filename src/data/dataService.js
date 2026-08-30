@@ -7,6 +7,28 @@ import { isDemoMode } from '../lib/demoMode';
 import { apiGet, apiPost, apiPatch, apiDelete, setTokens, clearTokens, getRefreshToken } from '../lib/apiClient';
 import { emitDataChange } from '../lib/dataEvents';
 
+// The backend paginates every list endpoint (DRF PageNumberPagination,
+// page_size=50 - see apps.core.utils.CustomPagination). Every dataService
+// list getter used to just read `res.results` off page 1 and silently drop
+// everything past the first 50 rows with no error and no way to reach the
+// rest - fine while demo data was small, a real bug once a table (leads,
+// users, audit logs...) grows past 50. fetchAllPages walks `page` until the
+// API reports no more pages, so callers keep getting a complete array; the
+// views themselves paginate that complete array client-side for display.
+async function fetchAllPages(path, params = {}) {
+  let page = 1;
+  let allResults = [];
+  // eslint-disable-next-line no-constant-condition
+  while (true) {
+    const res = await apiGet(path, { ...params, page });
+    if (Array.isArray(res)) return res; // endpoint isn't paginated at all
+    allResults = allResults.concat(res.results || []);
+    if (!res.next) break;
+    page += 1;
+  }
+  return allResults;
+}
+
 /* ---- Field mapping helpers ---- */
 
 // ---- User ----
@@ -458,8 +480,7 @@ export const dataService = {
   /* ---- Users ---- */
   getUsers: async () => {
     if (isDemoMode()) return Promise.resolve(db.getUsers());
-    const res = await apiGet('/users/');
-    const list = Array.isArray(res) ? res : res.results || [];
+    const list = await fetchAllPages('/users/');
     return list.map(userFromApi);
   },
 
@@ -531,15 +552,13 @@ export const dataService = {
   /* ---- Leads ---- */
   getLeads: async () => {
     if (isDemoMode()) return Promise.resolve(db.getLeads());
-    const res = await apiGet('/sales/leads/');
-    const list = Array.isArray(res) ? res : res.results || [];
+    const list = await fetchAllPages('/sales/leads/');
     return list.map(leadFromApi);
   },
 
   getArchivedLeads: async () => {
     if (isDemoMode()) return Promise.resolve(db.getArchivedLeads());
-    const res = await apiGet('/sales/leads/', { is_active: false });
-    const list = Array.isArray(res) ? res : res.results || [];
+    const list = await fetchAllPages('/sales/leads/', { is_active: false });
     return list.map(leadFromApi);
   },
 
@@ -583,8 +602,7 @@ export const dataService = {
       const all = db.getInspections();
       return Promise.resolve(leadId ? all.filter(i => i.leadId === leadId) : all);
     }
-    const res = await apiGet('/sales/inspections/', leadId ? { lead: leadId } : undefined);
-    const list = Array.isArray(res) ? res : res.results || [];
+    const list = await fetchAllPages('/sales/inspections/', leadId ? { lead: leadId } : undefined);
     return list.map(inspectionFromApi);
   },
 
@@ -612,8 +630,7 @@ export const dataService = {
       const all = db.getActivities();
       return Promise.resolve(leadId ? all.filter(a => a.leadId === leadId) : all);
     }
-    const res = await apiGet('/sales/activities/', leadId ? { lead: leadId } : undefined);
-    const list = Array.isArray(res) ? res : res.results || [];
+    const list = await fetchAllPages('/sales/activities/', leadId ? { lead: leadId } : undefined);
     return list.map(activityFromApi);
   },
 
@@ -641,8 +658,7 @@ export const dataService = {
   // INTEGRATION_STATUS.md gap notes).
   getNotifications: async () => {
     if (isDemoMode()) return Promise.resolve(db.getNotifications());
-    const res = await apiGet('/notifications/');
-    const list = Array.isArray(res) ? res : res.results || [];
+    const list = await fetchAllPages('/notifications/');
     return list.map(notificationFromApi);
   },
 
@@ -695,8 +711,7 @@ export const dataService = {
   /* ---- Properties ---- */
   getProperties: async () => {
     if (isDemoMode()) return Promise.resolve(db.getProperties());
-    const res = await apiGet('/properties/');
-    const list = Array.isArray(res) ? res : res.results || [];
+    const list = await fetchAllPages('/properties/');
     return list.map(propertyFromApi);
   },
 
@@ -747,8 +762,7 @@ export const dataService = {
   /* ---- Audit log ---- */
   getAuditLogs: async () => {
     if (isDemoMode()) return Promise.resolve(db.getAuditLogs());
-    const res = await apiGet('/audit-logs/');
-    const list = Array.isArray(res) ? res : res.results || [];
+    const list = await fetchAllPages('/audit-logs/');
     return list.map(auditLogFromApi);
   },
 
@@ -771,8 +785,7 @@ export const dataService = {
       const lead = db.getLeads().find(l => l.id === leadId) || db.getArchivedLeads?.().find(l => l.id === leadId);
       return Promise.resolve(lead?.paymentPlan || null);
     }
-    const res = await apiGet('/finance/payment-plans/', { lead: leadId });
-    const list = Array.isArray(res) ? res : res.results || [];
+    const list = await fetchAllPages('/finance/payment-plans/', { lead: leadId });
     return list.length ? paymentPlanFromApi(list[0]) : null;
   },
 
@@ -844,8 +857,7 @@ export const dataService = {
       const all = JSON.parse(localStorage.getItem('beacon_discounts')) || [];
       return Promise.resolve(leadId ? all.filter(d => d.leadId === leadId) : all);
     }
-    const res = await apiGet('/finance/discounts/', leadId ? { lead: leadId } : undefined);
-    const list = Array.isArray(res) ? res : res.results || [];
+    const list = await fetchAllPages('/finance/discounts/', leadId ? { lead: leadId } : undefined);
     return list.map(discountFromApi);
   },
 
@@ -874,8 +886,7 @@ export const dataService = {
     const params = {};
     if (leadId) params.lead = leadId;
     if (closerId) params.closer = closerId;
-    const res = await apiGet('/finance/commissions/', Object.keys(params).length ? params : undefined);
-    const list = Array.isArray(res) ? res : res.results || [];
+    const list = await fetchAllPages('/finance/commissions/', Object.keys(params).length ? params : undefined);
     return list.map(commissionFromApi);
   },
 
@@ -912,8 +923,7 @@ export const dataService = {
       const all = JSON.parse(localStorage.getItem('beacon_refunds')) || [];
       return Promise.resolve(leadId ? all.filter(r => r.leadId === leadId) : all);
     }
-    const res = await apiGet('/finance/refunds/', leadId ? { lead: leadId } : undefined);
-    const list = Array.isArray(res) ? res : res.results || [];
+    const list = await fetchAllPages('/finance/refunds/', leadId ? { lead: leadId } : undefined);
     return list.map(refundFromApi);
   },
 

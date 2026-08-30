@@ -11,6 +11,9 @@ import { notifySuccess, notifyError } from '../lib/toast';
 import { SkeletonTableRows } from '../components/Skeleton';
 import { onDataChange } from '../lib/dataEvents';
 import { formatDateTime } from '../lib/format';
+import Pagination, { paginate } from '../components/Pagination';
+
+const PAGE_SIZE = 25;
 
 export default function LeadManagement({ 
   currentUser, 
@@ -47,6 +50,7 @@ export default function LeadManagement({
 
   const [importSummary, setImportSummary] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [page, setPage] = useState(1);
 
   const loadLeads = async () => {
     try {
@@ -152,6 +156,11 @@ export default function LeadManagement({
   };
 
   const filteredLeads = getFilteredLeads();
+  const pagedLeads = paginate(filteredLeads, page, PAGE_SIZE);
+
+  useEffect(() => {
+    setPage(1);
+  }, [searchTerm, filterStage, filterSource, filterCategory, filterTemperature, filterCloser, filterLocation, filterArchived]);
   const locations = Array.from(new Set(leads.map(l => l.location).filter(Boolean)));
 
   const handleCSVExport = () => {
@@ -582,7 +591,7 @@ export default function LeadManagement({
                 </td>
               </tr>
             ) : (
-              filteredLeads.map(lead => {
+              pagedLeads.map(lead => {
                 const isSelected = selectedLeadIds.includes(lead.id);
                 const assignedCloserObj = closers.find(c => c.id === lead.assignedCloserId);
                 const closerName = assignedCloserObj ? assignedCloserObj.name : "Unassigned";
@@ -661,6 +670,7 @@ export default function LeadManagement({
             )}
           </tbody>
         </table>
+        <Pagination page={page} pageSize={PAGE_SIZE} totalItems={filteredLeads.length} onPageChange={setPage} />
       </div>
 
       {/* FILTER MODAL */}

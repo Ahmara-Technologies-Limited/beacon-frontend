@@ -8,6 +8,9 @@ import { formatBudget, formatDate } from '../lib/format';
 import { SkeletonTableRows } from '../components/Skeleton';
 import { onDataChange } from '../lib/dataEvents';
 import { notifyError } from '../lib/toast';
+import Pagination, { paginate } from '../components/Pagination';
+
+const PAGE_SIZE = 25;
 
 export default function Inspections({
   currentUser, 
@@ -57,6 +60,7 @@ export default function Inspections({
   ];
 
   const [isLoading, setIsLoading] = useState(true);
+  const [page, setPage] = useState(1);
 
   const loadInspectionData = async () => {
     try {
@@ -138,6 +142,11 @@ export default function Inspections({
   };
 
   const filteredInspections = getFilteredInspections();
+  const pagedInspections = paginate(filteredInspections, page, PAGE_SIZE);
+
+  useEffect(() => {
+    setPage(1);
+  }, [filterStatus, filterEstate, filterCloser, filterOfficer]);
 
   const handleExportCSV = () => {
     if (filteredInspections.length === 0) {
@@ -716,7 +725,7 @@ export default function Inspections({
                   </td>
                 </tr>
               ) : (
-                filteredInspections.map(i => {
+                pagedInspections.map(i => {
                   const leadName = leads.find(l => l.id === i.leadId)?.name || "Unknown Lead";
                   const closerName = users.find(u => u.id === i.assignedCloserId)?.name || "Unassigned";
                   const officerName = users.find(u => u.id === i.inspectionOfficerId)?.name || "Unassigned";
@@ -776,6 +785,7 @@ export default function Inspections({
               )}
             </tbody>
           </table>
+          <Pagination page={page} pageSize={PAGE_SIZE} totalItems={filteredInspections.length} onPageChange={setPage} />
         </div>
       )}
 

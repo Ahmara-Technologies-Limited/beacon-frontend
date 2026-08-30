@@ -9,6 +9,9 @@ import { SkeletonTableRows } from '../components/Skeleton';
 import { onDataChange } from '../lib/dataEvents';
 import { formatDateTime } from '../lib/format';
 import { confirmDialog } from '../lib/confirm';
+import Pagination, { paginate } from '../components/Pagination';
+
+const PAGE_SIZE = 25;
 
 export default function UserManagement({ currentUser }) {
   const [users, setUsers] = useState([]);
@@ -45,6 +48,7 @@ export default function UserManagement({ currentUser }) {
   ];
 
   const [isLoading, setIsLoading] = useState(true);
+  const [page, setPage] = useState(1);
 
   const loadUserData = async () => {
     try {
@@ -82,6 +86,11 @@ export default function UserManagement({ currentUser }) {
   };
 
   const filteredUsers = getFilteredUsers();
+  const pagedUsers = paginate(filteredUsers, page, PAGE_SIZE);
+
+  useEffect(() => {
+    setPage(1);
+  }, [searchQuery, filterRole, filterStatus]);
 
   const handleOpenCreateModal = () => {
     setSelectedUser(null);
@@ -293,7 +302,7 @@ export default function UserManagement({ currentUser }) {
                 </td>
               </tr>
             ) : (
-              filteredUsers.map(user => {
+              pagedUsers.map(user => {
                 const assignedLeadsCount = leads.filter(l => l.assignedCloserId === user.id).length;
                 return (
                   <tr key={user.id} onClick={(e) => handleOpenEditModal(user)}>
@@ -330,6 +339,7 @@ export default function UserManagement({ currentUser }) {
             )}
           </tbody>
         </table>
+        <Pagination page={page} pageSize={PAGE_SIZE} totalItems={filteredUsers.length} onPageChange={setPage} />
       </div>
 
       {showUserModal && (
