@@ -2312,8 +2312,10 @@ export default function LeadProfile({
 
         .profile-header-card {
           display: flex;
+          flex-wrap: wrap;
           justify-content: space-between;
           align-items: center;
+          gap: 20px;
           padding: 28px;
           margin-bottom: 24px;
         }
@@ -2322,11 +2324,13 @@ export default function LeadProfile({
           display: flex;
           align-items: center;
           gap: 20px;
+          flex-wrap: wrap;
         }
 
         .profile-avatar-large {
           width: 64px;
           height: 64px;
+          flex-shrink: 0;
           background-color: var(--primary-red);
           color: white;
           font-size: 24px;
@@ -2366,6 +2370,7 @@ export default function LeadProfile({
 
         .profile-header-right {
           display: flex;
+          flex-wrap: wrap;
           gap: 10px;
         }
 
