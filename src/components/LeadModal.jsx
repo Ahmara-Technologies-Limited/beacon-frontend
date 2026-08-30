@@ -28,17 +28,39 @@ export default function LeadModal({ leadId, isOpen, onClose, onSaveComplete, onS
   const [duplicateWarning, setDuplicateWarning] = useState(null);
   const [potentialReferrers, setPotentialReferrers] = useState([]);
   const [isSaving, setIsSaving] = useState(false);
+  const [isPopulating, setIsPopulating] = useState(false);
 
   useEffect(() => {
-    if (isOpen) {
-      dataService.getUsers().then(allUsers => {
-        setClosers(allUsers.filter(u => u.role === 'Sales Closer' && u.status === 'Active'));
-      });
+    if (!isOpen) return undefined;
 
-      dataService.getProperties().then(setProperties);
+    // Show a loading state instead of stale/blank fields while we fetch the
+    // real data for whichever lead (or blank "new lead" form) is being
+    // opened right now.
+    setIsPopulating(true);
 
-      if (leadId) {
-        dataService.getLeads().then(leads => {
+    // Guard against out-of-order async resolution: if the user opens lead A
+    // then quickly switches to lead B while A's fetches are still in
+    // flight, A's response can land after B's and silently overwrite B's
+    // freshly-populated form with A's stale data. Every setState below is
+    // gated on `cancelled` so a stale response from a previous leadId/open
+    // cycle is a no-op once this effect has been superseded.
+    let cancelled = false;
+
+    dataService.getUsers().then(allUsers => {
+      if (cancelled) return;
+      setClosers(allUsers.filter(u => u.role === 'Sales Closer' && u.status === 'Active'));
+    });
+
+    dataService.getProperties().then(props => {
+      if (cancelled) return;
+      setProperties(props);
+    });
+
+    if (leadId) {
+      // Single shared fetch for both the target lead and the referrer list
+      // (previously two separate dataService.getLeads() calls).
+      dataService.getLeads().then(leads => {
+        if (cancelled) return;
         const lead = leads.find(l => l.id === leadId);
         if (lead) {
           setFormData({
@@ -64,40 +86,46 @@ export default function LeadModal({ leadId, isOpen, onClose, onSaveComplete, onS
             referredById: lead.referredById || ''
           });
         }
-        });
-        dataService.getLeads().then(leads => {
-          setPotentialReferrers(leads.filter(l => l.id !== leadId && (l.stage === 'Client/Investor' || l.stage === 'Repeat Purchase')));
-        });
-      } else {
-        setFormData({
-          name: '',
-          phone: '',
-          whatsapp: '',
-          email: '',
-          location: '',
-          source: 'Paid Ads',
-          category: 'Investor Wealth',
-          stage: 'New Lead',
-          temperature: 'Hot',
-          assignedCloserId: currentUser.role === 'Sales Closer' ? currentUser.id : '',
-          branch: currentUser.role === 'Sales Closer' && currentUser.branch ? currentUser.branch : 'Lekki Branch',
-          budget: '',
-          propertyInterest: '',
-          nextAction: '',
-          followUpDate: '',
-          relationshipStatus: 'Active',
-          referralStatus: 'None',
-          satisfactionScore: '',
-          lastContactDate: '',
-          referredById: ''
-        });
-        dataService.getLeads().then(leads => {
-          setPotentialReferrers(leads.filter(l => l.stage === 'Client/Investor' || l.stage === 'Repeat Purchase'));
-        });
-      }
-      setErrors({});
-      setDuplicateWarning(null);
+        setPotentialReferrers(leads.filter(l => l.id !== leadId && (l.stage === 'Client/Investor' || l.stage === 'Repeat Purchase')));
+        setIsPopulating(false);
+      }).catch(() => {
+        if (!cancelled) setIsPopulating(false);
+      });
+    } else {
+      setFormData({
+        name: '',
+        phone: '',
+        whatsapp: '',
+        email: '',
+        location: '',
+        source: 'Paid Ads',
+        category: 'Investor Wealth',
+        stage: 'New Lead',
+        temperature: 'Hot',
+        assignedCloserId: currentUser.role === 'Sales Closer' ? currentUser.id : '',
+        branch: currentUser.role === 'Sales Closer' && currentUser.branch ? currentUser.branch : 'Lekki Branch',
+        budget: '',
+        propertyInterest: '',
+        nextAction: '',
+        followUpDate: '',
+        relationshipStatus: 'Active',
+        referralStatus: 'None',
+        satisfactionScore: '',
+        lastContactDate: '',
+        referredById: ''
+      });
+      setIsPopulating(false);
+      dataService.getLeads().then(leads => {
+        if (cancelled) return;
+        setPotentialReferrers(leads.filter(l => l.stage === 'Client/Investor' || l.stage === 'Repeat Purchase'));
+      });
     }
+    setErrors({});
+    setDuplicateWarning(null);
+
+    return () => {
+      cancelled = true;
+    };
   }, [leadId, isOpen, currentUser]);
 
   if (!isOpen) return null;
@@ -182,7 +210,13 @@ export default function LeadModal({ leadId, isOpen, onClose, onSaveComplete, onS
           </button>
         </div>
 
-        <div className="modal-body">
+        <div className="modal-body" style={{ position: 'relative' }}>
+          {isPopulating && (
+            <div className="modal-loading-overlay">
+              <span className="btn-spinner" style={{ width: 28, height: 28, borderWidth: 3, color: 'var(--primary-red)' }} />
+              <span>Loading lead details…</span>
+            </div>
+          )}
           {duplicateWarning && (
             <div className="duplicate-alert-banner">
               <AlertTriangle size={20} className="duplicate-alert-icon" />
@@ -204,7 +238,7 @@ export default function LeadModal({ leadId, isOpen, onClose, onSaveComplete, onS
             </div>
           )}
 
-          <div className="lead-form-grid">
+          <div className="lead-form-grid" style={isPopulating ? { opacity: 0.35, pointerEvents: 'none' } : undefined}>
             <div className="form-group">
               <label className="form-label">Full Name *</label>
               <input 
@@ -512,6 +546,21 @@ export default function LeadModal({ leadId, isOpen, onClose, onSaveComplete, onS
       </div>
 
       <style>{`
+        .modal-loading-overlay {
+          position: absolute;
+          inset: 0;
+          z-index: 5;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          gap: 10px;
+          background: rgba(255, 255, 255, 0.85);
+          font-size: 13px;
+          font-weight: 600;
+          color: var(--text-secondary);
+        }
+
         .lead-form-grid {
           display: grid;
           grid-template-columns: repeat(2, 1fr);
