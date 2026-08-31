@@ -141,7 +141,8 @@ export default function Inspections({
     return result;
   };
 
-  const filteredInspections = getFilteredInspections();
+  const filteredInspections = [...getFilteredInspections()]
+    .sort((a, b) => new Date(b.createdDate) - new Date(a.createdDate));
   const pagedInspections = paginate(filteredInspections, page, PAGE_SIZE);
 
   useEffect(() => {

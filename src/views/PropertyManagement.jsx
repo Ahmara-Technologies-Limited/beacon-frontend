@@ -3,7 +3,7 @@ import { Plus, Search, Building2, MapPin, Tag, SlidersHorizontal, Layers, Trash2
 import { dataService } from '../data/dataService';
 import { getPollInterval } from '../lib/demoMode';
 import { usePolling } from '../lib/usePolling';
-import { formatBudget } from '../lib/format';
+import { formatBudget, formatDateTime } from '../lib/format';
 import { notifySuccess, notifyError } from '../lib/toast';
 import { SkeletonTableRows } from '../components/Skeleton';
 import { confirmDialog } from '../lib/confirm';
@@ -183,7 +183,8 @@ export default function PropertyManagement({ currentUser }) {
     return result;
   };
 
-  const filteredProps = getFilteredProperties();
+  const filteredProps = [...getFilteredProperties()]
+    .sort((a, b) => new Date(b.dateCreated) - new Date(a.dateCreated));
   const pagedProps = paginate(filteredProps, page, PAGE_SIZE);
   const propertyTypes = Array.from(new Set(properties.map(p => p.type)));
 
@@ -406,15 +407,16 @@ export default function PropertyManagement({ currentUser }) {
                     <th>Available Units</th>
                     <th>Lead Count</th>
                     <th>Status</th>
+                    <th>Date Added</th>
                     {isEditable && <th>Actions</th>}
                   </tr>
                 </thead>
                 <tbody>
                   {isLoading ? (
-                    <SkeletonTableRows columns={isEditable ? 9 : 8} rows={6} />
+                    <SkeletonTableRows columns={isEditable ? 10 : 9} rows={6} />
                   ) : filteredProps.length === 0 ? (
                     <tr>
-                      <td colSpan={isEditable ? 9 : 8} className="empty-table-state">
+                      <td colSpan={isEditable ? 10 : 9} className="empty-table-state">
                         No properties found matching your search.
                       </td>
                     </tr>
@@ -435,6 +437,7 @@ export default function PropertyManagement({ currentUser }) {
                             </span>
                           </td>
                           <td><span className={`badge ${getStatusClass(prop.status)}`}>{prop.status}</span></td>
+                          <td>{formatDateTime(prop.dateCreated)}</td>
                           {isEditable && (
                             <td onClick={e => e.stopPropagation()}>
                               <div style={{ display: 'flex', gap: '4px' }}>

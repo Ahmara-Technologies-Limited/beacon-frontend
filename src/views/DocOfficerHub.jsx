@@ -158,7 +158,9 @@ export default function DocOfficerHub({ currentUser }) {
     return new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN', maximumFractionDigits: 0 }).format(val);
   };
 
-  const activePlans = leads.filter(l => l.paymentPlan);
+  const activePlans = leads
+    .filter(l => l.paymentPlan)
+    .sort((a, b) => new Date(b.paymentPlan?.dateCreated) - new Date(a.paymentPlan?.dateCreated));
   const reminders = [];
   const today = new Date();
 
@@ -371,7 +373,7 @@ export default function DocOfficerHub({ currentUser }) {
                     <td colSpan={8} className="empty-table-state">No refund requests logged.</td>
                   </tr>
                 ) : (
-                  refunds.map(r => (
+                  [...refunds].sort((a, b) => new Date(b.dateRequested) - new Date(a.dateRequested)).map(r => (
                     <tr key={r.id}>
                       <td className="lead-name-cell">{r.clientName}</td>
                       <td>{r.propertyInterest}</td>
@@ -451,7 +453,7 @@ export default function DocOfficerHub({ currentUser }) {
                     <td colSpan={9} className="empty-table-state">No sales commissions recorded yet.</td>
                   </tr>
                 ) : (
-                  commissions.map(c => (
+                  [...commissions].sort((a, b) => new Date(b.scheduledDate) - new Date(a.scheduledDate)).map(c => (
                     <tr key={c.id}>
                       <td style={{ fontWeight: 700 }}>{c.closerName}</td>
                       <td>{c.clientName}</td>
@@ -510,7 +512,7 @@ export default function DocOfficerHub({ currentUser }) {
                     <td colSpan={7} className="empty-table-state">No discount adjustments recorded in database.</td>
                   </tr>
                 ) : (
-                  discounts.map(d => (
+                  [...discounts].sort((a, b) => new Date(b.dateIssued) - new Date(a.dateIssued)).map(d => (
                     <tr key={d.id}>
                       <td className="lead-name-cell">{d.clientName}</td>
                       <td>{d.propertyName}</td>

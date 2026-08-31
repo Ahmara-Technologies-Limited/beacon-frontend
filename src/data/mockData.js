@@ -398,11 +398,11 @@ const DEFAULT_NOTIFICATIONS = [
 ];
 
 const DEFAULT_PROPERTIES = [
-  { id: "p-1", name: "Beacon Heights, Lekki", type: "Estate Plot", location: "Lekki, Lagos", totalUnits: 50, availableUnits: 12, price: 50000000, status: "Selling", description: "Premium serviced plots in Lekki with 24/7 power, treated water, and paved roads.", amenities: ["24/7 Power", "Paved Roads", "Perimeter Fence", "Water Treatment"] },
-  { id: "p-2", name: "Beacon Waterfront, Lekki", type: "5 Bedroom Duplex", location: "Lekki, Lagos", totalUnits: 10, availableUnits: 3, price: 250000000, status: "Selling", description: "Ultra-luxury waterfront duplexes with private jetty, smart automation, and infinity pool.", amenities: ["Waterfront View", "Jetty Access", "Smart Home Automation", "Infinity Pool", "24/7 Security"] },
-  { id: "p-3", name: "Beacon Hill, Guzape", type: "3 Bedroom Penthouse", location: "Guzape, Abuja", totalUnits: 20, availableUnits: 6, price: 120000000, status: "Selling", description: "Stunning penthouses overlooking Guzape Hills, featuring floor-to-ceiling windows, and private elevator.", amenities: ["Panoramic Views", "Private Elevator", "Gymnasium", "24/7 CCTV"] },
-  { id: "p-4", name: "Beacon Grove, Epe", type: "Estate Plot", location: "Epe, Lagos", totalUnits: 100, availableUnits: 45, price: 15000000, status: "Selling", description: "Fast-developing investment estate in Epe, suitable for high ROI residential/commercial buildings.", amenities: ["Drainage System", "Security Post", "Streetlights", "Green Areas"] },
-  { id: "p-5", name: "Beacon Palms, Maitama", type: "6 Bedroom Mansion", location: "Maitama, Abuja", totalUnits: 5, availableUnits: 5, price: 450000000, status: "Planned", description: "Exclusive smart diplomatic mansions in Maitama. Booking of units currently on reservation.", amenities: ["Diplomatic Zone", "Bulletproof Doors", "Private Cinema", "Swimming Pool", "Automation"] }
+  { id: "p-1", name: "Beacon Heights, Lekki", type: "Estate Plot", location: "Lekki, Lagos", totalUnits: 50, availableUnits: 12, price: 50000000, status: "Selling", description: "Premium serviced plots in Lekki with 24/7 power, treated water, and paved roads.", amenities: ["24/7 Power", "Paved Roads", "Perimeter Fence", "Water Treatment"], dateCreated: "2024-03-12T09:00:00Z" },
+  { id: "p-2", name: "Beacon Waterfront, Lekki", type: "5 Bedroom Duplex", location: "Lekki, Lagos", totalUnits: 10, availableUnits: 3, price: 250000000, status: "Selling", description: "Ultra-luxury waterfront duplexes with private jetty, smart automation, and infinity pool.", amenities: ["Waterfront View", "Jetty Access", "Smart Home Automation", "Infinity Pool", "24/7 Security"], dateCreated: "2024-07-20T09:00:00Z" },
+  { id: "p-3", name: "Beacon Hill, Guzape", type: "3 Bedroom Penthouse", location: "Guzape, Abuja", totalUnits: 20, availableUnits: 6, price: 120000000, status: "Selling", description: "Stunning penthouses overlooking Guzape Hills, featuring floor-to-ceiling windows, and private elevator.", amenities: ["Panoramic Views", "Private Elevator", "Gymnasium", "24/7 CCTV"], dateCreated: "2025-01-15T09:00:00Z" },
+  { id: "p-4", name: "Beacon Grove, Epe", type: "Estate Plot", location: "Epe, Lagos", totalUnits: 100, availableUnits: 45, price: 15000000, status: "Selling", description: "Fast-developing investment estate in Epe, suitable for high ROI residential/commercial buildings.", amenities: ["Drainage System", "Security Post", "Streetlights", "Green Areas"], dateCreated: "2025-09-02T09:00:00Z" },
+  { id: "p-5", name: "Beacon Palms, Maitama", type: "6 Bedroom Mansion", location: "Maitama, Abuja", totalUnits: 5, availableUnits: 5, price: 450000000, status: "Planned", description: "Exclusive smart diplomatic mansions in Maitama. Booking of units currently on reservation.", amenities: ["Diplomatic Zone", "Bulletproof Doors", "Private Cinema", "Swimming Pool", "Automation"], dateCreated: "2026-02-10T09:00:00Z" }
 ];
 
 const DEFAULT_SETTINGS = {
@@ -849,6 +849,7 @@ export const db = {
     } else {
       property.id = "p-" + Date.now();
       property.amenities = property.amenities || [];
+      property.dateCreated = property.dateCreated || new Date().toISOString();
       properties.push(property);
     }
     setData("beacon_properties", properties);

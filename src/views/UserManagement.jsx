@@ -85,7 +85,8 @@ export default function UserManagement({ currentUser }) {
     return result;
   };
 
-  const filteredUsers = getFilteredUsers();
+  const filteredUsers = [...getFilteredUsers()]
+    .sort((a, b) => new Date(b.dateAdded) - new Date(a.dateAdded));
   const pagedUsers = paginate(filteredUsers, page, PAGE_SIZE);
 
   useEffect(() => {

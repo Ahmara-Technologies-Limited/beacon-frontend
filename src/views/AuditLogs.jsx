@@ -53,7 +53,8 @@ export default function AuditLogs({ currentUser }) {
     );
   };
 
-  const filteredLogs = getFilteredLogs();
+  const filteredLogs = [...getFilteredLogs()]
+    .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
   const pagedLogs = paginate(filteredLogs, page, PAGE_SIZE);
 
   useEffect(() => {

@@ -239,6 +239,7 @@ const propertyFromApi = (p) => {
     status: p.status,
     description: p.description,
     amenities: p.amenities || [],
+    dateCreated: p.created_on,
     _raw: p,
   };
 };

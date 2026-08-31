@@ -155,7 +155,8 @@ export default function LeadManagement({
     return result;
   };
 
-  const filteredLeads = getFilteredLeads();
+  const filteredLeads = [...getFilteredLeads()]
+    .sort((a, b) => new Date(b.dateCreated) - new Date(a.dateCreated));
   const pagedLeads = paginate(filteredLeads, page, PAGE_SIZE);
 
   useEffect(() => {
@@ -575,6 +576,7 @@ export default function LeadManagement({
               <th>Pipeline Stage</th>
               <th>Temperature</th>
               <th>Assigned Closer</th>
+              <th>Date Added</th>
               <th>Follow-up Date</th>
               <th>Last Activity</th>
               {filterArchived === 'Active' && currentUser.role !== 'Admin/Doc Officer' && <th>Action</th>}
@@ -583,10 +585,10 @@ export default function LeadManagement({
           </thead>
           <tbody>
             {isLoading ? (
-              <SkeletonTableRows columns={11} rows={8} />
+              <SkeletonTableRows columns={12} rows={8} />
             ) : filteredLeads.length === 0 ? (
               <tr>
-                <td colSpan={11} className="empty-table-state">
+                <td colSpan={12} className="empty-table-state">
                   No leads found. Try adjusting your search query or filters.
                 </td>
               </tr>
@@ -640,6 +642,7 @@ export default function LeadManagement({
                         {closerName}
                       </span>
                     </td>
+                    <td>{formatDateTime(lead.dateCreated)}</td>
                     <td>
                       <div className="followup-cell">
                         {isFollowUpOverdue && <Flag size={14} className="overdue-flag-red" />}
