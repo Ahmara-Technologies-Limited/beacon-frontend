@@ -97,6 +97,17 @@ const leadFromApi = (l) => {
     referralCount: l.referral_count,
     lastContactDate: l.last_contact_date,
     referredById: l.referred_by,
+    // Legal & Finance Desk fields. These are read-only from the frontend's
+    // perspective in live mode - they're only ever mutated server-side via
+    // the sendApplicationForm/sendOfferLetter actions or by the client
+    // through the public portal endpoints, never via a plain saveLead PATCH
+    // (see leadToApi, which deliberately does not map these back).
+    applicationFormStatus: l.application_form_status,
+    applicationData: l.application_data,
+    offerLetterStatus: l.offer_letter_status,
+    offerLetterTerms: l.offer_letter_terms,
+    offerLetterSignature: l.offer_letter_signature,
+    offerLetterSignedDate: l.offer_letter_signed_date,
     _raw: l,
   };
 };
@@ -595,6 +606,87 @@ export const dataService = {
     emitDataChange('leads');
     return res;
   },
+
+  /* ---- Legal & Finance Desk: application form / offer letter ---- */
+  // In demo mode there's no server, so these just flip the status fields
+  // locally the way the old in-app simulation did. In live mode they call
+  // the real backend action, which actually emails the client a signed
+  // portal link (see apps.sales.views.LeadViewSet.send_application_form /
+  // send_offer_letter).
+  sendApplicationForm: async (leadId) => {
+    if (isDemoMode()) {
+      const lead = db.getLeads().find(l => l.id === leadId) || db.getArchivedLeads?.().find(l => l.id === leadId);
+      db.saveLead({ ...lead, applicationFormStatus: 'Sent to Lead' });
+      db.logAudit(`Application Form sent to client ${lead?.name || leadId} by Doc Officer.`);
+      emitDataChange('leads');
+      return Promise.resolve({ portalLink: `${window.location.origin}/apply/demo-${leadId}` });
+    }
+    const res = await apiPost(`/sales/leads/${leadId}/send-application-form/`);
+    emitDataChange('leads');
+    return { portalLink: res.portal_link };
+  },
+
+  approveApplicationForm: async (leadId, appData) => {
+    if (isDemoMode()) {
+      const lead = db.getLeads().find(l => l.id === leadId) || db.getArchivedLeads?.().find(l => l.id === leadId);
+      const res = db.saveLead({ ...lead, applicationFormStatus: 'Approved', applicationData: appData });
+      db.logAudit(`Application Form approved for client ${lead?.name || leadId} by Doc Officer.`);
+      emitDataChange('leads');
+      return Promise.resolve(res);
+    }
+    // No dedicated backend action for this yet - approval is a purely
+    // internal status flip (no email, no client-facing token), so a plain
+    // PATCH through the normal lead-write path is enough.
+    const res = await apiPatch(`/sales/leads/${leadId}/`, { application_form_status: 'Approved' });
+    emitDataChange('leads');
+    return leadFromApi(res);
+  },
+
+  // `terms` is optional staff input: { discount, depositPercentage, months }.
+  // The backend recomputes pricing server-side from the live Property table
+  // regardless (see send_offer_letter), so this is just what gets sent to
+  // shape those terms - never raw pricing.
+  sendOfferLetter: async (leadId, terms = {}) => {
+    if (isDemoMode()) {
+      const lead = db.getLeads().find(l => l.id === leadId) || db.getArchivedLeads?.().find(l => l.id === leadId);
+      const allProperties = db.getProperties();
+      let matchingProperty = null;
+      if (lead?.propertyInterest) {
+        const interestLower = lead.propertyInterest.toLowerCase();
+        matchingProperty = allProperties.find(p => interestLower.includes(p.name.toLowerCase()) || p.name.toLowerCase().includes(interestLower));
+      }
+      if (!matchingProperty && allProperties.length > 0) matchingProperty = allProperties[0];
+      const regularPrice = matchingProperty ? matchingProperty.price : 50000000;
+      const discount = Number(terms.discount) || 0;
+      const depositPercentage = terms.depositPercentage !== undefined ? Number(terms.depositPercentage) : 20;
+      const months = terms.months !== undefined ? Number(terms.months) : 6;
+      const netPrice = regularPrice - discount;
+      const deposit = Math.round(netPrice * (depositPercentage / 100));
+      const balance = netPrice - deposit;
+      const installmentVal = months > 0 ? Math.round(balance / months) : balance;
+      const offerLetterTerms = {
+        property: matchingProperty ? matchingProperty.name : (lead?.propertyInterest || 'Beacon Property'),
+        regularPrice, discount, netPrice, depositPercentage, deposit, months, installmentVal,
+      };
+      db.saveLead({ ...lead, offerLetterStatus: 'Sent', offerLetterTerms });
+      db.logAudit(`Offer Letter sent to client ${lead?.name || leadId} by Doc Officer.`);
+      emitDataChange('leads');
+      return Promise.resolve({ portalLink: `${window.location.origin}/offer/demo-${leadId}` });
+    }
+    const payload = {};
+    if (terms.discount !== undefined) payload.discount = terms.discount;
+    if (terms.depositPercentage !== undefined) payload.depositPercentage = terms.depositPercentage;
+    if (terms.months !== undefined) payload.months = terms.months;
+    const res = await apiPost(`/sales/leads/${leadId}/send-offer-letter/`, payload);
+    emitDataChange('leads');
+    return { portalLink: res.portal_link };
+  },
+
+  /* ---- Public client portal (no auth - reached via emailed token) ---- */
+  getApplicationFormPortal: (token) => apiGet(`/sales/portal/application-form/${token}/`),
+  submitApplicationFormPortal: (token, data) => apiPost(`/sales/portal/application-form/${token}/`, data),
+  getOfferLetterPortal: (token) => apiGet(`/sales/portal/offer-letter/${token}/`),
+  acceptOfferLetterPortal: (token, data) => apiPost(`/sales/portal/offer-letter/${token}/`, data),
 
   /* ---- Inspections ---- */
   getInspections: async (leadId) => {

@@ -14,6 +14,37 @@ import { confirmDialog } from '../lib/confirm';
 import { SkeletonBlock, SkeletonListRows } from '../components/Skeleton';
 import { onDataChange } from '../lib/dataEvents';
 
+// Small inline form staff use to set discount/deposit/tenor terms before
+// sending an offer letter. Kept outside the main component so its own
+// input state doesn't re-render/re-fetch anything in LeadProfile.
+function OfferTermsForm({ form, setForm, onSubmit, onCancel, isSubmitting }) {
+  const update = (field) => (e) => setForm((prev) => ({ ...prev, [field]: e.target.value }));
+  return (
+    <form onSubmit={onSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
+        <div>
+          <label style={{ fontSize: '11px', fontWeight: '600' }}>Discount (NGN)</label>
+          <input type="number" min="0" className="form-control" value={form.discount} onChange={update('discount')} style={{ height: '30px', fontSize: '12px' }} />
+        </div>
+        <div>
+          <label style={{ fontSize: '11px', fontWeight: '600' }}>Deposit (%)</label>
+          <input type="number" min="0" max="100" className="form-control" value={form.depositPercentage} onChange={update('depositPercentage')} style={{ height: '30px', fontSize: '12px' }} />
+        </div>
+        <div>
+          <label style={{ fontSize: '11px', fontWeight: '600' }}>Tenor (Months)</label>
+          <input type="number" min="0" className="form-control" value={form.months} onChange={update('months')} style={{ height: '30px', fontSize: '12px' }} />
+        </div>
+      </div>
+      <div style={{ display: 'flex', gap: '8px' }}>
+        <button type="button" className="btn btn-sm" style={{ flex: 1 }} onClick={onCancel} disabled={isSubmitting}>Cancel</button>
+        <button type="submit" className="btn btn-sm btn-primary" style={{ flex: 2 }} disabled={isSubmitting}>
+          {isSubmitting ? 'Sending...' : 'Send Offer Letter'}
+        </button>
+      </div>
+    </form>
+  );
+}
+
 /**
  * @param {{
  *   leadId: string,
@@ -93,6 +124,19 @@ export default function LeadProfile({
     months: '6'
   });
   const [activePrintDoc, setActivePrintDoc] = useState(null);
+
+  // Legal & Finance Desk: real portal links + offer-letter terms input.
+  // The signed portal token is only ever returned by the send-* API call
+  // itself (see dataService.sendApplicationForm/sendOfferLetter) - it isn't
+  // persisted on the lead, so it's only available to copy right after
+  // sending/resending, not on every page load.
+  const [applicationPortalLink, setApplicationPortalLink] = useState(null);
+  const [offerPortalLink, setOfferPortalLink] = useState(null);
+  const [isSendingApplicationForm, setIsSendingApplicationForm] = useState(false);
+  const [isApprovingApplicationForm, setIsApprovingApplicationForm] = useState(false);
+  const [isSendingOfferLetter, setIsSendingOfferLetter] = useState(false);
+  const [showOfferTermsForm, setShowOfferTermsForm] = useState(false);
+  const [offerTermsForm, setOfferTermsForm] = useState({ discount: '0', depositPercentage: '20', months: '6' });
 
   const STAGES_ORDER = [
     "New Lead", "Contact Attempted", "Conversation Started", "Qualified Prospect", 
@@ -258,96 +302,69 @@ export default function LeadProfile({
     }
   };
 
+  // Sends (or resends) the real client-facing application form link by
+  // email. The signed token is single-use-context (tied to this lead +
+  // purpose) but not revoked on resend, so resending just mints a fresh
+  // link without invalidating any earlier one still in the client's inbox.
   const handleSendApplicationForm = async () => {
+    if (isSendingApplicationForm) return;
+    setIsSendingApplicationForm(true);
     try {
-      const updatedLead = {
-        ...lead,
-        applicationFormStatus: 'Sent to Lead'
-      };
-      await dataService.saveLead(updatedLead);
+      const { portalLink } = await dataService.sendApplicationForm(lead.id);
+      setApplicationPortalLink(portalLink);
       loadLeadData();
-      db.logAudit(`Application Form sent to client ${lead.name} by Doc Officer.`);
-      notifySuccess('Application form sent.');
+      notifySuccess('Application form emailed to the client.');
     } catch (err) {
       notifyError(err, 'Could not send the application form.');
-    }
-  };
-
-  const handleSimulateClientSubmit = async (appData) => {
-    try {
-      const updatedLead = {
-        ...lead,
-        applicationFormStatus: 'Submitted',
-        applicationData: appData
-      };
-      await dataService.saveLead(updatedLead);
-      loadLeadData();
-      await dataService.saveActivity({
-        leadId: lead.id,
-        type: "Internal Note",
-        summary: `Simulation: Client filled and submitted the digital application form.`,
-        objections: "None",
-        feedback: "N/A",
-        nextStep: "Awaiting Doc Officer review and approval.",
-        loggedBy: "System (Simulation)"
-      });
-    } catch (err) {
-      notifyError(err, 'Could not submit the application form.');
+    } finally {
+      setIsSendingApplicationForm(false);
     }
   };
 
   const handleApproveApplicationForm = async (appData) => {
+    if (isApprovingApplicationForm) return;
+    setIsApprovingApplicationForm(true);
     try {
-      const updatedLead = {
-        ...lead,
-        applicationFormStatus: 'Approved',
-        applicationData: appData
-      };
-      await dataService.saveLead(updatedLead);
+      await dataService.approveApplicationForm(lead.id, appData);
       loadLeadData();
-      db.logAudit(`Application Form approved for client ${lead.name} by Doc Officer.`);
       notifySuccess('Application form approved.');
     } catch (err) {
       notifyError(err, 'Could not approve the application form.');
+    } finally {
+      setIsApprovingApplicationForm(false);
     }
   };
 
-  const handleSendOfferLetter = async () => {
+  // Sends (or resends) the real client-facing offer letter link by email.
+  // Pricing/terms are computed server-side from the live Property table -
+  // this only passes staff's discount/deposit/tenor inputs, never raw price.
+  const handleSendOfferLetter = async (e) => {
+    e.preventDefault();
+    if (isSendingOfferLetter) return;
+    setIsSendingOfferLetter(true);
     try {
-      const updatedLead = {
-        ...lead,
-        offerLetterStatus: 'Sent'
-      };
-      await dataService.saveLead(updatedLead);
+      const { portalLink } = await dataService.sendOfferLetter(lead.id, {
+        discount: Number(offerTermsForm.discount) || 0,
+        depositPercentage: Number(offerTermsForm.depositPercentage) || 0,
+        months: Number(offerTermsForm.months) || 0,
+      });
+      setOfferPortalLink(portalLink);
+      setShowOfferTermsForm(false);
       loadLeadData();
-      db.logAudit(`Offer Letter sent to client ${lead.name} by Doc Officer.`);
-      notifySuccess('Offer letter sent.');
+      notifySuccess('Offer letter emailed to the client.');
     } catch (err) {
       notifyError(err, 'Could not send the offer letter.');
+    } finally {
+      setIsSendingOfferLetter(false);
     }
   };
 
-  const handleSimulateClientAccept = async (signatureText) => {
+  const handleCopyPortalLink = async (link) => {
     try {
-      const updatedLead = {
-        ...lead,
-        offerLetterStatus: 'Accepted',
-        offerLetterSignature: signatureText,
-        offerLetterSignedDate: new Date().toISOString().split('T')[0]
-      };
-      await dataService.saveLead(updatedLead);
-      loadLeadData();
-      await dataService.saveActivity({
-        leadId: lead.id,
-        type: "Internal Note",
-        summary: `Simulation: Client reviewed, digitally signed and accepted the Offer Letter. Signature: ${signatureText}.`,
-        objections: "None",
-        feedback: "Client accepted offer terms.",
-        nextStep: "Proceed to payments configuration desk.",
-        loggedBy: "System (Simulation)"
-      });
-    } catch (err) {
-      notifyError(err, 'Could not accept the offer letter.');
+      await navigator.clipboard.writeText(link);
+      notifySuccess('Link copied to clipboard.');
+    } catch {
+      notifyError(null, 'Could not copy the link automatically. Please copy it manually.');
     }
   };
 
@@ -818,11 +835,18 @@ export default function LeadProfile({
               {lead.applicationFormStatus === 'Sent to Lead' && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                   <div style={{ padding: '12px', background: 'rgba(59, 130, 246, 0.08)', border: '1px solid rgba(59, 130, 246, 0.3)', borderRadius: '6px', fontSize: '12px', color: '#1E3A8A' }}>
-                    <strong>Form Link Generated:</strong> Form has been sent to client. Awaiting client submission.
+                    <strong>Form Link Sent:</strong> An email with the secure application form link was sent to {lead.email || 'the client'}. Awaiting submission.
                   </div>
-                  
-                  <button 
-                    className="btn btn-sm" 
+
+                  {applicationPortalLink && (
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <input readOnly value={applicationPortalLink} className="form-control" style={{ fontSize: '11px' }} onFocus={(e) => e.target.select()} />
+                      <button type="button" className="btn btn-sm" onClick={() => handleCopyPortalLink(applicationPortalLink)}>Copy</button>
+                    </div>
+                  )}
+
+                  <button
+                    className="btn btn-sm"
                     style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', background: '#F3F4F6', border: '1px solid var(--border-color)', color: 'var(--text-secondary)' }}
                     onClick={() => {
                       setActivePrintDoc({
@@ -842,56 +866,18 @@ export default function LeadProfile({
                     <FileText size={14} />
                     <span>Preview Client Link Form</span>
                   </button>
-                  
-                  {/* CLIENT SIDE SIMULATION PORTAL */}
-                  <div className="simulation-portal-block" style={{ padding: '16px', background: '#FFFDF5', border: '2px dashed #F59E0B', borderRadius: '8px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '10px', fontSize: '12px', fontWeight: '800', color: '#B45309', textTransform: 'uppercase' }}>
-                      <AlertTriangle size={14} />
-                      <span>Client Portal Simulation (On Lead's End)</span>
-                    </div>
-                    <p style={{ fontSize: '12px', color: '#78350F', marginBottom: '12px' }}>
-                      Simulate the screen the client sees when they open their email link to fill their application form.
-                    </p>
-                    <form onSubmit={(e) => {
-                      e.preventDefault();
-                      const fd = new FormData(e.target);
-                      handleSimulateClientSubmit({
-                        legalName: fd.get('legalName'),
-                        nokName: fd.get('nokName'),
-                        nokPhone: fd.get('nokPhone'),
-                        unitDetails: fd.get('unitDetails'),
-                        employment: fd.get('employment')
-                      });
-                    }}>
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '10px' }}>
-                        <div>
-                          <label style={{ fontSize: '11px', fontWeight: '700', color: '#78350F' }}>Full Legal Name *</label>
-                          <input type="text" name="legalName" className="form-control" defaultValue={lead.name} required style={{ height: '30px', fontSize: '12px' }} />
-                        </div>
-                        <div>
-                          <label style={{ fontSize: '11px', fontWeight: '700', color: '#78350F' }}>Employment Status</label>
-                          <input type="text" name="employment" className="form-control" placeholder="e.g. Entrepreneur, Corporate" required style={{ height: '30px', fontSize: '12px' }} />
-                        </div>
-                      </div>
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '10px' }}>
-                        <div>
-                          <label style={{ fontSize: '11px', fontWeight: '700', color: '#78350F' }}>Next of Kin Name *</label>
-                          <input type="text" name="nokName" className="form-control" placeholder="Kin's Legal Name" required style={{ height: '30px', fontSize: '12px' }} />
-                        </div>
-                        <div>
-                          <label style={{ fontSize: '11px', fontWeight: '700', color: '#78350F' }}>Next of Kin Phone *</label>
-                          <input type="text" name="nokPhone" className="form-control" placeholder="Kin's Phone Number" required style={{ height: '30px', fontSize: '12px' }} />
-                        </div>
-                      </div>
-                      <div style={{ marginBottom: '12px' }}>
-                        <label style={{ fontSize: '11px', fontWeight: '700', color: '#78350F' }}>Property Interest Spec</label>
-                        <input type="text" name="unitDetails" className="form-control" defaultValue={lead.propertyInterest ? `${lead.propertyInterest} - Unit TBD` : ''} required style={{ height: '30px', fontSize: '12px' }} />
-                      </div>
-                      <button type="submit" className="btn btn-sm btn-warning" style={{ width: '100%', backgroundColor: '#D97706', borderColor: '#D97706', color: 'white', fontWeight: '700' }}>
-                        Submit Completed Form (Client End)
-                      </button>
-                    </form>
-                  </div>
+
+                  {(currentUser.role === 'Admin/Doc Officer' || currentUser.role === 'Super Admin') && (
+                    <button
+                      type="button"
+                      className="btn btn-sm"
+                      style={{ width: '100%' }}
+                      onClick={handleSendApplicationForm}
+                      disabled={isSendingApplicationForm}
+                    >
+                      {isSendingApplicationForm ? 'Resending...' : 'Resend Application Form Email'}
+                    </button>
+                  )}
                 </div>
               )}
 
@@ -993,12 +979,22 @@ export default function LeadProfile({
                   {(!lead.offerLetterStatus || lead.offerLetterStatus === 'Not Started') && (
                     <div style={{ padding: '14px', background: '#F9FAFB', borderRadius: '6px', border: '1px solid var(--border-color)' }}>
                       <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '12px' }}>
-                        Generate the provisional sale Offer Letter containing pricing terms, discounts, and payment periods.
+                        Generate the provisional sale Offer Letter containing pricing terms, discounts, and payment periods. Pricing is pulled from the matching property record.
                       </p>
                       {(currentUser.role === 'Admin/Doc Officer' || currentUser.role === 'Super Admin') ? (
-                        <button className="btn btn-sm btn-primary" style={{ width: '100%' }} onClick={handleSendOfferLetter}>
-                          Generate & Send Offer Letter
-                        </button>
+                        !showOfferTermsForm ? (
+                          <button className="btn btn-sm btn-primary" style={{ width: '100%' }} onClick={() => setShowOfferTermsForm(true)}>
+                            Generate & Send Offer Letter
+                          </button>
+                        ) : (
+                          <OfferTermsForm
+                            form={offerTermsForm}
+                            setForm={setOfferTermsForm}
+                            onSubmit={handleSendOfferLetter}
+                            onCancel={() => setShowOfferTermsForm(false)}
+                            isSubmitting={isSendingOfferLetter}
+                          />
+                        )
                       ) : (
                         <div className="badge badge-grey" style={{ display: 'block', textAlign: 'center', padding: '6px' }}>Awaiting Action from Document Officer</div>
                       )}
@@ -1011,33 +1007,30 @@ export default function LeadProfile({
                         <strong>Offer Letter Sent:</strong> Offer document is currently with client. Awaiting sign-off.
                       </div>
 
-                      <button 
-                        className="btn btn-sm" 
+                      {offerPortalLink && (
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                          <input readOnly value={offerPortalLink} className="form-control" style={{ fontSize: '11px' }} onFocus={(e) => e.target.select()} />
+                          <button type="button" className="btn btn-sm" onClick={() => handleCopyPortalLink(offerPortalLink)}>Copy</button>
+                        </div>
+                      )}
+
+                      <button
+                        className="btn btn-sm"
                         style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', background: '#F3F4F6', border: '1px solid var(--border-color)', color: 'var(--text-secondary)' }}
                         onClick={() => {
-                          const allProperties = db.getProperties();
-                          let matchingProperty = null;
-                          if (lead.propertyInterest) {
-                            const interestLower = lead.propertyInterest.toLowerCase();
-                            matchingProperty = allProperties.find(p => interestLower.includes(p.name.toLowerCase()) || p.name.toLowerCase().includes(interestLower));
-                          }
-                          if (!matchingProperty && allProperties.length > 0) {
-                            matchingProperty = allProperties[0];
-                          }
-                          const propPrice = matchingProperty ? matchingProperty.price : 50000000;
-                          
+                          const terms = lead.offerLetterTerms || {};
                           setActivePrintDoc({
                             type: 'offer_letter',
                             data: {
                               clientName: lead.name,
                               legalName: lead.applicationData?.legalName || lead.name,
-                              property: lead.propertyInterest || (matchingProperty ? matchingProperty.name : 'Beacon Property'),
-                              regularPrice: propPrice,
-                              discount: 0,
-                              netPrice: propPrice,
-                              deposit: Math.round(propPrice * 0.2),
-                              months: 6,
-                              installmentVal: Math.round((propPrice - Math.round(propPrice * 0.2)) / 6),
+                              property: terms.property || lead.propertyInterest || 'Beacon Property',
+                              regularPrice: Number(terms.regularPrice) || 0,
+                              discount: Number(terms.discount) || 0,
+                              netPrice: Number(terms.netPrice) || 0,
+                              deposit: Number(terms.deposit) || 0,
+                              months: Number(terms.months) || 0,
+                              installmentVal: Number(terms.installmentVal) || 0,
                               date: new Date().toISOString().split('T')[0],
                               isSigned: false
                             }
@@ -1048,35 +1041,21 @@ export default function LeadProfile({
                         <span>View Offer Letter Draft</span>
                       </button>
 
-                      {/* CLIENT SIDE SIMULATION PORTAL */}
-                      <div className="simulation-portal-block" style={{ padding: '16px', background: '#FFFDF5', border: '2px dashed #F59E0B', borderRadius: '8px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '10px', fontSize: '12px', fontWeight: '800', color: '#B45309', textTransform: 'uppercase' }}>
-                          <AlertTriangle size={14} />
-                          <span>Client Portal Simulation (On Lead's End)</span>
-                        </div>
-                        <p style={{ fontSize: '12px', color: '#78350F', marginBottom: '12px' }}>
-                          Review the provisional terms and sign the digital acceptance sheet to confirm commitment.
-                        </p>
-                        <form onSubmit={(e) => {
-                          e.preventDefault();
-                          const fd = new FormData(e.target);
-                          handleSimulateClientAccept(fd.get('signature'));
-                        }}>
-                          <div style={{ background: 'white', padding: '12px', border: '1px solid #E5E7EB', borderRadius: '4px', fontSize: '11px', color: '#374151', lineHeight: 1.5, marginBottom: '12px', maxHeight: '120px', overflowY: 'auto' }}>
-                            <strong>TERMS OF SALES ACQUISITION:</strong><br />
-                            Subject to complete contract execution, the client agrees to purchase the estate plot: <strong>{lead.applicationData?.unitDetails || lead.propertyInterest}</strong>. Payments must follow the defined schedules. Defaulting for 2 consecutive periods leads to provisional allocation withdrawal.
-                          </div>
-                          
-                          <div className="form-group" style={{ marginBottom: '10px' }}>
-                            <label style={{ fontSize: '11px', fontWeight: '700', color: '#78350F' }}>Signature (Type Full Legal Name to Sign) *</label>
-                            <input type="text" name="signature" className="form-control" placeholder="e.g. Tunde Bakare" required style={{ height: '30px', fontSize: '12px' }} />
-                          </div>
-
-                          <button type="submit" className="btn btn-sm btn-warning" style={{ width: '100%', backgroundColor: '#D97706', borderColor: '#D97706', color: 'white', fontWeight: '700' }}>
-                            Accept Terms & Sign Offer Letter
+                      {(currentUser.role === 'Admin/Doc Officer' || currentUser.role === 'Super Admin') && (
+                        !showOfferTermsForm ? (
+                          <button type="button" className="btn btn-sm" style={{ width: '100%' }} onClick={() => setShowOfferTermsForm(true)}>
+                            Resend / Regenerate Offer Letter
                           </button>
-                        </form>
-                      </div>
+                        ) : (
+                          <OfferTermsForm
+                            form={offerTermsForm}
+                            setForm={setOfferTermsForm}
+                            onSubmit={handleSendOfferLetter}
+                            onCancel={() => setShowOfferTermsForm(false)}
+                            isSubmitting={isSendingOfferLetter}
+                          />
+                        )
+                      )}
                     </div>
                   )}
 
@@ -1091,33 +1070,23 @@ export default function LeadProfile({
                         <strong>Date Signed:</strong> {lead.offerLetterSignedDate}
                       </div>
 
-                      <button 
-                        className="btn btn-sm" 
+                      <button
+                        className="btn btn-sm"
                         style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', background: '#D1FAE5', color: '#065F46', border: '1px solid #A7F3D0' }}
                         onClick={() => {
-                          const allProperties = db.getProperties();
-                          let matchingProperty = null;
-                          if (lead.propertyInterest) {
-                            const interestLower = lead.propertyInterest.toLowerCase();
-                            matchingProperty = allProperties.find(p => interestLower.includes(p.name.toLowerCase()) || p.name.toLowerCase().includes(interestLower));
-                          }
-                          if (!matchingProperty && allProperties.length > 0) {
-                            matchingProperty = allProperties[0];
-                          }
-                          const propPrice = matchingProperty ? matchingProperty.price : 50000000;
-                          
+                          const terms = lead.offerLetterTerms || {};
                           setActivePrintDoc({
                             type: 'offer_letter',
                             data: {
                               clientName: lead.name,
                               legalName: lead.applicationData?.legalName || lead.name,
-                              property: lead.propertyInterest || (matchingProperty ? matchingProperty.name : 'Beacon Property'),
-                              regularPrice: propPrice,
-                              discount: 0,
-                              netPrice: propPrice,
-                              deposit: Math.round(propPrice * 0.2),
-                              months: 6,
-                              installmentVal: Math.round((propPrice - Math.round(propPrice * 0.2)) / 6),
+                              property: terms.property || lead.propertyInterest || 'Beacon Property',
+                              regularPrice: Number(terms.regularPrice) || 0,
+                              discount: Number(terms.discount) || 0,
+                              netPrice: Number(terms.netPrice) || 0,
+                              deposit: Number(terms.deposit) || 0,
+                              months: Number(terms.months) || 0,
+                              installmentVal: Number(terms.installmentVal) || 0,
                               date: lead.offerLetterSignedDate || new Date().toISOString().split('T')[0],
                               isSigned: true,
                               signature: lead.offerLetterSignature,
