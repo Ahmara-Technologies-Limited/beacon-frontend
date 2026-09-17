@@ -13,6 +13,7 @@ import { notifySuccess, notifyError } from '../lib/toast';
 import { confirmDialog } from '../lib/confirm';
 import { SkeletonBlock, SkeletonListRows } from '../components/Skeleton';
 import { onDataChange } from '../lib/dataEvents';
+import { useResetOnChange } from '../lib/useResetOnChange';
 
 // Small inline form staff use to set discount/deposit/tenor terms before
 // sending an offer letter. Kept outside the main component so its own
@@ -192,14 +193,17 @@ export default function LeadProfile({
     }
   };
 
+  // Navigating to a different lead puts the page back into its loading state;
+  // usePolling below does the actual fetching, for the first load and on every
+  // change of leadId alike, so there's only one place that loads this view.
+  useResetOnChange(leadId, () => setIsLoading(true));
+
   useEffect(() => {
-    setIsLoading(true);
-    loadLeadData();
     const unsubscribe = onDataChange(['leads', 'inspections', 'activities', 'finance'], () => loadLeadData());
     return unsubscribe;
   }, [leadId]);
 
-  usePolling(loadLeadData, getPollInterval(2000));
+  usePolling(loadLeadData, getPollInterval(2000), leadId);
 
   const conversationActivities = activities.filter(act => 
     ['Call', 'WhatsApp', 'SMS', 'Email', 'Voice Note', 'Meeting'].includes(act.type)

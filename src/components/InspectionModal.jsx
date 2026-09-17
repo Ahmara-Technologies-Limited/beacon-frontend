@@ -3,6 +3,18 @@ import { X, AlertTriangle } from 'lucide-react';
 import { db } from '../data/mockData';
 import { dataService } from '../data/dataService';
 import { notifySuccess, notifyError } from '../lib/toast';
+import { useResetOnChange } from '../lib/useResetOnChange';
+
+// Module scope, not a fresh array per render: as a local it was a new
+// identity every render, which made it an unstable effect dependency.
+const ESTATES = [
+  'Beacon Heights, Lekki',
+  'Beacon Grove, Epe',
+  'Beacon Waterfront, Lekki',
+  'Beacon Hill, Guzape',
+  'Beacon Gardens, Enugu',
+  'Beacon Palms, Maitama'
+];
 
 export default function InspectionModal({ leadId, inspectionId, isOpen, onClose, onSaveComplete, currentUser }) {
   const [formData, setFormData] = useState({
@@ -27,24 +39,25 @@ export default function InspectionModal({ leadId, inspectionId, isOpen, onClose,
   const [errors, setErrors] = useState({});
   const [activeInspectionWarning, setActiveInspectionWarning] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
-  const [isPopulating, setIsPopulating] = useState(false);
 
-  const ESTATES = [
-    'Beacon Heights, Lekki',
-    'Beacon Grove, Epe',
-    'Beacon Waterfront, Lekki',
-    'Beacon Hill, Guzape',
-    'Beacon Gardens, Enugu',
-    'Beacon Palms, Maitama'
-  ];
+  // Which inspection this modal is currently pointed at. It's mounted once
+  // globally (CrmUIContext) and re-aimed rather than remounted, so "am I
+  // showing the right record yet?" is a question about this key rather than a
+  // separate flag the effect has to raise and lower by hand.
+  const targetKey = isOpen ? `${inspectionId ?? 'new'}:${leadId ?? ''}` : 'closed';
+  const [populatedFor, setPopulatedFor] = useState(null);
+  const isPopulating = isOpen && populatedFor !== targetKey;
+
+  // Re-aiming the modal clears the previous record's validation state. Done
+  // during render rather than in the effect, so the new record's form never
+  // paints carrying the old one's errors for a frame.
+  useResetOnChange(targetKey, () => {
+    setErrors({});
+    setActiveInspectionWarning(null);
+  });
 
   useEffect(() => {
     if (!isOpen) return undefined;
-
-    // Show a loading state instead of a stale/blank form while we fetch the
-    // real data for whichever inspection (or blank "new booking" form) is
-    // being opened right now.
-    setIsPopulating(true);
 
     // Guard against out-of-order async resolution: this modal is mounted
     // once globally (CrmUIContext) and reused across inspections, so
@@ -84,9 +97,14 @@ export default function InspectionModal({ leadId, inspectionId, isOpen, onClose,
               nextStepRecommendation: inspection.nextStepRecommendation || ''
             });
           }
-          setIsPopulating(false);
-        }).catch(() => {
-          if (!cancelled) setIsPopulating(false);
+          setPopulatedFor(targetKey);
+        }).catch(err => {
+          if (cancelled) return;
+          // Mark it populated regardless: a form stuck behind a permanent
+          // loading state gives the user nothing to act on, and the toast
+          // says what actually went wrong.
+          setPopulatedFor(targetKey);
+          notifyError(err, 'Could not load this inspection.');
         });
       } else {
         let defaultCloserId = '';
@@ -112,18 +130,20 @@ export default function InspectionModal({ leadId, inspectionId, isOpen, onClose,
           feedback: '',
           nextStepRecommendation: ''
         });
-        setIsPopulating(false);
+        setPopulatedFor(targetKey);
       }
-    }).catch(() => {
-      if (!cancelled) setIsPopulating(false);
+    }).catch(err => {
+      if (cancelled) return;
+      setPopulatedFor(targetKey);
+      // Swallowing this left the closer/officer dropdowns simply empty, with
+      // no way to tell a genuinely empty roster from a failed request.
+      notifyError(err, 'Could not load leads and team members for this form.');
     });
-    setErrors({});
-    setActiveInspectionWarning(null);
 
     return () => {
       cancelled = true;
     };
-  }, [leadId, inspectionId, isOpen]);
+  }, [leadId, inspectionId, isOpen, targetKey]);
 
   if (!isOpen) return null;
 
@@ -252,7 +272,7 @@ export default function InspectionModal({ leadId, inspectionId, isOpen, onClose,
                   <div><strong>Assigned Sales Closer:</strong> <span style={{ color: 'var(--text-primary)', fontWeight: '600' }}>{closers.find(c => c.id === formData.assignedCloserId)?.name || "N/A"}</span></div>
                   {formData.internalNotes && (
                     <div style={{ gridColumn: 'span 2' }}>
-                      <strong>Booking Notes:</strong> <span style={{ color: 'var(--text-secondary)', fontStyle: 'italic' }}>"{formData.internalNotes}"</span>
+                      <strong>Booking Notes:</strong> <span style={{ color: 'var(--text-secondary)', fontStyle: 'italic' }}>&ldquo;{formData.internalNotes}&ldquo;</span>
                     </div>
                   )}
                 </div>

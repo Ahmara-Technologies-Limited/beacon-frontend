@@ -9,6 +9,7 @@ import { SkeletonTableRows } from '../components/Skeleton';
 import { confirmDialog } from '../lib/confirm';
 import { onDataChange } from '../lib/dataEvents';
 import Pagination, { paginate } from '../components/Pagination';
+import { useResetOnChange } from '../lib/useResetOnChange';
 
 const PAGE_SIZE = 25;
 
@@ -188,9 +189,10 @@ export default function PropertyManagement({ currentUser }) {
   const pagedProps = paginate(filteredProps, page, PAGE_SIZE);
   const propertyTypes = Array.from(new Set(properties.map(p => p.type)));
 
-  useEffect(() => {
-    setPage(1);
-  }, [searchTerm, filterType, filterStatus]);
+  useResetOnChange(
+    JSON.stringify([searchTerm, filterType, filterStatus]),
+    () => setPage(1)
+  );
 
   const getAllocations = (prop) => {
     if (!prop) return [];

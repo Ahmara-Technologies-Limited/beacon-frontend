@@ -12,7 +12,15 @@ import { useEffect, useRef } from 'react';
 // pauses entirely while the tab is hidden (document.visibilitychange) and
 // immediately re-fires once it becomes visible again so data isn't stale
 // when the user comes back.
-export function usePolling(callback, intervalMs) {
+//
+// `resetKey` is for views whose data depends on something the user can change
+// (the archived/active toggle, the lead being viewed): pass that value and the
+// callback re-fires immediately whenever it changes, restarting the interval
+// from that point. Views used to do this by calling their own load function
+// from an effect alongside usePolling, which meant two fetches on mount and
+// put a data fetch inside an effect body; owning it here leaves each view
+// with exactly one place that loads its data.
+export function usePolling(callback, intervalMs, resetKey = null) {
   const callbackRef = useRef(callback);
 
   // Keep the ref current without writing to it during render (React's rules
@@ -45,12 +53,19 @@ export function usePolling(callback, intervalMs) {
       }
     };
 
-    if (!document.hidden) start();
+    // Fire once up front, not just on the first interval tick. Without this
+    // a view's first fetch only happens `intervalMs` after mount - invisible
+    // in demo mode (1.5-2s) but a 30 second blank screen in live mode, where
+    // getPollInterval clamps every interval to >= 30s.
+    if (!document.hidden) {
+      callbackRef.current();
+      start();
+    }
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => {
       stop();
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [intervalMs]);
+  }, [intervalMs, resetKey]);
 }

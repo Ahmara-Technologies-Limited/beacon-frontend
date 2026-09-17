@@ -3,40 +3,72 @@ import { X, AlertTriangle } from 'lucide-react';
 import { db } from '../data/mockData';
 import { dataService } from '../data/dataService';
 import { notifySuccess, notifyError } from '../lib/toast';
+import { useResetOnChange } from '../lib/useResetOnChange';
+
+// The blank "new lead" form, in one place. It used to be spelled out twice -
+// once as the useState initial value and once inside the effect that resets
+// the form - and the two copies had drifted apart (different default
+// category, and the initial one was missing the relationship/referral
+// fields entirely), so a freshly mounted modal and a re-opened one started
+// from different defaults.
+const blankLead = (currentUser) => ({
+  name: '',
+  phone: '',
+  whatsapp: '',
+  email: '',
+  location: '',
+  source: 'Paid Ads',
+  category: 'Investor Wealth',
+  stage: 'New Lead',
+  temperature: 'Hot',
+  assignedCloserId: currentUser.role === 'Sales Closer' ? currentUser.id : '',
+  branch: currentUser.role === 'Sales Closer' && currentUser.branch ? currentUser.branch : 'Lekki Branch',
+  budget: '',
+  propertyInterest: '',
+  nextAction: '',
+  followUpDate: '',
+  relationshipStatus: 'Active',
+  referralStatus: 'None',
+  satisfactionScore: '',
+  lastContactDate: '',
+  referredById: ''
+});
 
 export default function LeadModal({ leadId, isOpen, onClose, onSaveComplete, onSaveAndLogActivity, currentUser }) {
-  const [formData, setFormData] = useState({
-    name: '',
-    phone: '',
-    whatsapp: '',
-    email: '',
-    location: '',
-    source: 'Paid Ads',
-    category: 'Incoming',
-    stage: 'New Lead',
-    temperature: 'Hot',
-    assignedCloserId: '',
-    budget: '',
-    propertyInterest: '',
-    nextAction: '',
-    followUpDate: ''
-  });
+  const [formData, setFormData] = useState(() => blankLead(currentUser));
 
   const [closers, setClosers] = useState([]);
+  const [closersLoaded, setClosersLoaded] = useState(false);
   const [properties, setProperties] = useState([]);
   const [errors, setErrors] = useState({});
   const [duplicateWarning, setDuplicateWarning] = useState(null);
   const [potentialReferrers, setPotentialReferrers] = useState([]);
   const [isSaving, setIsSaving] = useState(false);
-  const [isPopulating, setIsPopulating] = useState(false);
+
+  // Which lead this modal is currently pointed at. Because it's mounted once
+  // globally (CrmUIContext) and re-aimed rather than remounted, "am I showing
+  // the right lead yet?" is a question about this key, not a separate flag
+  // that the effect has to remember to raise and lower.
+  const targetKey = isOpen ? (leadId ?? 'new') : 'closed';
+  const [populatedFor, setPopulatedFor] = useState(null);
+
+  // Only an existing lead has anything to wait for; a blank new-lead form is
+  // ready the moment it's on screen.
+  const isPopulating = isOpen && !!leadId && populatedFor !== targetKey;
+
+  // Re-aiming the modal has to wipe the previous lead's form, errors and
+  // duplicate warning. Doing that during render rather than in the effect
+  // means the new lead's form never paints with the old lead's values for a
+  // frame first.
+  useResetOnChange(targetKey, () => {
+    setErrors({});
+    setDuplicateWarning(null);
+    setClosersLoaded(false);
+    if (!leadId) setFormData(blankLead(currentUser));
+  });
 
   useEffect(() => {
     if (!isOpen) return undefined;
-
-    // Show a loading state instead of stale/blank fields while we fetch the
-    // real data for whichever lead (or blank "new lead" form) is being
-    // opened right now.
-    setIsPopulating(true);
 
     // Guard against out-of-order async resolution: if the user opens lead A
     // then quickly switches to lead B while A's fetches are still in
@@ -46,10 +78,20 @@ export default function LeadModal({ leadId, isOpen, onClose, onSaveComplete, onS
     // cycle is a no-op once this effect has been superseded.
     let cancelled = false;
 
-    dataService.getUsers().then(allUsers => {
-      if (cancelled) return;
-      setClosers(allUsers.filter(u => u.role === 'Sales Closer' && u.status === 'Active'));
-    });
+    // An empty closer list is indistinguishable from a failed/forbidden
+    // /users/ request unless we say which it was: report the failure, and
+    // record that the fetch resolved so the select below can explain an
+    // empty result instead of just rendering a dropdown with nothing in it.
+    dataService.getUsers()
+      .then(allUsers => {
+        if (cancelled) return;
+        setClosers(allUsers.filter(u => u.role === 'Sales Closer' && u.status === 'Active'));
+        setClosersLoaded(true);
+      })
+      .catch(err => {
+        if (cancelled) return;
+        notifyError(err, 'Could not load the list of sales closers.');
+      });
 
     dataService.getProperties().then(props => {
       if (cancelled) return;
@@ -87,46 +129,28 @@ export default function LeadModal({ leadId, isOpen, onClose, onSaveComplete, onS
           });
         }
         setPotentialReferrers(leads.filter(l => l.id !== leadId && (l.stage === 'Client/Investor' || l.stage === 'Repeat Purchase')));
-        setIsPopulating(false);
-      }).catch(() => {
-        if (!cancelled) setIsPopulating(false);
+        setPopulatedFor(targetKey);
+      }).catch(err => {
+        if (cancelled) return;
+        // Mark it populated regardless: leaving the form stuck behind a
+        // permanent loading state gives the user nothing to act on, whereas
+        // the toast says what went wrong.
+        setPopulatedFor(targetKey);
+        notifyError(err, 'Could not load this lead.');
       });
     } else {
-      setFormData({
-        name: '',
-        phone: '',
-        whatsapp: '',
-        email: '',
-        location: '',
-        source: 'Paid Ads',
-        category: 'Investor Wealth',
-        stage: 'New Lead',
-        temperature: 'Hot',
-        assignedCloserId: currentUser.role === 'Sales Closer' ? currentUser.id : '',
-        branch: currentUser.role === 'Sales Closer' && currentUser.branch ? currentUser.branch : 'Lekki Branch',
-        budget: '',
-        propertyInterest: '',
-        nextAction: '',
-        followUpDate: '',
-        relationshipStatus: 'Active',
-        referralStatus: 'None',
-        satisfactionScore: '',
-        lastContactDate: '',
-        referredById: ''
-      });
-      setIsPopulating(false);
+      // The blank form itself is already in place (see useResetOnChange
+      // above); only the referrer list needs fetching.
       dataService.getLeads().then(leads => {
         if (cancelled) return;
         setPotentialReferrers(leads.filter(l => l.stage === 'Client/Investor' || l.stage === 'Repeat Purchase'));
       });
     }
-    setErrors({});
-    setDuplicateWarning(null);
 
     return () => {
       cancelled = true;
     };
-  }, [leadId, isOpen, currentUser]);
+  }, [leadId, isOpen, currentUser, targetKey]);
 
   if (!isOpen) return null;
 
@@ -356,6 +380,12 @@ export default function LeadModal({ leadId, isOpen, onClose, onSaveComplete, onS
                     <option key={c.id} value={c.id}>{c.name}</option>
                   ))}
                 </select>
+              )}
+              {closersLoaded && closers.length === 0 && (
+                <span className="form-error">
+                  No active user has the &quot;Sales Closer&quot; role yet. Add one under User Management,
+                  or re-activate an existing closer, before assigning this lead.
+                </span>
               )}
               {errors.assignedCloserId && <span className="form-error">{errors.assignedCloserId}</span>}
             </div>

@@ -10,6 +10,7 @@ import { onDataChange } from '../lib/dataEvents';
 import { formatDateTime } from '../lib/format';
 import { confirmDialog } from '../lib/confirm';
 import Pagination, { paginate } from '../components/Pagination';
+import { useResetOnChange } from '../lib/useResetOnChange';
 
 const PAGE_SIZE = 25;
 
@@ -89,9 +90,10 @@ export default function UserManagement({ currentUser }) {
     .sort((a, b) => new Date(b.dateAdded) - new Date(a.dateAdded));
   const pagedUsers = paginate(filteredUsers, page, PAGE_SIZE);
 
-  useEffect(() => {
-    setPage(1);
-  }, [searchQuery, filterRole, filterStatus]);
+  useResetOnChange(
+    JSON.stringify([searchQuery, filterRole, filterStatus]),
+    () => setPage(1)
+  );
 
   const handleOpenCreateModal = () => {
     setSelectedUser(null);

@@ -5,28 +5,57 @@
 import { db } from './mockData';
 import { isDemoMode } from '../lib/demoMode';
 import { apiGet, apiPost, apiPatch, apiDelete, setTokens, clearTokens, getRefreshToken } from '../lib/apiClient';
-import { emitDataChange } from '../lib/dataEvents';
+import { emitDataChange as broadcastDataChange } from '../lib/dataEvents';
+import { dedupedFetch, invalidateAll } from '../lib/requestCache';
 
-// The backend paginates every list endpoint (DRF PageNumberPagination,
-// page_size=50 - see apps.core.utils.CustomPagination). Every dataService
-// list getter used to just read `res.results` off page 1 and silently drop
-// everything past the first 50 rows with no error and no way to reach the
-// rest - fine while demo data was small, a real bug once a table (leads,
-// users, audit logs...) grows past 50. fetchAllPages walks `page` until the
-// API reports no more pages, so callers keep getting a complete array; the
-// views themselves paginate that complete array client-side for display.
-async function fetchAllPages(path, params = {}) {
+// Every mutation in this file announces itself through emitDataChange so the
+// mounted views refetch. Those refetches must not be served the pre-write
+// snapshot still sitting in the request cache's freshness window, so dropping
+// the cache is folded into the same call rather than left to each call site
+// to remember. The window is only seconds wide, so clearing all of it on any
+// write costs nothing and can't be got wrong.
+function emitDataChange(resource) {
+  invalidateAll();
+  broadcastDataChange(resource);
+}
+
+// The backend paginates every list endpoint (DRF PageNumberPagination -
+// see apps.core.utils.CustomPagination). Every dataService list getter used
+// to just read `res.results` off page 1 and silently drop everything past
+// the first page with no error and no way to reach the rest - fine while
+// demo data was small, a real bug once a table (leads, users, audit logs...)
+// grows past it. fetchAllPages walks `page` until the API reports no more
+// pages, so callers keep getting a complete array; the views themselves
+// paginate that complete array client-side for display.
+//
+// Each of those pages is a separate round trip, and the default page size of
+// 50 meant a few hundred leads turned one "load the dashboard" into a long
+// sequential chain of requests. We ask for a larger page instead
+// (page_size, supported by CustomPagination up to MAX_PAGE_SIZE); an older
+// backend that ignores the param simply keeps serving 50 at a time and the
+// walk below still terminates correctly.
+const PAGE_SIZE = 200;
+
+async function fetchAllPagesUncached(path, params = {}) {
   let page = 1;
   let allResults = [];
-  // eslint-disable-next-line no-constant-condition
   while (true) {
-    const res = await apiGet(path, { ...params, page });
+    const res = await apiGet(path, { ...params, page, page_size: PAGE_SIZE });
     if (Array.isArray(res)) return res; // endpoint isn't paginated at all
     allResults = allResults.concat(res.results || []);
     if (!res.next) break;
     page += 1;
   }
   return allResults;
+}
+
+// Views mount, poll, and remount independently of each other, so the same
+// list is routinely asked for several times within the same second by
+// unrelated components. dedupedFetch collapses those into one HTTP call (see
+// lib/requestCache.js); polling still reaches the network because the
+// freshness window is far shorter than any poll interval.
+function fetchAllPages(path, params = {}) {
+  return dedupedFetch(path, params, () => fetchAllPagesUncached(path, params));
 }
 
 /* ---- Field mapping helpers ---- */

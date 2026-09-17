@@ -7,6 +7,7 @@ import { usePolling } from '../lib/usePolling';
 import { confirmDialog } from '../lib/confirm';
 import { notifySuccess, notifyError } from '../lib/toast';
 import Pagination, { paginate } from '../components/Pagination';
+import { useResetOnChange } from '../lib/useResetOnChange';
 
 const PAGE_SIZE = 25;
 
@@ -57,9 +58,9 @@ export default function AuditLogs({ currentUser }) {
     .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
   const pagedLogs = paginate(filteredLogs, page, PAGE_SIZE);
 
-  useEffect(() => {
-    setPage(1);
-  }, [searchQuery]);
+  // Narrowing the search can leave you on a page that no longer exists, so
+  // the list jumps back to page 1 whenever the query changes.
+  useResetOnChange(searchQuery, () => setPage(1));
 
   return (
     <div className="audit-logs-page">

@@ -12,6 +12,7 @@ import { SkeletonTableRows } from '../components/Skeleton';
 import { onDataChange } from '../lib/dataEvents';
 import { formatDateTime } from '../lib/format';
 import Pagination, { paginate } from '../components/Pagination';
+import { useResetOnChange } from '../lib/useResetOnChange';
 
 const PAGE_SIZE = 25;
 
@@ -66,12 +67,16 @@ export default function LeadManagement({
     }
   };
 
+  // Switching between the active and archived lists swaps the data source,
+  // so the table goes back to its loading state while the other set is
+  // fetched. It starts out loading already, so this only has to cover the
+  // switch, not the first render.
+  useResetOnChange(filterArchived, () => setIsLoading(true));
+
   useEffect(() => {
-    setIsLoading(true);
-    loadLeads();
-    dataService.getUsers().then(users =>
-      setClosers(users.filter(u => u.role === 'Sales Closer' && u.status === 'Active'))
-    );
+    dataService.getUsers()
+      .then(users => setClosers(users.filter(u => u.role === 'Sales Closer' && u.status === 'Active')))
+      .catch(err => notifyError(err, 'Could not load the list of sales closers.'));
     if (currentUser.role === 'Inspection Officer') {
       dataService.getInspections().then(all =>
         setOfficerInspections(all.filter(i => i.inspectionOfficerId === currentUser.id))
@@ -87,7 +92,7 @@ export default function LeadManagement({
     return unsubscribe;
   }, [filterArchived]);
 
-  usePolling(loadLeads, getPollInterval(2000));
+  usePolling(loadLeads, getPollInterval(2000), filterArchived);
 
   const toggleSelectAll = () => {
     if (selectedLeadIds.length === filteredLeads.length) {
@@ -159,9 +164,10 @@ export default function LeadManagement({
     .sort((a, b) => new Date(b.dateCreated) - new Date(a.dateCreated));
   const pagedLeads = paginate(filteredLeads, page, PAGE_SIZE);
 
-  useEffect(() => {
-    setPage(1);
-  }, [searchTerm, filterStage, filterSource, filterCategory, filterTemperature, filterCloser, filterLocation, filterArchived]);
+  useResetOnChange(
+    JSON.stringify([searchTerm, filterStage, filterSource, filterCategory, filterTemperature, filterCloser, filterLocation, filterArchived]),
+    () => setPage(1)
+  );
   const locations = Array.from(new Set(leads.map(l => l.location).filter(Boolean)));
 
   const handleCSVExport = () => {

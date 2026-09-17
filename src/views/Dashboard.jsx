@@ -21,7 +21,10 @@ export default function Dashboard({ currentUser, setCurrentTab, setViewingLeadId
   const [inspections, setInspections] = useState([]);
   const [activities, setActivities] = useState([]);
   const [users, setUsers] = useState([]);
-  const [settings, setSettings] = useState({});
+  // Read once, lazily, at mount: db.getSettings() is a synchronous read of a
+  // local store, so pulling it in through an effect only bought an extra
+  // render where the thresholds below were undefined.
+  const [settings] = useState(() => db.getSettings());
 
   const [dateFilter, setDateFilter] = useState('This Month');
   const [staffFilter, setStaffFilter] = useState('All');
@@ -61,22 +64,33 @@ export default function Dashboard({ currentUser, setCurrentTab, setViewingLeadId
 
   const [isLoading, setIsLoading] = useState(true);
 
+  // The four lists below are independent: every card on this dashboard reads
+  // one of them, so there's no reason to hold the whole page behind a
+  // skeleton until the slowest of the four lands. Each one renders as it
+  // arrives, and the skeleton clears as soon as leads (what the page is
+  // mostly made of) are in. Failures are reported rather than left as an
+  // unhandled rejection that silently leaves a section empty forever.
   const loadDashboardData = () => {
+    const track = (promise, apply, label) =>
+      promise.then(apply).catch(err => notifyError(err, `Could not load ${label}.`));
+
+    const leadsDone = track(dataService.getLeads(), setLeads, 'leads')
+      .finally(() => setIsLoading(false));
+
     return Promise.all([
-      dataService.getLeads().then(setLeads),
-      dataService.getInspections().then(setInspections),
-      dataService.getActivities().then(setActivities),
-      dataService.getUsers().then(setUsers),
+      leadsDone,
+      track(dataService.getInspections(), setInspections, 'inspections'),
+      track(dataService.getActivities(), setActivities, 'activities'),
+      track(dataService.getUsers(), setUsers, 'team members'),
     ]);
   };
 
   useEffect(() => {
-    setSettings(db.getSettings());
     const unsubscribe = onDataChange(['leads', 'inspections', 'activities', 'users'], () => loadDashboardData());
     return unsubscribe;
   }, [])
 
-  usePolling(() => loadDashboardData().finally(() => setIsLoading(false)), getPollInterval(1500));
+  usePolling(loadDashboardData, getPollInterval(1500));
   const filterByDate = (items, dateKey) => {
     if (dateFilter === 'All Time') return items;
     if (dateFilter === 'Custom') {

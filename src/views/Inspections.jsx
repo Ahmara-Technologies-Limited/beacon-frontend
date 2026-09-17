@@ -9,6 +9,7 @@ import { SkeletonTableRows } from '../components/Skeleton';
 import { onDataChange } from '../lib/dataEvents';
 import { notifyError } from '../lib/toast';
 import Pagination, { paginate } from '../components/Pagination';
+import { useResetOnChange } from '../lib/useResetOnChange';
 
 const PAGE_SIZE = 25;
 
@@ -75,21 +76,25 @@ export default function Inspections({
     }
   };
 
-  useEffect(() => {
-    if (viewingInspectionId) {
-      const selected = inspections.find(i => i.id === viewingInspectionId);
-      if (selected) {
-        setReportStatus(selected.status === 'Scheduled' || selected.status === 'Confirmed' ? 'Completed' : selected.status);
-        setReportText(selected.report || '');
-        setClientFeedback(selected.feedback || '');
-        setNextStepRec(selected.nextStepRecommendation || '');
-        setNoShowNote(selected.noShowNote || '');
-        setRescheduleDate(selected.date || '');
-        setRescheduleTime(selected.time || '');
-        setCancellationReason(selected.internalNotes || '');
-      }
-    }
-  }, [viewingInspectionId, inspections]);
+  // Seed the outcome form from whichever inspection was just opened.
+  //
+  // This used to run on [viewingInspectionId, inspections], which meant every
+  // poll tick produced a new `inspections` array and re-seeded the form -
+  // overwriting whatever the officer had typed into the report, feedback or
+  // note fields while they were still working on it. It's keyed on the
+  // selection alone now, so a background refresh can no longer discard edits.
+  useResetOnChange(viewingInspectionId, () => {
+    const selected = inspections.find(i => i.id === viewingInspectionId);
+    if (!selected) return;
+    setReportStatus(selected.status === 'Scheduled' || selected.status === 'Confirmed' ? 'Completed' : selected.status);
+    setReportText(selected.report || '');
+    setClientFeedback(selected.feedback || '');
+    setNextStepRec(selected.nextStepRecommendation || '');
+    setNoShowNote(selected.noShowNote || '');
+    setRescheduleDate(selected.date || '');
+    setRescheduleTime(selected.time || '');
+    setCancellationReason(selected.internalNotes || '');
+  });
 
   const formatPrice = (val) => {
     return new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN', maximumFractionDigits: 0 }).format(val);
@@ -102,14 +107,19 @@ export default function Inspections({
 
   usePolling(loadInspectionData, getPollInterval(2000));
 
+  // Keyed on the lead rather than the whole inspections array: depending on
+  // the array meant re-fetching this lead's activity history on every poll
+  // tick, for a value that only changes when a different inspection is opened.
+  const selectedLeadId = viewingInspectionId
+    ? (inspections.find(i => i.id === viewingInspectionId)?.leadId ?? null)
+    : null;
+
   useEffect(() => {
-    if (viewingInspectionId) {
-      const selected = inspections.find(i => i.id === viewingInspectionId);
-      if (selected) {
-        dataService.getActivities(selected.leadId).then(setLeadActivities);
-      }
-    }
-  }, [viewingInspectionId, inspections]);
+    if (!selectedLeadId) return;
+    dataService.getActivities(selectedLeadId)
+      .then(setLeadActivities)
+      .catch(err => notifyError(err, 'Could not load this lead\'s activity history.'));
+  }, [selectedLeadId]);
 
   const isUserRelevantForInspection = (inspection) => {
     if (['Super Admin', 'General Manager', 'Head of Operations', 'Branch Manager'].includes(currentUser.role)) {
@@ -145,9 +155,10 @@ export default function Inspections({
     .sort((a, b) => new Date(b.createdDate) - new Date(a.createdDate));
   const pagedInspections = paginate(filteredInspections, page, PAGE_SIZE);
 
-  useEffect(() => {
-    setPage(1);
-  }, [filterStatus, filterEstate, filterCloser, filterOfficer]);
+  useResetOnChange(
+    JSON.stringify([filterStatus, filterEstate, filterCloser, filterOfficer]),
+    () => setPage(1)
+  );
 
   const handleExportCSV = () => {
     if (filteredInspections.length === 0) {
