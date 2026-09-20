@@ -497,6 +497,28 @@ a { text-decoration: none; color: inherit; }
   border: 1px dashed #000000;
 }
 
+/* Marks the row for a record the user just created, so it's obvious which of
+   the rows is theirs. Fades out after a few seconds (see useRevealCreated). */
+.just-created-row > td {
+  background-color: rgba(212, 38, 42, 0.06);
+  animation: justCreatedFade 4s ease-out forwards;
+}
+@keyframes justCreatedFade {
+  0%, 60% { background-color: rgba(212, 38, 42, 0.10); }
+  100% { background-color: transparent; }
+}
+
+/* An empty state can carry a "clear filters" action, so it stacks its message
+   and button. The flex box goes on an inner div: making the <td> itself a flex
+   container takes it out of the table layout and the cell stops spanning. */
+.empty-table-state-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+
 /* =====================================================
    DASHBOARD LAYOUT ROWS
    ===================================================== */

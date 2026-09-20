@@ -10,7 +10,7 @@ import { useAppNavigate } from '@/lib/navigation';
 export default function InspectionsPage() {
   const router = useAppNavigate();
   const { currentUser } = useAuth();
-  const { openBookInspection } = useCrmUI();
+  const { openBookInspection, createdInspection } = useCrmUI();
 
   return (
     <Inspections
@@ -21,6 +21,7 @@ export default function InspectionsPage() {
         router.push(`/leads/${id}?from=inspections${inspId ? `&inspectionId=${inspId}` : ''}`)
       }
       setCurrentTab={(tab: string) => router.push(routeForTab(tab))}
+      createdInspection={createdInspection}
     />
   );
 }

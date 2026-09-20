@@ -10,6 +10,7 @@ import { confirmDialog } from '../lib/confirm';
 import { onDataChange } from '../lib/dataEvents';
 import Pagination, { paginate } from '../components/Pagination';
 import { useResetOnChange } from '../lib/useResetOnChange';
+import { useRevealCreated, hides } from '../lib/useRevealCreated';
 
 const PAGE_SIZE = 25;
 
@@ -36,6 +37,7 @@ export default function PropertyManagement({ currentUser }) {
   });
   const [formErrors, setFormErrors] = useState({});
   const [isSavingProperty, setIsSavingProperty] = useState(false);
+  const [createdProperty, setCreatedProperty] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [page, setPage] = useState(1);
 
@@ -151,10 +153,11 @@ export default function PropertyManagement({ currentUser }) {
 
     setIsSavingProperty(true);
     try {
-      await dataService.saveProperty(payload);
+      const savedProperty = await dataService.saveProperty(payload);
       notifySuccess(modalData.id ? 'Property updated successfully.' : 'Property created successfully.');
       await loadData();
       setModalOpen(false);
+      if (!modalData.id && savedProperty) setCreatedProperty(savedProperty);
     } catch (err) {
       notifyError(err, 'Could not save this property.');
     } finally {
@@ -193,6 +196,29 @@ export default function PropertyManagement({ currentUser }) {
     JSON.stringify([searchTerm, filterType, filterStatus]),
     () => setPage(1)
   );
+
+  // A listing created here still has to be visible afterwards: adding a
+  // Duplex while the table is filtered to Land, or while a search is active,
+  // would otherwise save fine and show nothing. Only what would hide the new
+  // row is cleared.
+  const highlightPropertyId = useRevealCreated(createdProperty, (property) => {
+    if (searchTerm.trim() !== '') setSearchTerm('');
+    if (hides(filterType, property.type)) setFilterType('All');
+    if (hides(filterStatus, property.status)) setFilterStatus('All');
+    // Newest first, so the new row is on page 1.
+    setPage(1);
+  });
+
+  // "No listings yet" and "nothing matches your search" are different
+  // problems with different fixes, so the empty state says which one it is.
+  const hasNarrowingFilters =
+    searchTerm.trim() !== '' || filterType !== 'All' || filterStatus !== 'All';
+
+  const clearSearchAndFilters = () => {
+    setSearchTerm('');
+    setFilterType('All');
+    setFilterStatus('All');
+  };
 
   const getAllocations = (prop) => {
     if (!prop) return [];
@@ -419,14 +445,30 @@ export default function PropertyManagement({ currentUser }) {
                   ) : filteredProps.length === 0 ? (
                     <tr>
                       <td colSpan={isEditable ? 10 : 9} className="empty-table-state">
-                        No properties found matching your search.
+                        <div className="empty-table-state-inner">
+                          {hasNarrowingFilters ? (
+                            <>
+                              <span>No properties match your current search or filters.</span>
+                              <button type="button" className="btn btn-sm" onClick={clearSearchAndFilters}>
+                                Clear search &amp; filters
+                              </button>
+                            </>
+                          ) : (
+                            <span>No property listings yet.</span>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ) : (
                     pagedProps.map(prop => {
                       const count = getLeadCount(prop);
                       return (
-                        <tr key={prop.id} onClick={() => setSelectedProperty(prop)} style={{ cursor: 'pointer' }}>
+                        <tr
+                          key={prop.id}
+                          className={prop.id === highlightPropertyId ? 'just-created-row' : ''}
+                          onClick={() => setSelectedProperty(prop)}
+                          style={{ cursor: 'pointer' }}
+                        >
                           <td style={{ fontWeight: 700 }} className="lead-name-cell">{prop.name}</td>
                           <td><span className="badge badge-grey">{prop.type}</span></td>
                           <td>{prop.location}</td>

@@ -213,9 +213,12 @@ export default function InspectionModal({ leadId, inspectionId, isOpen, onClose,
         id: inspectionId || undefined
       };
 
-      await dataService.saveInspection(payload);
+      const savedInspection = await dataService.saveInspection(payload);
       notifySuccess(inspectionId ? 'Inspection updated successfully.' : 'Inspection booked successfully.');
-      onSaveComplete();
+      // Hand the record back, and say whether it's new: the inspections table
+      // needs it to make sure a freshly booked inspection is actually visible
+      // rather than hidden behind whatever filters were active.
+      onSaveComplete(savedInspection, !inspectionId);
     } catch (err) {
       notifyError(err, 'Could not save this inspection. Please try again.');
     } finally {

@@ -11,6 +11,7 @@ import { formatDateTime } from '../lib/format';
 import { confirmDialog } from '../lib/confirm';
 import Pagination, { paginate } from '../components/Pagination';
 import { useResetOnChange } from '../lib/useResetOnChange';
+import { useRevealCreated, hides } from '../lib/useRevealCreated';
 
 const PAGE_SIZE = 25;
 
@@ -50,6 +51,7 @@ export default function UserManagement({ currentUser }) {
 
   const [isLoading, setIsLoading] = useState(true);
   const [page, setPage] = useState(1);
+  const [createdUser, setCreatedUser] = useState(null);
 
   const loadUserData = async () => {
     try {
@@ -94,6 +96,29 @@ export default function UserManagement({ currentUser }) {
     JSON.stringify([searchQuery, filterRole, filterStatus]),
     () => setPage(1)
   );
+
+  // A user created here still has to be visible afterwards: creating a Sales
+  // Closer while the table is filtered to, say, Inspection Officers would
+  // otherwise save fine and show nothing. Only the filters that would hide
+  // the new row are dropped.
+  const highlightUserId = useRevealCreated(createdUser, (user) => {
+    if (searchQuery.trim() !== '') setSearchQuery('');
+    if (hides(filterRole, user.role)) { setFilterRole('All'); setPendingFilterRole('All'); }
+    if (hides(filterStatus, user.status)) { setFilterStatus('All'); setPendingFilterStatus('All'); }
+    // Newest first, so the new row is on page 1.
+    setPage(1);
+  });
+
+  // "No users yet" and "nothing matches your search" are different problems
+  // with different fixes, so the empty state says which one it is.
+  const hasNarrowingFilters =
+    searchQuery.trim() !== '' || filterRole !== 'All' || filterStatus !== 'All';
+
+  const clearSearchAndFilters = () => {
+    setSearchQuery('');
+    setFilterRole('All'); setPendingFilterRole('All');
+    setFilterStatus('All'); setPendingFilterStatus('All');
+  };
 
   const handleOpenCreateModal = () => {
     setSelectedUser(null);
@@ -149,13 +174,14 @@ export default function UserManagement({ currentUser }) {
 
     setIsSavingUser(true);
     try {
-      await dataService.saveUser({
+      const savedUser = await dataService.saveUser({
         ...formData,
         id: selectedUser ? selectedUser.id : undefined
       });
 
       notifySuccess(selectedUser ? 'User updated successfully.' : 'User created successfully. An email invite has been sent.');
       setShowUserModal(false);
+      if (!selectedUser && savedUser) setCreatedUser(savedUser);
       loadUserData();
     } catch (err) {
       notifyError(err, 'Could not save this user.');
@@ -301,14 +327,29 @@ export default function UserManagement({ currentUser }) {
             ) : filteredUsers.length === 0 ? (
               <tr>
                 <td colSpan={7} className="empty-table-state">
-                  No users found matching the selected filters.
+                  <div className="empty-table-state-inner">
+                    {hasNarrowingFilters ? (
+                      <>
+                        <span>No users match your current search or filters.</span>
+                        <button type="button" className="btn btn-sm" onClick={clearSearchAndFilters}>
+                          Clear search &amp; filters
+                        </button>
+                      </>
+                    ) : (
+                      <span>No users yet.</span>
+                    )}
+                  </div>
                 </td>
               </tr>
             ) : (
               pagedUsers.map(user => {
                 const assignedLeadsCount = leads.filter(l => l.assignedCloserId === user.id).length;
                 return (
-                  <tr key={user.id} onClick={(e) => handleOpenEditModal(user)}>
+                  <tr
+                    key={user.id}
+                    className={user.id === highlightUserId ? 'just-created-row' : ''}
+                    onClick={(e) => handleOpenEditModal(user)}
+                  >
                     <td className="lead-name-cell">
                       <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                         <div className="avatar-sm">{user.name.split(' ').map(n => n[0]).join('')}</div>

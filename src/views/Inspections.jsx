@@ -10,6 +10,7 @@ import { onDataChange } from '../lib/dataEvents';
 import { notifyError } from '../lib/toast';
 import Pagination, { paginate } from '../components/Pagination';
 import { useResetOnChange } from '../lib/useResetOnChange';
+import { useRevealCreated, hides } from '../lib/useRevealCreated';
 
 const PAGE_SIZE = 25;
 
@@ -18,7 +19,8 @@ export default function Inspections({
   onBookInspectionClick, 
   onEditInspectionClick, 
   setViewingLeadId, 
-  setCurrentTab 
+  setCurrentTab,
+  createdInspection
 }) {
   const [inspections, setInspections] = useState([]);
   const [leads, setLeads] = useState([]);
@@ -159,6 +161,29 @@ export default function Inspections({
     JSON.stringify([filterStatus, filterEstate, filterCloser, filterOfficer]),
     () => setPage(1)
   );
+
+  // An inspection booked from the globally mounted InspectionModal has to end
+  // up visible here; only the filters that would actually hide it are dropped.
+  const highlightInspectionId = useRevealCreated(createdInspection, (inspection) => {
+    if (hides(filterStatus, inspection.status)) { setFilterStatus('All'); setPendingFilterStatus('All'); }
+    if (hides(filterEstate, inspection.estate)) { setFilterEstate('All'); setPendingFilterEstate('All'); }
+    if (hides(filterCloser, inspection.assignedCloserId)) { setFilterCloser('All'); setPendingFilterCloser('All'); }
+    if (hides(filterOfficer, inspection.inspectionOfficerId)) { setFilterOfficer('All'); setPendingFilterOfficer('All'); }
+    // Newest first, so the new row is on page 1.
+    setPage(1);
+  });
+
+  // "Nothing booked yet" and "nothing matches these filters" are different
+  // problems with different fixes, so the empty state says which one it is.
+  const hasNarrowingFilters =
+    [filterStatus, filterEstate, filterCloser, filterOfficer].some(f => f !== 'All');
+
+  const clearFilters = () => {
+    setFilterStatus('All'); setPendingFilterStatus('All');
+    setFilterEstate('All'); setPendingFilterEstate('All');
+    setFilterCloser('All'); setPendingFilterCloser('All');
+    setFilterOfficer('All'); setPendingFilterOfficer('All');
+  };
 
   const handleExportCSV = () => {
     if (filteredInspections.length === 0) {
@@ -733,7 +758,18 @@ export default function Inspections({
               ) : filteredInspections.length === 0 ? (
                 <tr>
                   <td colSpan={9} className="empty-table-state">
-                    No inspections scheduled or found with these filters.
+                    <div className="empty-table-state-inner">
+                      {hasNarrowingFilters ? (
+                        <>
+                          <span>No inspections match your current filters.</span>
+                          <button type="button" className="btn btn-sm" onClick={clearFilters}>
+                            Clear filters
+                          </button>
+                        </>
+                      ) : (
+                        <span>No inspections scheduled yet.</span>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ) : (
@@ -745,6 +781,7 @@ export default function Inspections({
                   return (
                     <tr 
                       key={i.id} 
+                      className={i.id === highlightInspectionId ? 'just-created-row' : ''}
                       onClick={() => {
                         setViewingLeadId(i.leadId, i.id);
                         setCurrentTab('leads');

@@ -25,6 +25,7 @@ interface CrmUIContextValue {
   openBookInspection: (leadId?: string | null, inspId?: string | null) => void;
   handleSaveAndRedirectToLogActivity: (leadId: string) => void;
   createdLead: CreatedLead | null;
+  createdInspection: CreatedLead | null;
 }
 
 const CrmUIContext = createContext<CrmUIContextValue | null>(null);
@@ -47,10 +48,11 @@ export function CrmUIProvider({ children }: { children: ReactNode }) {
   const [inspectionLeadId, setInspectionLeadId] = useState<string | null>(null);
   const [inspectionId, setInspectionId] = useState<string | null>(null);
 
-  // The lead the user just created, if any. The lead modal is mounted here,
+  // The records the user just created, if any. These modals are mounted here,
   // globally, so this is the only place that knows a create happened; the
-  // leads table reads it to make sure the new row is actually on screen.
+  // matching table reads it to make sure the new row is actually on screen.
   const [createdLead, setCreatedLead] = useState<CreatedLead | null>(null);
+  const [createdInspection, setCreatedInspection] = useState<CreatedLead | null>(null);
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', darkMode ? 'dark' : 'light');
@@ -85,6 +87,7 @@ export function CrmUIProvider({ children }: { children: ReactNode }) {
         openBookInspection,
         handleSaveAndRedirectToLogActivity,
         createdLead,
+        createdInspection,
       }}
     >
       {children}
@@ -121,7 +124,10 @@ export function CrmUIProvider({ children }: { children: ReactNode }) {
         inspectionId={inspectionId}
         onClose={() => setInspectionModalOpen(false)}
         currentUser={currentUser}
-        onSaveComplete={() => setInspectionModalOpen(false)}
+        onSaveComplete={(savedInspection: CreatedLead | undefined, isNew: boolean) => {
+          setInspectionModalOpen(false);
+          if (isNew && savedInspection) setCreatedInspection(savedInspection);
+        }}
       />
     </CrmUIContext.Provider>
   );

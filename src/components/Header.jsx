@@ -14,7 +14,7 @@ import { useAppNavigate } from '@/lib/navigation';
 export default function Header() {
   const router = useAppNavigate();
   const { currentUser } = useAuth();
-  const { darkMode, toggleDarkMode, mobileSidebarOpen, setMobileSidebarOpen, setSearchTerm } = useCrmUI();
+  const { darkMode, toggleDarkMode, mobileSidebarOpen, setMobileSidebarOpen, searchTerm, setSearchTerm } = useCrmUI();
   const [notifications, setNotifications] = useState([]);
   const [showNotifications, setShowNotifications] = useState(false);
   const notificationRef = useRef(null);
@@ -118,10 +118,14 @@ export default function Header() {
       <div className="header-right">
         <div className="search-container">
           <Search size={18} className="search-icon" />
+          {/* Controlled: the box was uncontrolled, so anything that cleared
+              the search term in state (creating a lead, for one) left the old
+              query sitting in the input while the list ignored it. */}
           <input 
             type="text" 
             placeholder="Search leads by name, phone..."
             className="search-input"
+            value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
