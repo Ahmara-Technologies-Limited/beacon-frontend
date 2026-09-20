@@ -9,7 +9,7 @@ import { useAppNavigate } from '@/lib/navigation';
 export default function LeadsPage() {
   const router = useAppNavigate();
   const { currentUser } = useAuth();
-  const { openEditLead, searchTerm } = useCrmUI();
+  const { openEditLead, searchTerm, setSearchTerm, createdLead } = useCrmUI();
 
   return (
     <LeadManagement
@@ -18,6 +18,8 @@ export default function LeadsPage() {
       onEditLeadClick={openEditLead}
       setViewingLeadId={(id: string) => router.push(`/leads/${id}?from=leads`)}
       searchTerm={searchTerm}
+      onClearSearch={() => setSearchTerm('')}
+      createdLead={createdLead}
     />
   );
 }

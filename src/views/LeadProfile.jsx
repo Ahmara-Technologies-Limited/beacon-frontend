@@ -314,10 +314,16 @@ export default function LeadProfile({
     if (isSendingApplicationForm) return;
     setIsSendingApplicationForm(true);
     try {
-      const { portalLink } = await dataService.sendApplicationForm(lead.id);
+      const { portalLink, emailSent } = await dataService.sendApplicationForm(lead.id);
       setApplicationPortalLink(portalLink);
       loadLeadData();
-      notifySuccess('Application form emailed to the client.');
+      if (emailSent) {
+        notifySuccess('Application form emailed to the client.');
+      } else {
+        // The link is minted and valid; only delivery failed. Saying "emailed"
+        // here is how a dead mail configuration went unnoticed in production.
+        notifyError(null, 'The form link was generated but the email could not be delivered. Copy the link below and send it to the client.');
+      }
     } catch (err) {
       notifyError(err, 'Could not send the application form.');
     } finally {
@@ -347,7 +353,7 @@ export default function LeadProfile({
     if (isSendingOfferLetter) return;
     setIsSendingOfferLetter(true);
     try {
-      const { portalLink } = await dataService.sendOfferLetter(lead.id, {
+      const { portalLink, emailSent } = await dataService.sendOfferLetter(lead.id, {
         discount: Number(offerTermsForm.discount) || 0,
         depositPercentage: Number(offerTermsForm.depositPercentage) || 0,
         months: Number(offerTermsForm.months) || 0,
@@ -355,7 +361,11 @@ export default function LeadProfile({
       setOfferPortalLink(portalLink);
       setShowOfferTermsForm(false);
       loadLeadData();
-      notifySuccess('Offer letter emailed to the client.');
+      if (emailSent) {
+        notifySuccess('Offer letter emailed to the client.');
+      } else {
+        notifyError(null, 'The offer letter link was generated but the email could not be delivered. Copy the link below and send it to the client.');
+      }
     } catch (err) {
       notifyError(err, 'Could not send the offer letter.');
     } finally {
@@ -827,8 +837,18 @@ export default function LeadProfile({
                     Generate the digital application form link and email it to the client to capture legal info, employment, and next of kin details.
                   </p>
                   {(currentUser.role === 'Admin/Doc Officer' || currentUser.role === 'Super Admin') ? (
-                    <button className="btn btn-sm btn-primary" style={{ width: '100%' }} onClick={handleSendApplicationForm}>
-                      Send Application Form to Lead
+                    <button
+                      type="button"
+                      className="btn btn-sm btn-primary"
+                      style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                      onClick={handleSendApplicationForm}
+                      disabled={isSendingApplicationForm}
+                    >
+                      {/* Sending mints a token and hands off to the mail
+                          backend, which can take a few seconds - without this
+                          the button looks inert and invites a second click. */}
+                      {isSendingApplicationForm && <span className="btn-spinner" />}
+                      <span>{isSendingApplicationForm ? 'Sending application form…' : 'Send Application Form to Lead'}</span>
                     </button>
                   ) : (
                     <div className="badge badge-grey" style={{ display: 'block', textAlign: 'center', padding: '6px' }}>Awaiting Action from Document Officer</div>
@@ -875,11 +895,12 @@ export default function LeadProfile({
                     <button
                       type="button"
                       className="btn btn-sm"
-                      style={{ width: '100%' }}
+                      style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
                       onClick={handleSendApplicationForm}
                       disabled={isSendingApplicationForm}
                     >
-                      {isSendingApplicationForm ? 'Resending...' : 'Resend Application Form Email'}
+                      {isSendingApplicationForm && <span className="btn-spinner" />}
+                      <span>{isSendingApplicationForm ? 'Resending…' : 'Resend Application Form Email'}</span>
                     </button>
                   )}
                 </div>

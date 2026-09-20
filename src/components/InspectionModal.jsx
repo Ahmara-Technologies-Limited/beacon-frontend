@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { X, AlertTriangle } from 'lucide-react';
+import { X } from 'lucide-react';
 import { db } from '../data/mockData';
 import { dataService } from '../data/dataService';
 import { notifySuccess, notifyError } from '../lib/toast';
+import { confirmDialog } from '../lib/confirm';
 import { useResetOnChange } from '../lib/useResetOnChange';
 
 // Module scope, not a fresh array per render: as a local it was a new
@@ -37,7 +38,6 @@ export default function InspectionModal({ leadId, inspectionId, isOpen, onClose,
   const [closers, setClosers] = useState([]);
   const [officers, setOfficers] = useState([]);
   const [errors, setErrors] = useState({});
-  const [activeInspectionWarning, setActiveInspectionWarning] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
 
   // Which inspection this modal is currently pointed at. It's mounted once
@@ -53,7 +53,6 @@ export default function InspectionModal({ leadId, inspectionId, isOpen, onClose,
   // paints carrying the old one's errors for a frame.
   useResetOnChange(targetKey, () => {
     setErrors({});
-    setActiveInspectionWarning(null);
   });
 
   useEffect(() => {
@@ -181,23 +180,31 @@ export default function InspectionModal({ leadId, inspectionId, isOpen, onClose,
     return Object.keys(err).length === 0;
   };
 
-  const handleSave = async (bypassWarning = false) => {
+  const handleSave = async () => {
     if (!validate()) return;
     if (isSaving) return;
 
     setIsSaving(true);
     try {
-      // Check for active inspections on lead (only for new inspections)
-      if (!inspectionId && !bypassWarning) {
+      // Check for active inspections on lead (only for new inspections).
+      // This used to render as a banner at the top of the modal body, which
+      // meant scrolling back up to find it; it's a decision, so it asks in a
+      // dialog over the form instead.
+      if (!inspectionId) {
         const allInspections = await dataService.getInspections();
         const activeIns = allInspections.find(
           i => i.leadId === formData.leadId &&
           (i.status === 'Scheduled' || i.status === 'Confirmed')
         );
         if (activeIns) {
-          setActiveInspectionWarning(activeIns);
-          setIsSaving(false);
-          return;
+          const proceed = await confirmDialog({
+            title: 'Active Booking Alert',
+            message: `This lead already has an upcoming inspection scheduled for ${activeIns.date} at ${activeIns.time}. Do you want to proceed and book another inspection anyway?`,
+            confirmLabel: 'Confirm and Book',
+            cancelLabel: 'Cancel',
+            danger: true
+          });
+          if (!proceed) return;
         }
       }
 
@@ -237,27 +244,6 @@ export default function InspectionModal({ leadId, inspectionId, isOpen, onClose,
               <span>Loading inspection details…</span>
             </div>
           )}
-          {activeInspectionWarning && (
-            <div className="duplicate-alert-banner">
-              <AlertTriangle size={20} className="duplicate-alert-icon" />
-              <div className="duplicate-alert-text">
-                <p>
-                  <strong>Active Booking Alert:</strong> This lead already has an upcoming inspection scheduled 
-                  for <strong>{activeInspectionWarning.date}</strong> at <strong>{activeInspectionWarning.time}</strong>.
-                </p>
-                <p>Do you want to proceed and book another inspection anyway?</p>
-                <div className="duplicate-alert-buttons">
-                  <button className="btn btn-sm btn-primary" onClick={() => handleSave(true)}>
-                    Confirm and Book
-                  </button>
-                  <button className="btn btn-sm" onClick={() => setActiveInspectionWarning(null)}>
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-
           {currentUser.role === 'Inspection Officer' ? (
             <div className="inspection-officer-modal-view" style={{ display: 'flex', flexDirection: 'column', gap: '16px', ...(isPopulating ? { opacity: 0.35, pointerEvents: 'none' } : {}) }}>
               <div className="card" style={{ padding: '16px', background: 'var(--color-grey-bg)', border: '1px solid var(--border-color)', borderRadius: '8px', marginBottom: '0' }}>
@@ -601,42 +587,13 @@ export default function InspectionModal({ leadId, inspectionId, isOpen, onClose,
 
         <div className="modal-footer">
           <button className="btn" onClick={onClose} disabled={isSaving}>Cancel</button>
-          <button className="btn btn-primary" onClick={() => handleSave(false)} disabled={isSaving}>
+          <button className="btn btn-primary" onClick={() => handleSave()} disabled={isSaving}>
             {isSaving ? 'Saving...' : (currentUser.role === 'Inspection Officer' ? 'Submit Outcome' : 'Save Booking')}
           </button>
         </div>
       </div>
 
       <style>{`
-        .duplicate-alert-banner {
-          display: flex;
-          align-items: flex-start;
-          gap: 12px;
-          background-color: #FFFAEB;
-          border: 1px solid #FEC84B;
-          border-radius: var(--radius-md);
-          padding: 16px;
-          margin-bottom: 20px;
-          color: #B54708;
-        }
-
-        .duplicate-alert-icon {
-          flex-shrink: 0;
-          margin-top: 2px;
-        }
-
-        .duplicate-alert-text p {
-          font-size: 13px;
-          line-height: 1.5;
-          margin-bottom: 8px;
-        }
-
-        .duplicate-alert-buttons {
-          display: flex;
-          gap: 8px;
-          margin-top: 8px;
-        }
-
         .inspection-form-grid {
           display: grid;
           grid-template-columns: repeat(2, 1fr);

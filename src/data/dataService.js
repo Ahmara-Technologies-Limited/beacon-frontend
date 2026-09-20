@@ -649,11 +649,13 @@ export const dataService = {
       db.saveLead({ ...lead, applicationFormStatus: 'Sent to Lead' });
       db.logAudit(`Application Form sent to client ${lead?.name || leadId} by Doc Officer.`);
       emitDataChange('leads');
-      return Promise.resolve({ portalLink: `${window.location.origin}/apply/demo-${leadId}` });
+      return Promise.resolve({ portalLink: `${window.location.origin}/apply/demo-${leadId}`, emailSent: true });
     }
     const res = await apiPost(`/sales/leads/${leadId}/send-application-form/`);
     emitDataChange('leads');
-    return { portalLink: res.portal_link };
+    // email_sent is false when the mail backend rejected the message; the
+    // link itself is still valid, so the caller warns rather than errors.
+    return { portalLink: res.portal_link, emailSent: res.email_sent !== false };
   },
 
   approveApplicationForm: async (leadId, appData) => {
@@ -701,7 +703,7 @@ export const dataService = {
       db.saveLead({ ...lead, offerLetterStatus: 'Sent', offerLetterTerms });
       db.logAudit(`Offer Letter sent to client ${lead?.name || leadId} by Doc Officer.`);
       emitDataChange('leads');
-      return Promise.resolve({ portalLink: `${window.location.origin}/offer/demo-${leadId}` });
+      return Promise.resolve({ portalLink: `${window.location.origin}/offer/demo-${leadId}`, emailSent: true });
     }
     const payload = {};
     if (terms.discount !== undefined) payload.discount = terms.discount;
@@ -709,7 +711,7 @@ export const dataService = {
     if (terms.months !== undefined) payload.months = terms.months;
     const res = await apiPost(`/sales/leads/${leadId}/send-offer-letter/`, payload);
     emitDataChange('leads');
-    return { portalLink: res.portal_link };
+    return { portalLink: res.portal_link, emailSent: res.email_sent !== false };
   },
 
   /* ---- Public client portal (no auth - reached via emailed token) ---- */

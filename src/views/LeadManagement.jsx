@@ -21,7 +21,9 @@ export default function LeadManagement({
   onAddLeadClick, 
   onEditLeadClick, 
   setViewingLeadId, 
-  searchTerm 
+  searchTerm,
+  onClearSearch,
+  createdLead
 }) {
   const [leads, setLeads] = useState([]);
   const [closers, setClosers] = useState([]);
@@ -52,6 +54,7 @@ export default function LeadManagement({
   const [importSummary, setImportSummary] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [page, setPage] = useState(1);
+  const [highlightLeadId, setHighlightLeadId] = useState(null);
 
   const loadLeads = async () => {
     try {
@@ -168,6 +171,61 @@ export default function LeadManagement({
     JSON.stringify([searchTerm, filterStage, filterSource, filterCategory, filterTemperature, filterCloser, filterLocation, filterArchived]),
     () => setPage(1)
   );
+
+  // Revealing a just-created lead. The lead modal is mounted globally
+  // (CrmUIContext) and knows nothing about this table's filters, so a lead
+  // created while the table was filtered - or while the header search was
+  // still set from before - would save fine and then simply not be in the
+  // list, which reads as "my lead vanished" (or, with a search active, as an
+  // empty table). Only the filters that would actually hide the new row are
+  // relaxed; anything it already matches is left alone.
+  useResetOnChange(createdLead ? createdLead.id : '', () => {
+    if (!createdLead) return;
+    const relax = (value, setValue, setPending, leadValue) => {
+      if (value !== 'All' && value !== leadValue) {
+        setValue('All');
+        setPending('All');
+      }
+    };
+    // A new lead is always active, never archived.
+    if (filterArchived !== 'Active') {
+      setFilterArchived('Active');
+      setPendingFilterArchived('Active');
+    }
+    relax(filterStage, setFilterStage, setPendingFilterStage, createdLead.stage);
+    relax(filterSource, setFilterSource, setPendingFilterSource, createdLead.source);
+    relax(filterCategory, setFilterCategory, setPendingFilterCategory, createdLead.category);
+    relax(filterTemperature, setFilterTemperature, setPendingFilterTemperature, createdLead.temperature);
+    relax(filterCloser, setFilterCloser, setPendingFilterCloser, createdLead.assignedCloserId);
+    relax(filterLocation, setFilterLocation, setPendingFilterLocation, createdLead.location);
+    // Leads are sorted newest first, so the new row is on page 1.
+    setPage(1);
+    setHighlightLeadId(createdLead.id);
+  });
+
+  // Let the highlight fade on its own rather than leaving one row marked up
+  // for the rest of the session.
+  useEffect(() => {
+    if (!highlightLeadId) return undefined;
+    const timer = setTimeout(() => setHighlightLeadId(null), 4000);
+    return () => clearTimeout(timer);
+  }, [highlightLeadId]);
+  // "Nothing here" and "nothing matches what you typed" are different
+  // problems with different fixes, so the empty state says which one it is.
+  const hasNarrowingFilters =
+    searchTerm.trim() !== '' ||
+    [filterStage, filterSource, filterCategory, filterTemperature, filterCloser, filterLocation].some(f => f !== 'All');
+
+  const clearSearchAndFilters = () => {
+    if (onClearSearch) onClearSearch();
+    setFilterStage('All'); setPendingFilterStage('All');
+    setFilterSource('All'); setPendingFilterSource('All');
+    setFilterCategory('All'); setPendingFilterCategory('All');
+    setFilterTemperature('All'); setPendingFilterTemperature('All');
+    setFilterCloser('All'); setPendingFilterCloser('All');
+    setFilterLocation('All'); setPendingFilterLocation('All');
+  };
+
   const locations = Array.from(new Set(leads.map(l => l.location).filter(Boolean)));
 
   const handleCSVExport = () => {
@@ -595,7 +653,20 @@ export default function LeadManagement({
             ) : filteredLeads.length === 0 ? (
               <tr>
                 <td colSpan={12} className="empty-table-state">
-                  No leads found. Try adjusting your search query or filters.
+                  <div className="empty-table-state-inner">
+                  {hasNarrowingFilters ? (
+                    <>
+                      <span>No leads match your current search or filters.</span>
+                      <button type="button" className="btn btn-sm" onClick={clearSearchAndFilters}>
+                        Clear search &amp; filters
+                      </button>
+                    </>
+                  ) : filterArchived === 'Archived' ? (
+                    <span>No archived leads.</span>
+                  ) : (
+                    <span>No leads yet. Use &ldquo;Add New Lead&rdquo; to create the first one.</span>
+                  )}
+                  </div>
                 </td>
               </tr>
             ) : (
@@ -611,7 +682,7 @@ export default function LeadManagement({
                 return (
                   <tr 
                     key={lead.id} 
-                    className={isSelected ? 'selected-row' : ''}
+                    className={`${isSelected ? 'selected-row' : ''} ${lead.id === highlightLeadId ? 'just-created-row' : ''}`.trim()}
                     onClick={() => setViewingLeadId(lead.id)}
                   >
                     {filterArchived === 'Active' && currentUser.role !== 'Admin/Doc Officer' && (
@@ -801,6 +872,30 @@ export default function LeadManagement({
       <style>{`
         .lead-management-page {
           animation: fadeIn 0.25s ease-out;
+        }
+
+        /* The empty state can carry a "clear search & filters" action, so it
+           stacks its message and button instead of being a bare line. The
+           flex box goes on an inner div: making the <td> itself a flex
+           container takes it out of the table layout, and the cell stops
+           spanning the row. */
+        .empty-table-state-inner {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 12px;
+        }
+
+        /* Marks the row for a lead the user just created, so it's obvious
+           which of the rows is theirs. Fades out after a few seconds. */
+        .just-created-row > td {
+          background-color: rgba(212, 38, 42, 0.06);
+          animation: justCreatedFade 4s ease-out forwards;
+        }
+
+        @keyframes justCreatedFade {
+          0%, 60% { background-color: rgba(212, 38, 42, 0.10); }
+          100% { background-color: transparent; }
         }
 
         .page-header-row {

@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { X, AlertTriangle } from 'lucide-react';
+import { X } from 'lucide-react';
 import { db } from '../data/mockData';
 import { dataService } from '../data/dataService';
 import { notifySuccess, notifyError } from '../lib/toast';
+import { confirmDialog } from '../lib/confirm';
 import { useResetOnChange } from '../lib/useResetOnChange';
 
 // The blank "new lead" form, in one place. It used to be spelled out twice -
@@ -41,7 +42,6 @@ export default function LeadModal({ leadId, isOpen, onClose, onSaveComplete, onS
   const [closersLoaded, setClosersLoaded] = useState(false);
   const [properties, setProperties] = useState([]);
   const [errors, setErrors] = useState({});
-  const [duplicateWarning, setDuplicateWarning] = useState(null);
   const [potentialReferrers, setPotentialReferrers] = useState([]);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -56,13 +56,11 @@ export default function LeadModal({ leadId, isOpen, onClose, onSaveComplete, onS
   // ready the moment it's on screen.
   const isPopulating = isOpen && !!leadId && populatedFor !== targetKey;
 
-  // Re-aiming the modal has to wipe the previous lead's form, errors and
-  // duplicate warning. Doing that during render rather than in the effect
-  // means the new lead's form never paints with the old lead's values for a
-  // frame first.
+  // Re-aiming the modal has to wipe the previous lead's form and errors.
+  // Doing that during render rather than in the effect means the new lead's
+  // form never paints with the old lead's values for a frame first.
   useResetOnChange(targetKey, () => {
     setErrors({});
-    setDuplicateWarning(null);
     setClosersLoaded(false);
     if (!leadId) setFormData(blankLead(currentUser));
   });
@@ -185,21 +183,26 @@ export default function LeadModal({ leadId, isOpen, onClose, onSaveComplete, onS
     return Object.keys(err).length === 0;
   };
 
-  const handleSave = async (bypassDuplicateCheck = false, requestLogActivity = false) => {
+  const handleSave = async (requestLogActivity = false) => {
     if (!validate()) return;
     if (isSaving) return;
 
     setIsSaving(true);
     try {
-      // Check duplicate phone number (only for new leads or when phone is changed)
-      if (!bypassDuplicateCheck) {
-        const allLeads = await dataService.getLeads();
-        const duplicate = allLeads.find(l => l.phone === formData.phone && l.id !== leadId);
-        if (duplicate) {
-          setDuplicateWarning(duplicate);
-          setIsSaving(false);
-          return;
-        }
+      // Check duplicate phone number. This used to render as a banner at the
+      // top of the modal body, which meant scrolling back up to find it; it's
+      // a decision, so it asks in a dialog over the form instead.
+      const allLeads = await dataService.getLeads();
+      const duplicate = allLeads.find(l => l.phone === formData.phone && l.id !== leadId);
+      if (duplicate) {
+        const proceed = await confirmDialog({
+          title: 'Duplicate Phone Warning',
+          message: `A lead with this phone number already exists: ${duplicate.name}. Do you want to continue saving this lead?`,
+          confirmLabel: 'Continue and Save',
+          cancelLabel: 'Cancel',
+          danger: true
+        });
+        if (!proceed) return;
       }
 
       const payload = {
@@ -213,7 +216,11 @@ export default function LeadModal({ leadId, isOpen, onClose, onSaveComplete, onS
       if (requestLogActivity) {
         onSaveAndLogActivity(savedLead.id);
       } else {
-        onSaveComplete();
+        // Hand the saved record back, and say whether it's new: the leads
+        // table needs it to make sure a freshly created lead is actually
+        // visible rather than hidden behind whatever search/filters were
+        // active when the user opened this form.
+        onSaveComplete(savedLead, !leadId);
       }
     } catch (err) {
       notifyError(err, 'Could not save this lead. Please check the form and try again.');
@@ -241,27 +248,6 @@ export default function LeadModal({ leadId, isOpen, onClose, onSaveComplete, onS
               <span>Loading lead details…</span>
             </div>
           )}
-          {duplicateWarning && (
-            <div className="duplicate-alert-banner">
-              <AlertTriangle size={20} className="duplicate-alert-icon" />
-              <div className="duplicate-alert-text">
-                <p>
-                  <strong>Duplicate Phone Warning:</strong> A lead with this phone number already exists: 
-                  <strong> {duplicateWarning.name}</strong>.
-                </p>
-                <p>Do you want to continue saving this lead or cancel?</p>
-                <div className="duplicate-alert-buttons">
-                  <button className="btn btn-sm btn-primary" onClick={() => handleSave(true)}>
-                    Continue and Save
-                  </button>
-                  <button className="btn btn-sm" onClick={() => setDuplicateWarning(null)}>
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-
           <div className="lead-form-grid" style={isPopulating ? { opacity: 0.35, pointerEvents: 'none' } : undefined}>
             <div className="form-group">
               <label className="form-label">Full Name *</label>
@@ -569,7 +555,7 @@ export default function LeadModal({ leadId, isOpen, onClose, onSaveComplete, onS
 
         <div className="modal-footer">
           <button className="btn" onClick={onClose} disabled={isSaving}>Cancel</button>
-          <button className="btn btn-primary" onClick={() => handleSave(false, false)} disabled={isSaving}>
+          <button className="btn btn-primary" onClick={() => handleSave(false)} disabled={isSaving}>
             {isSaving ? 'Saving...' : 'Save Lead'}
           </button>
         </div>
@@ -584,35 +570,6 @@ export default function LeadModal({ leadId, isOpen, onClose, onSaveComplete, onS
 
         .form-group.full-width {
           grid-column: span 2;
-        }
-
-        .duplicate-alert-banner {
-          background-color: #FFFAEB;
-          border: 1px solid #FEF0C7;
-          border-radius: var(--radius-sm);
-          padding: 16px;
-          margin-bottom: 20px;
-          display: flex;
-          gap: 12px;
-          align-items: flex-start;
-        }
-
-        .duplicate-alert-icon {
-          color: #DC6803;
-          flex-shrink: 0;
-        }
-
-        .duplicate-alert-text {
-          font-size: 14px;
-          color: #B54708;
-          display: flex;
-          flex-direction: column;
-          gap: 8px;
-        }
-
-        .duplicate-alert-buttons {
-          display: flex;
-          gap: 8px;
         }
 
         .modal-subgrid-2col {

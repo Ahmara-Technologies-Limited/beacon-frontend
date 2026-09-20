@@ -6,6 +6,13 @@ import LeadModal from '../components/LeadModal';
 import LogActivityModal from '../components/LogActivityModal';
 import InspectionModal from '../components/InspectionModal';
 
+// Shape is whatever dataService hands back for a lead; the leads table only
+// reads the fields it filters on.
+interface CreatedLead {
+  id: string;
+  [key: string]: unknown;
+}
+
 interface CrmUIContextValue {
   darkMode: boolean;
   toggleDarkMode: () => void;
@@ -17,6 +24,7 @@ interface CrmUIContextValue {
   openLogActivity: (leadId: string) => void;
   openBookInspection: (leadId?: string | null, inspId?: string | null) => void;
   handleSaveAndRedirectToLogActivity: (leadId: string) => void;
+  createdLead: CreatedLead | null;
 }
 
 const CrmUIContext = createContext<CrmUIContextValue | null>(null);
@@ -38,6 +46,11 @@ export function CrmUIProvider({ children }: { children: ReactNode }) {
   const [inspectionModalOpen, setInspectionModalOpen] = useState(false);
   const [inspectionLeadId, setInspectionLeadId] = useState<string | null>(null);
   const [inspectionId, setInspectionId] = useState<string | null>(null);
+
+  // The lead the user just created, if any. The lead modal is mounted here,
+  // globally, so this is the only place that knows a create happened; the
+  // leads table reads it to make sure the new row is actually on screen.
+  const [createdLead, setCreatedLead] = useState<CreatedLead | null>(null);
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', darkMode ? 'dark' : 'light');
@@ -71,6 +84,7 @@ export function CrmUIProvider({ children }: { children: ReactNode }) {
         openLogActivity,
         openBookInspection,
         handleSaveAndRedirectToLogActivity,
+        createdLead,
       }}
     >
       {children}
@@ -80,7 +94,18 @@ export function CrmUIProvider({ children }: { children: ReactNode }) {
         leadId={leadModalId}
         onClose={() => setLeadModalOpen(false)}
         currentUser={currentUser}
-        onSaveComplete={() => setLeadModalOpen(false)}
+        onSaveComplete={(savedLead: CreatedLead | undefined, isNew: boolean) => {
+          setLeadModalOpen(false);
+          if (!isNew || !savedLead) return;
+          // A lead the user can't see is the same as no confirmation at all.
+          // The header search is app-wide and survives the modal, so someone
+          // who searched for a lead, didn't find it and created it would
+          // otherwise land back on a table still filtered to that search -
+          // i.e. empty. Clear it, and let the leads table relax any of its
+          // own filters that would hide the new row.
+          setSearchTerm('');
+          setCreatedLead(savedLead);
+        }}
         onSaveAndLogActivity={handleSaveAndRedirectToLogActivity}
       />
       <LogActivityModal
