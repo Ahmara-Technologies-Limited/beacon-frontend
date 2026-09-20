@@ -4,7 +4,7 @@ import { db } from '../data/mockData';
 import { dataService } from '../data/dataService';
 import { getPollInterval } from '../lib/demoMode';
 import { usePolling } from '../lib/usePolling';
-import { formatDateTime } from '../lib/format';
+import { formatDateTime, toLocalDateTimeInput } from '../lib/format';
 import { notifySuccess, notifyError } from '../lib/toast';
 
 export default function FollowUp({ currentUser, setViewingLeadId, setCurrentTab }) {
@@ -142,7 +142,9 @@ export default function FollowUp({ currentUser, setViewingLeadId, setCurrentTab 
       nextStep: actionLead.nextAction,
       loggedBy: currentUser.name,
       updateFollowUp: true,
-      followUpDate: snoozeTargetDate.toISOString().slice(0, 16)
+      // Local wall clock, not UTC: toISOString() here moved the snoozed
+      // follow-up by the local offset.
+      followUpDate: toLocalDateTimeInput(snoozeTargetDate)
     });
 
     setShowSnoozeModal(false);

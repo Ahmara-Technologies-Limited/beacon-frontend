@@ -7,6 +7,7 @@ import { isDemoMode } from '../lib/demoMode';
 import { apiGet, apiPost, apiPatch, apiDelete, setTokens, clearTokens, getRefreshToken } from '../lib/apiClient';
 import { emitDataChange as broadcastDataChange } from '../lib/dataEvents';
 import { dedupedFetch, invalidateAll } from '../lib/requestCache';
+import { toLocalDateInput, toLocalTimeInput, toLocalDateTimeInput, fromLocalDateTimeInput } from '../lib/format';
 
 // Every mutation in this file announces itself through emitDataChange so the
 // mounted views refetch. Those refetches must not be served the pre-write
@@ -115,7 +116,7 @@ const leadFromApi = (l) => {
     budget: l.budget,
     propertyInterest: l.property_interest,
     nextAction: l.next_action,
-    followUpDate: l.follow_up_date,
+    followUpDate: toLocalDateTimeInput(l.follow_up_date),
     lastActivityDate: l.last_activity_date,
     dateCreated: l.created_on,
     status: l.is_active === false ? 'Archived' : (l.status || 'Active'),
@@ -161,7 +162,10 @@ const leadToApi = (l) => {
   }
   if (l.propertyInterest !== undefined) payload.property_interest = l.propertyInterest;
   if (l.nextAction !== undefined) payload.next_action = l.nextAction;
-  if (l.followUpDate !== undefined) payload.follow_up_date = l.followUpDate;
+  // The form hands over a local wall-clock string with no timezone; passing
+  // it straight through left the backend to read it as UTC and shift it by
+  // the local offset.
+  if (l.followUpDate !== undefined) payload.follow_up_date = fromLocalDateTimeInput(l.followUpDate);
   if (l.relationshipStatus !== undefined) payload.relationship_status = l.relationshipStatus;
   if (l.referralStatus !== undefined) payload.referral_status = l.referralStatus;
   if (l.satisfactionScore !== undefined) payload.satisfaction_score = l.satisfactionScore;
@@ -174,13 +178,11 @@ const leadToApi = (l) => {
 // ---- Inspection ----
 const inspectionFromApi = (i) => {
   if (!i) return i;
-  let date = '';
-  let time = '';
-  if (i.scheduled_datetime) {
-    const dt = new Date(i.scheduled_datetime);
-    date = dt.toISOString().split('T')[0];
-    time = dt.toISOString().split('T')[1]?.slice(0, 5) || '';
-  }
+  // Local, not UTC: toISOString() here rendered the UTC wall clock, so an
+  // inspection booked for 11:00 read back as 10:00 for anyone west or east
+  // of Greenwich.
+  const date = toLocalDateInput(i.scheduled_datetime);
+  const time = toLocalTimeInput(i.scheduled_datetime);
   return {
     id: i.id,
     leadId: typeof i.lead === 'object' ? i.lead?.id : i.lead,
@@ -208,9 +210,9 @@ const inspectionToApi = (i) => {
   if (i.leadId !== undefined) payload.lead = i.leadId;
   if (i.estate !== undefined) payload.estate = i.estate;
   if (i.date !== undefined || i.time !== undefined) {
-    const date = i.date || (i._raw?.scheduled_datetime ? new Date(i._raw.scheduled_datetime).toISOString().split('T')[0] : '');
+    const date = i.date || toLocalDateInput(i._raw?.scheduled_datetime);
     const time = i.time || '00:00';
-    if (date) payload.scheduled_datetime = new Date(`${date}T${time}:00`).toISOString();
+    if (date) payload.scheduled_datetime = fromLocalDateTimeInput(`${date}T${time}`);
   }
   if (i.meetingPoint !== undefined) payload.meeting_point = i.meetingPoint;
   if (i.assignedCloserId !== undefined) payload.assigned_closer = i.assignedCloserId;
