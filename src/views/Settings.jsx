@@ -1,102 +1,203 @@
 import React, { useState, useEffect } from 'react';
-import { Save, Check, ShieldAlert } from 'lucide-react';
+import { Save, Check, Lock, User as UserIcon, Building2 } from 'lucide-react';
 import { dataService } from '../data/dataService';
-import { notifySuccess, notifyError } from '../lib/toast';
+import { notifySuccess, notifyError, notifyLoadError } from '../lib/toast';
+import { can } from '../lib/permissions';
+
+// Settings, split by who a setting belongs to.
+//
+// The page used to mix the two: alert thresholds that describe company policy
+// sat beside "your account profile" notification toggles, and a "Reminder
+// Timings" control that read as personal while writing to the company-wide
+// singleton. Staff without settings.manage were shown an editable form whose
+// save always 403'd, and the notification toggles were component state that
+// no save path ever included - you could switch them, be told the settings
+// were saved, and find them reset on reload.
+//
+// So: My Account is everyone's, and is per-user for real. Company
+// Configuration needs settings.manage, and is shown as plain read-only values
+// to everyone else rather than as a form that refuses to submit.
+
+const NOTIFICATION_TOGGLES = [
+  {
+    key: 'notify_new_lead_unassigned',
+    label: 'New Lead Unassigned',
+    description: 'A new lead has had no closer for longer than the contact time limit.',
+  },
+  {
+    key: 'notify_closer_no_contact',
+    label: 'Closer Has Not Made Contact',
+    description: 'An assigned lead is still waiting on its first contact attempt.',
+  },
+  {
+    key: 'notify_missed_follow_up',
+    label: 'Missed Follow-Up',
+    description: 'A scheduled follow-up date has passed without activity.',
+  },
+  {
+    key: 'notify_lead_dormant',
+    label: 'Lead Gone Dormant',
+    description: 'A lead has had no activity for longer than the dormancy threshold.',
+  },
+];
 
 export default function Settings({ currentUser, onUserChange }) {
+  const canManageCompany = can(currentUser, 'settings.manage');
+
   const [passwordData, setPasswordData] = useState({
     currentPassword: '',
     newPassword: '',
-    confirmPassword: ''
+    confirmPassword: '',
   });
   const [passwordErrors, setPasswordErrors] = useState({});
   const [passwordSuccess, setPasswordSuccess] = useState(false);
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+
+  const [preferences, setPreferences] = useState(null);
+  const [isSavingPreference, setIsSavingPreference] = useState(false);
+
   const [formData, setFormData] = useState({
     contactHoursLimit: 24,
     dormancyDaysThreshold: 7,
     inspectionConfirmationHours: 24,
-    remindersTiming: "1 hour before"
   });
-
-  const [notificationsToggles, setNotificationsToggles] = useState({
-    newLeadUnassigned: true,
-    closerNoContact: true,
-    missedFollowUp: true,
-    leadDormant: true,
-    inspectionNotConfirmed: true,
-    stageChanged: true
-  });
-
   const [errors, setErrors] = useState({});
-  const [successToast, setSuccessToast] = useState(false);
   const [isSavingSettings, setIsSavingSettings] = useState(false);
-  const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [successToast, setSuccessToast] = useState(false);
 
   useEffect(() => {
-    // Load settings from the data layer (demo db.* or live backend)
-    dataService.getSettings().then(currentSettings => {
-      if (currentSettings) {
+    dataService.getSettings()
+      .then(currentSettings => {
+        if (!currentSettings) return;
         setFormData({
-          contactHoursLimit: currentSettings.contactHoursLimit || 24,
-          dormancyDaysThreshold: currentSettings.dormancyDaysThreshold || 7,
-          inspectionConfirmationHours: currentSettings.inspectionConfirmationHours || 24,
-          remindersTiming: currentSettings.remindersTiming || "1 hour before"
+          contactHoursLimit: currentSettings.contactHoursLimit ?? 24,
+          dormancyDaysThreshold: currentSettings.dormancyDaysThreshold ?? 7,
+          inspectionConfirmationHours: currentSettings.inspectionConfirmationHours ?? 24,
         });
-      }
-    });
+      })
+      .catch(err => notifyLoadError(err, 'Could not load company settings.'));
+
+    dataService.getMyPreferences()
+      .then(setPreferences)
+      .catch(err => notifyLoadError(err, 'Could not load your notification preferences.'));
   }, []);
 
-  const validate = () => {
-    const err = {};
-    const dormancy = parseInt(formData.dormancyDaysThreshold, 10);
-    if (isNaN(dormancy) || dormancy < 1) {
-      err.dormancyDaysThreshold = 'Threshold must be at least 1 day.';
+  // Saved on change rather than behind a Save button: a switch that needs
+  // confirming elsewhere on the page is how the old toggles ended up silently
+  // discarding what people set.
+  const handleToggle = async (key) => {
+    if (!preferences || isSavingPreference) return;
+    const previous = preferences;
+    const next = { ...preferences, [key]: !preferences[key] };
+    setPreferences(next);
+    setIsSavingPreference(true);
+    try {
+      await dataService.saveMyPreferences({ [key]: next[key] });
+    } catch (err) {
+      setPreferences(previous);
+      notifyError(err, 'Could not save that preference.');
+    } finally {
+      setIsSavingPreference(false);
     }
-    const contact = parseInt(formData.contactHoursLimit, 10);
-    if (isNaN(contact) || contact < 1) {
-      err.contactHoursLimit = 'Threshold must be at least 1 hour.';
-    }
-    const inspection = parseInt(formData.inspectionConfirmationHours, 10);
-    if (isNaN(inspection) || inspection < 1) {
-      err.inspectionConfirmationHours = 'Threshold must be at least 1 hour.';
-    }
-
-    setErrors(err);
-    return Object.keys(err).length === 0;
   };
 
-  const handleSave = async () => {
-    if (!validate()) return;
-    if (isSavingSettings) return;
+  const validateCompanySettings = () => {
+    const errs = {};
+    const positiveInt = (value) => Number.isInteger(Number(value)) && Number(value) > 0;
+    if (!positiveInt(formData.contactHoursLimit)) errs.contactHoursLimit = 'Enter a number of hours greater than zero.';
+    if (!positiveInt(formData.dormancyDaysThreshold)) errs.dormancyDaysThreshold = 'Enter a number of days greater than zero.';
+    if (!positiveInt(formData.inspectionConfirmationHours)) errs.inspectionConfirmationHours = 'Enter a number of hours greater than zero.';
+    setErrors(errs);
+    return Object.keys(errs).length === 0;
+  };
 
+  const handleSaveCompanySettings = async () => {
+    if (isSavingSettings || !validateCompanySettings()) return;
     setIsSavingSettings(true);
     try {
       await dataService.saveSettings({
         contactHoursLimit: parseInt(formData.contactHoursLimit, 10),
         dormancyDaysThreshold: parseInt(formData.dormancyDaysThreshold, 10),
         inspectionConfirmationHours: parseInt(formData.inspectionConfirmationHours, 10),
-        remindersTiming: formData.remindersTiming
       });
-
-      notifySuccess('Settings successfully saved and applied system-wide.');
+      notifySuccess('Company settings saved and applied system-wide.');
       setSuccessToast(true);
       setTimeout(() => setSuccessToast(false), 3000);
     } catch (err) {
-      notifyError(err, 'Could not save settings.');
+      notifyError(err, 'Could not save these settings.');
     } finally {
       setIsSavingSettings(false);
     }
   };
 
-  const handleToggle = (key) => {
-    setNotificationsToggles(prev => ({
-      ...prev,
-      [key]: !prev[key]
-    }));
+  const handleChangePassword = async (e) => {
+    e.preventDefault();
+    if (isChangingPassword) return;
+    setPasswordErrors({});
+    setPasswordSuccess(false);
+
+    const errs = {};
+    if (!passwordData.currentPassword) errs.currentPassword = 'Current password is required.';
+    if (!passwordData.newPassword) {
+      errs.newPassword = 'New password is required.';
+    } else if (passwordData.newPassword.length < 6) {
+      errs.newPassword = 'Password must be at least 6 characters.';
+    }
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      errs.confirmPassword = 'Passwords do not match.';
+    }
+    if (Object.keys(errs).length > 0) {
+      setPasswordErrors(errs);
+      return;
+    }
+
+    setIsChangingPassword(true);
+    try {
+      const updatedUser = await dataService.changePassword(
+        passwordData.currentPassword,
+        passwordData.newPassword
+      );
+      if (typeof onUserChange === 'function' && updatedUser) onUserChange(updatedUser);
+    } catch (err) {
+      const message = err.status === 400
+        ? (err.body?.current_password?.[0] || err.message)
+        : 'Incorrect current password.';
+      setPasswordErrors({ currentPassword: message });
+      notifyError(null, message);
+      setIsChangingPassword(false);
+      return;
+    }
+
+    notifySuccess('Password successfully updated.');
+    setPasswordSuccess(true);
+    setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
+    setIsChangingPassword(false);
+    setTimeout(() => setPasswordSuccess(false), 3000);
   };
 
+  const COMPANY_FIELDS = [
+    {
+      key: 'contactHoursLimit',
+      label: 'Contact Time Limit',
+      unit: 'hours',
+      hint: 'How long a new lead may sit before it is flagged as uncontacted on the dashboard.',
+    },
+    {
+      key: 'dormancyDaysThreshold',
+      label: 'Dormancy Threshold',
+      unit: 'days',
+      hint: 'How long without activity before a lead is marked Dormant.',
+    },
+    {
+      key: 'inspectionConfirmationHours',
+      label: 'Inspection Confirmation Window',
+      unit: 'hours',
+      hint: 'How long before a site tour the client is expected to confirm.',
+    },
+  ];
+
   return (
-    <div className="settings-page animate-slide">
+    <div className="settings-page">
       <div className="breadcrumbs">
         <span>Home</span>
         <span className="breadcrumb-separator">&gt;</span>
@@ -105,78 +206,29 @@ export default function Settings({ currentUser, onUserChange }) {
 
       <div className="page-header-row">
         <div>
-          <h1 className="page-title">System Settings</h1>
-          <p className="page-subtitle">Configure notification thresholds, escalation timing, and alerts preferences.</p>
+          <h1 className="page-title">Settings</h1>
+          <p className="page-subtitle">Your account, and how the system treats the company portfolio.</p>
         </div>
-        <button className="btn btn-primary" onClick={handleSave} disabled={isSavingSettings}>
-          <Save size={16} />
-          <span>{isSavingSettings ? 'Saving...' : 'Save Changes'}</span>
-        </button>
       </div>
 
       {successToast && (
-        <div className="bulk-status-toast">
+        <div className="settings-success-banner">
           <Check size={16} />
-          <span>Settings successfully saved and applied system-wide immediately.</span>
+          <span>Company settings saved and applied system-wide.</span>
         </div>
       )}
 
-      <div className="settings-layout-grid">
-        <div className="settings-column">
-          <div className="card">
-            <h3 className="section-title">System Alert Thresholds</h3>
-            <p className="section-desc">These options configure background alert metrics used across the entire company portfolio.</p>
-            
-            {currentUser.role !== 'Super Admin' ? (
-              <div className="restricted-settings-block">
-                <ShieldAlert size={20} />
-                <span>Threshold editing is restricted to Super Admin profile. Viewing read-only values.</span>
-              </div>
-            ) : null}
-
-            <fieldset disabled={currentUser.role !== 'Super Admin'} style={{ border: 'none' }}>
-              <div className="form-group">
-                <label className="form-label">Contact Time Limit (Hours)</label>
-                <input 
-                  type="number" 
-                  className="form-control" 
-                  value={formData.contactHoursLimit}
-                  onChange={e => setFormData({ ...formData, contactHoursLimit: e.target.value })}
-                  placeholder="e.g. 24"
-                />
-                <span className="input-field-hint">Hours remaining before a new lead must be contacted by their closer.</span>
-                {errors.contactHoursLimit && <span className="form-error">{errors.contactHoursLimit}</span>}
-              </div>
-
-              <div className="form-group">
-                <label className="form-label">Dormancy Threshold (Days)</label>
-                <input 
-                  type="number" 
-                  className="form-control" 
-                  value={formData.dormancyDaysThreshold}
-                  onChange={e => setFormData({ ...formData, dormancyDaysThreshold: e.target.value })}
-                  placeholder="e.g. 7"
-                />
-                <span className="input-field-hint">Days of complete system activity silence before a lead is flagged as 'Dormant'.</span>
-                {errors.dormancyDaysThreshold && <span className="form-error">{errors.dormancyDaysThreshold}</span>}
-              </div>
-
-              <div className="form-group">
-                <label className="form-label">Inspection Auto-Confirmation Window (Hours)</label>
-                <input 
-                  type="number" 
-                  className="form-control" 
-                  value={formData.inspectionConfirmationHours}
-                  onChange={e => setFormData({ ...formData, inspectionConfirmationHours: e.target.value })}
-                  placeholder="e.g. 24"
-                />
-                <span className="input-field-hint">Hours before inspection date when system flags non-confirmed events.</span>
-                {errors.inspectionConfirmationHours && <span className="form-error">{errors.inspectionConfirmationHours}</span>}
-              </div>
-            </fieldset>
+      <div className="settings-section">
+        <div className="settings-section-head">
+          <UserIcon size={16} />
+          <div>
+            <h2>My Account</h2>
+            <p>Applies to you alone. Every role can change these.</p>
           </div>
+        </div>
 
-          <div className="card" style={{ marginTop: '24px' }}>
+        <div className="settings-layout-grid">
+          <div className="card">
             <h3 className="section-title">Change Password</h3>
             <p className="section-desc">Update your login password to keep your account secure.</p>
 
@@ -187,258 +239,225 @@ export default function Settings({ currentUser, onUserChange }) {
               </div>
             )}
 
-            <form onSubmit={async (e) => {
-              e.preventDefault();
-              if (isChangingPassword) return;
-              setPasswordErrors({});
-              setPasswordSuccess(false);
-
-              const errs = {};
-              if (!passwordData.currentPassword) {
-                errs.currentPassword = 'Current password is required.';
-              }
-
-              if (!passwordData.newPassword) {
-                errs.newPassword = 'New password is required.';
-              } else if (passwordData.newPassword.length < 6) {
-                errs.newPassword = 'Password must be at least 6 characters.';
-              }
-
-              if (passwordData.newPassword !== passwordData.confirmPassword) {
-                errs.confirmPassword = 'Passwords do not match.';
-              }
-
-              if (Object.keys(errs).length > 0) {
-                setPasswordErrors(errs);
-                return;
-              }
-
-              setIsChangingPassword(true);
-              try {
-                const updatedUser = await dataService.changePassword(
-                  passwordData.currentPassword,
-                  passwordData.newPassword
-                );
-
-                if (typeof onUserChange === 'function' && updatedUser) {
-                  onUserChange(updatedUser);
-                }
-              } catch (err) {
-                const message = err.status === 400 ? (err.body?.current_password?.[0] || err.message) : 'Incorrect current password.';
-                setPasswordErrors({ currentPassword: message });
-                notifyError(null, message);
-                setIsChangingPassword(false);
-                return;
-              }
-
-              notifySuccess('Password successfully updated.');
-              setPasswordSuccess(true);
-              setPasswordData({
-                currentPassword: '',
-                newPassword: '',
-                confirmPassword: ''
-              });
-              setIsChangingPassword(false);
-              setTimeout(() => setPasswordSuccess(false), 3000);
-            }}>
+            <form onSubmit={handleChangePassword}>
               <div className="form-group">
                 <label className="form-label">Current Password</label>
-                <input 
-                  type="password" 
-                  className="form-control" 
+                <input
+                  type="password"
+                  className="form-control"
                   value={passwordData.currentPassword}
                   onChange={e => setPasswordData({ ...passwordData, currentPassword: e.target.value })}
                   placeholder="••••••••"
+                  autoComplete="current-password"
                 />
                 {passwordErrors.currentPassword && <span className="form-error">{passwordErrors.currentPassword}</span>}
               </div>
 
               <div className="form-group">
                 <label className="form-label">New Password</label>
-                <input 
-                  type="password" 
-                  className="form-control" 
+                <input
+                  type="password"
+                  className="form-control"
                   value={passwordData.newPassword}
                   onChange={e => setPasswordData({ ...passwordData, newPassword: e.target.value })}
                   placeholder="Minimum 6 characters"
+                  autoComplete="new-password"
                 />
                 {passwordErrors.newPassword && <span className="form-error">{passwordErrors.newPassword}</span>}
               </div>
 
               <div className="form-group">
                 <label className="form-label">Confirm New Password</label>
-                <input 
-                  type="password" 
-                  className="form-control" 
+                <input
+                  type="password"
+                  className="form-control"
                   value={passwordData.confirmPassword}
                   onChange={e => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
                   placeholder="••••••••"
+                  autoComplete="new-password"
                 />
                 {passwordErrors.confirmPassword && <span className="form-error">{passwordErrors.confirmPassword}</span>}
               </div>
 
               <button type="submit" className="btn btn-primary" style={{ width: '100%', marginTop: '8px' }} disabled={isChangingPassword}>
-                {isChangingPassword ? 'Updating...' : 'Update Password'}
+                {isChangingPassword ? 'Updating…' : 'Update Password'}
               </button>
             </form>
           </div>
-        </div>
-
-        <div className="settings-column">
-          <div className="card" style={{ marginBottom: '24px' }}>
-            <h3 className="section-title">Notification Alerts Preferences</h3>
-            <p className="section-desc">Toggle which email and in-app bell alerts are delivered to your account profile.</p>
-
-            <div className="toggles-list">
-              <div className="toggle-setting-row">
-                <div className="toggle-text-col">
-                  <strong>New Lead Unassigned</strong>
-                  <span>Get notified when a new lead lacks closer ownership for over threshold limits.</span>
-                </div>
-                <input 
-                  type="checkbox" 
-                  className="ios-switch" 
-                  checked={notificationsToggles.newLeadUnassigned}
-                  onChange={() => handleToggle('newLeadUnassigned')}
-                />
-              </div>
-
-              <div className="toggle-setting-row">
-                <div className="toggle-text-col">
-                  <strong>Closer Contact Delays</strong>
-                  <span>Alert when a closer has not contacted a lead within the configured contact window.</span>
-                </div>
-                <input 
-                  type="checkbox" 
-                  className="ios-switch" 
-                  checked={notificationsToggles.closerNoContact}
-                  onChange={() => handleToggle('closerNoContact')}
-                />
-              </div>
-
-              <div className="toggle-setting-row">
-                <div className="toggle-text-col">
-                  <strong>Overdue / Missed Follow-ups</strong>
-                  <span>Notification when follow-up timelines elapse without contact activities.</span>
-                </div>
-                <input 
-                  type="checkbox" 
-                  className="ios-switch" 
-                  checked={notificationsToggles.missedFollowUp}
-                  onChange={() => handleToggle('missedFollowUp')}
-                />
-              </div>
-
-              <div className="toggle-setting-row">
-                <div className="toggle-text-col">
-                  <strong>Lead Dormancy Flags</strong>
-                  <span>Get alerts when active leads remain untouched for threshold days.</span>
-                </div>
-                <input 
-                  type="checkbox" 
-                  className="ios-switch" 
-                  checked={notificationsToggles.leadDormant}
-                  onChange={() => handleToggle('leadDormant')}
-                />
-              </div>
-            </div>
-          </div>
 
           <div className="card">
-            <h3 className="section-title">Reminder Timings</h3>
-            <div className="form-group">
-              <label className="form-label">Default Reminder Offset</label>
-              <select 
-                className="form-control"
-                value={formData.remindersTiming}
-                onChange={e => setFormData({ ...formData, remindersTiming: e.target.value })}
-              >
-                <option value="day of">Day of scheduled follow-up</option>
-                <option value="1 hour before">1 hour before due time</option>
-                <option value="2 hours before">2 hours before due time</option>
-                <option value="1 day before">24 hours before due date</option>
-              </select>
-            </div>
+            <h3 className="section-title">My Notification Alerts</h3>
+            <p className="section-desc">
+              Which alerts reach your notification bell. Saved as you switch them, and applies
+              to your account only.
+            </p>
+
+            {!preferences ? (
+              <p className="settings-muted">Loading your preferences…</p>
+            ) : (
+              <div className="toggles-list">
+                {NOTIFICATION_TOGGLES.map(toggle => (
+                  <div className="toggle-setting-row" key={toggle.key}>
+                    <div className="toggle-text-col">
+                      <strong>{toggle.label}</strong>
+                      <span>{toggle.description}</span>
+                    </div>
+                    <input
+                      type="checkbox"
+                      className="ios-switch"
+                      checked={!!preferences[toggle.key]}
+                      onChange={() => handleToggle(toggle.key)}
+                      aria-label={toggle.label}
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>
 
+      <div className="settings-section">
+        <div className="settings-section-head">
+          <Building2 size={16} />
+          <div>
+            <h2>Company Configuration</h2>
+            <p>
+              Applies to everyone in Beacon CRM.
+              {canManageCompany
+                ? ' Changing a threshold changes what the whole team sees as at-risk.'
+                : ' Changed by a Super Admin or General Manager.'}
+            </p>
+          </div>
+          {!canManageCompany && (
+            <span className="settings-readonly-badge">
+              <Lock size={12} />
+              <span>View only</span>
+            </span>
+          )}
+        </div>
+
+        <div className="card">
+          <h3 className="section-title">System Alert Thresholds</h3>
+          <p className="section-desc">
+            These drive the at-risk and dormancy flags on the dashboard and lead lists.
+          </p>
+
+          {canManageCompany ? (
+            <>
+              <div className="settings-field-grid">
+                {COMPANY_FIELDS.map(field => (
+                  <div className="form-group" key={field.key}>
+                    <label className="form-label">{field.label} ({field.unit})</label>
+                    <input
+                      type="number"
+                      min="1"
+                      className="form-control"
+                      value={formData[field.key]}
+                      onChange={e => setFormData({ ...formData, [field.key]: e.target.value })}
+                    />
+                    <span className="input-field-hint">{field.hint}</span>
+                    {errors[field.key] && <span className="form-error">{errors[field.key]}</span>}
+                  </div>
+                ))}
+              </div>
+              <button
+                className="btn btn-primary"
+                onClick={handleSaveCompanySettings}
+                disabled={isSavingSettings}
+                style={{ marginTop: '8px' }}
+              >
+                <Save size={15} />
+                <span>{isSavingSettings ? 'Saving…' : 'Save company settings'}</span>
+              </button>
+            </>
+          ) : (
+            // Plain values rather than a disabled form: a greyed-out input
+            // still invites the click, and the save behind it would 403.
+            <dl className="settings-readonly-list">
+              {COMPANY_FIELDS.map(field => (
+                <div key={field.key}>
+                  <dt>{field.label}</dt>
+                  <dd>
+                    <strong>{formData[field.key]}</strong> {field.unit}
+                    <span>{field.hint}</span>
+                  </dd>
+                </div>
+              ))}
+            </dl>
+          )}
+        </div>
+      </div>
+
       <style>{`
-        .settings-page {
-          animation: fadeIn 0.25s ease-out;
+        .settings-page { animation: fadeIn 0.25s ease-out; }
+
+        .page-header-row { margin-bottom: 8px; }
+        .page-title { font-size: 24px; font-weight: 700; color: var(--text-primary); margin-bottom: 4px; }
+        .page-subtitle { font-size: 14px; color: var(--text-secondary); }
+
+        .settings-section { margin-top: 28px; }
+
+        .settings-section-head {
+          display: flex;
+          align-items: flex-start;
+          gap: 10px;
+          margin-bottom: 14px;
+          color: var(--text-secondary);
+        }
+
+        .settings-section-head h2 {
+          font-size: 15px;
+          font-weight: 700;
+          color: var(--text-primary);
+          margin: 0 0 2px;
+        }
+
+        .settings-section-head p { font-size: 12.5px; margin: 0; line-height: 1.5; }
+        .settings-section-head > svg { margin-top: 2px; flex-shrink: 0; }
+
+        .settings-readonly-badge {
+          margin-left: auto;
+          display: inline-flex;
+          align-items: center;
+          gap: 5px;
+          font-size: 11px;
+          font-weight: 700;
+          text-transform: uppercase;
+          letter-spacing: 0.4px;
+          background: var(--color-grey-bg);
+          padding: 5px 10px;
+          border-radius: 20px;
+          white-space: nowrap;
         }
 
         .settings-layout-grid {
           display: grid;
           grid-template-columns: 1fr 1fr;
           gap: 24px;
-          margin-top: 24px;
+          align-items: start;
         }
 
-        .section-desc {
-          font-size: 13px;
-          color: var(--text-secondary);
-          margin-bottom: 20px;
-          line-height: 1.4;
+        .settings-field-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+          gap: 20px;
+          margin-bottom: 8px;
         }
 
-        .input-field-hint {
-          display: block;
-          font-size: 11px;
-          color: var(--text-placeholder);
-          margin-top: 4px;
-        }
+        .section-desc { font-size: 13px; color: var(--text-secondary); margin-bottom: 20px; line-height: 1.4; }
+        .settings-muted { font-size: 13px; color: var(--text-secondary); }
 
-        .restricted-settings-block {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          background-color: #FFF5F5;
-          color: var(--primary-red);
-          border: 1px solid var(--primary-red-light-border);
-          padding: 10px 14px;
-          border-radius: var(--radius-sm);
-          font-size: 12px;
-          font-weight: 600;
-          margin-bottom: 20px;
-        }
+        .input-field-hint { display: block; font-size: 11px; color: var(--text-placeholder); margin-top: 4px; line-height: 1.45; }
 
-        .toggles-list {
-          display: flex;
-          flex-direction: column;
-          gap: 16px;
-        }
+        .settings-readonly-list { margin: 0; display: grid; gap: 16px; }
+        .settings-readonly-list dt { font-size: 12px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.4px; }
+        .settings-readonly-list dd { margin: 4px 0 0; font-size: 14px; color: var(--text-primary); }
+        .settings-readonly-list dd strong { font-size: 18px; font-weight: 700; }
+        .settings-readonly-list dd span { display: block; font-size: 12px; color: var(--text-secondary); margin-top: 3px; line-height: 1.45; }
 
-        .toggle-setting-row {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          padding-bottom: 16px;
-          border-bottom: 1px solid var(--border-color);
-        }
-
-        .toggle-setting-row:last-child {
-          border-bottom: none;
-          padding-bottom: 0;
-        }
-
-        .toggle-text-col {
-          display: flex;
-          flex-direction: column;
-          gap: 2px;
-          max-width: 80%;
-        }
-
-        .toggle-text-col strong {
-          font-size: 14px;
-          color: var(--text-primary);
-        }
-
-        .toggle-text-col span {
-          font-size: 12px;
-          color: var(--text-secondary);
-        }
-
+        /* Carried over from the previous Settings page - the toggles moved,
+           the control did not. */
         .ios-switch {
           appearance: none;
           width: 44px;
@@ -448,12 +467,11 @@ export default function Settings({ currentUser, onUserChange }) {
           position: relative;
           cursor: pointer;
           outline: none;
+          flex-shrink: 0;
           transition: background-color 0.2s;
         }
 
-        .ios-switch:checked {
-          background-color: var(--primary-red);
-        }
+        .ios-switch:checked { background-color: var(--primary-red); }
 
         .ios-switch::before {
           content: "";
@@ -468,28 +486,41 @@ export default function Settings({ currentUser, onUserChange }) {
           box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.1);
         }
 
-        .ios-switch:checked::before {
-          transform: translateX(20px);
+        .ios-switch:checked::before { transform: translateX(20px); }
+
+        .toggles-list { display: flex; flex-direction: column; gap: 4px; }
+
+        .toggle-setting-row {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 16px;
+          padding: 12px 0;
+          border-bottom: 1px solid var(--border-color);
         }
 
+        .toggle-setting-row:last-child { border-bottom: none; }
+
+        .toggle-text-col { display: flex; flex-direction: column; gap: 3px; }
+        .toggle-text-col strong { font-size: 13px; color: var(--text-primary); }
+        .toggle-text-col span { font-size: 12px; color: var(--text-secondary); line-height: 1.45; }
+
+        .settings-success-banner,
         .password-success-banner {
-          background: #ECFDF3;
-          border: 1px solid #D1FADF;
-          color: #027A48;
-          padding: 10px 14px;
-          border-radius: var(--radius-sm);
-          font-size: 12px;
-          font-weight: 600;
           display: flex;
           align-items: center;
           gap: 8px;
+          background-color: rgba(6,118,71,0.08);
+          color: var(--color-success-text, #067647);
+          border: 1px solid rgba(6,118,71,0.25);
+          padding: 10px 14px;
+          border-radius: var(--radius-sm);
+          font-size: 13px;
           margin-bottom: 16px;
         }
 
-        @media (max-width: 1024px) {
-          .settings-layout-grid {
-            grid-template-columns: 1fr;
-          }
+        @media (max-width: 900px) {
+          .settings-layout-grid { grid-template-columns: 1fr; }
         }
       `}</style>
     </div>

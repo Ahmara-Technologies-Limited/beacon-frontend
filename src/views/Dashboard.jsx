@@ -14,7 +14,7 @@ import { usePolling } from '../lib/usePolling';
 import { formatBudget, parseBudgetNumber, formatDateTime } from '../lib/format';
 import { SkeletonCards } from '../components/Skeleton';
 import { onDataChange } from '../lib/dataEvents';
-import { notifySuccess, notifyError } from '../lib/toast';
+import { notifySuccess, notifyError, notifyLoadError } from '../lib/toast';
 
 export default function Dashboard({ currentUser, setCurrentTab, setViewingLeadId, onAddLeadClick, onLogActivityClick, onBookInspectionClick, onEditLeadClick }) {
   const [leads, setLeads] = useState([]);
@@ -71,8 +71,12 @@ export default function Dashboard({ currentUser, setCurrentTab, setViewingLeadId
   // mostly made of) are in. Failures are reported rather than left as an
   // unhandled rejection that silently leaves a section empty forever.
   const loadDashboardData = () => {
+    // notifyLoadError, not notifyError: roles without access to a resource
+    // (an Inspection Officer has none to the lead list) were greeted on login
+    // by two "You do not have permission to perform this action" toasts for
+    // data the dashboard asked for on their behalf.
     const track = (promise, apply, label) =>
-      promise.then(apply).catch(err => notifyError(err, `Could not load ${label}.`));
+      promise.then(apply).catch(err => notifyLoadError(err, `Could not load ${label}.`));
 
     const leadsDone = track(dataService.getLeads(), setLeads, 'leads')
       .finally(() => setIsLoading(false));

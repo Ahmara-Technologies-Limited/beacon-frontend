@@ -37,8 +37,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     async function bootstrap() {
       if (isDemoMode()) {
         initializeDB();
-        const savedUser = db.getCurrentUser();
-        if (!cancelled) setCurrentUserState(savedUser || null);
+        // Through getCurrentUserProfile so the restored session carries the
+        // same `permissions` the rest of the app gates on - a user rehydrated
+        // straight from storage would have none and see an empty sidebar.
+        const savedUser = db.getCurrentUser()
+          ? await dataService.getCurrentUserProfile()
+          : null;
+        if (!cancelled) setCurrentUserState((savedUser as CurrentUser) || null);
         if (!cancelled) setLoading(false);
         return;
       }

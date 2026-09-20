@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
 import { db } from '../data/mockData';
 import { dataService } from '../data/dataService';
-import { notifySuccess, notifyError } from '../lib/toast';
+import { notifySuccess, notifyError, notifyLoadError } from '../lib/toast';
 import { confirmDialog } from '../lib/confirm';
 import { useResetOnChange } from '../lib/useResetOnChange';
 
@@ -103,7 +103,7 @@ export default function InspectionModal({ leadId, inspectionId, isOpen, onClose,
           // loading state gives the user nothing to act on, and the toast
           // says what actually went wrong.
           setPopulatedFor(targetKey);
-          notifyError(err, 'Could not load this inspection.');
+          notifyLoadError(err, 'Could not load this inspection.');
         });
       } else {
         let defaultCloserId = '';
@@ -136,7 +136,7 @@ export default function InspectionModal({ leadId, inspectionId, isOpen, onClose,
       setPopulatedFor(targetKey);
       // Swallowing this left the closer/officer dropdowns simply empty, with
       // no way to tell a genuinely empty roster from a failed request.
-      notifyError(err, 'Could not load leads and team members for this form.');
+      notifyLoadError(err, 'Could not load leads and team members for this form.');
     });
 
     return () => {

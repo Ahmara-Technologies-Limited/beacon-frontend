@@ -17,7 +17,8 @@ import {
   Building2,
   DollarSign
 } from 'lucide-react';
-import { TAB_ROUTES, TAB_ROLES } from '../lib/routes';
+import { TAB_ROUTES } from '../lib/routes';
+import { canAccessTab } from '../lib/permissions';
 import { useCrmUI } from '../context/CrmUIContext';
 import { useAppNavigate } from '@/lib/navigation';
 
@@ -73,7 +74,9 @@ export default function Sidebar({ currentUser, onSignOut }) {
     return sections
       .map(section => ({
         ...section,
-        items: section.items.filter(item => (TAB_ROLES[item.id] || []).includes(role))
+        // Driven by the user's permissions, so a change made in Roles &
+        // Permissions shows up in the nav rather than only at the API.
+        items: section.items.filter(item => canAccessTab(currentUser, item.id))
       }))
       .filter(section => section.items.length > 0);
   };

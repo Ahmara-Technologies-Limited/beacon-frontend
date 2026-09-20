@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
 import { db } from '../data/mockData';
 import { dataService } from '../data/dataService';
-import { notifySuccess, notifyError } from '../lib/toast';
+import { notifySuccess, notifyError, notifyLoadError } from '../lib/toast';
 import { confirmDialog } from '../lib/confirm';
 import { useResetOnChange } from '../lib/useResetOnChange';
 
@@ -88,7 +88,7 @@ export default function LeadModal({ leadId, isOpen, onClose, onSaveComplete, onS
       })
       .catch(err => {
         if (cancelled) return;
-        notifyError(err, 'Could not load the list of sales closers.');
+        notifyLoadError(err, 'Could not load the list of sales closers.');
       });
 
     dataService.getProperties().then(props => {
@@ -134,7 +134,7 @@ export default function LeadModal({ leadId, isOpen, onClose, onSaveComplete, onS
         // permanent loading state gives the user nothing to act on, whereas
         // the toast says what went wrong.
         setPopulatedFor(targetKey);
-        notifyError(err, 'Could not load this lead.');
+        notifyLoadError(err, 'Could not load this lead.');
       });
     } else {
       // The blank form itself is already in place (see useResetOnChange

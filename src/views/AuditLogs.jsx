@@ -5,7 +5,7 @@ import { dataService } from '../data/dataService';
 import { getPollInterval } from '../lib/demoMode';
 import { usePolling } from '../lib/usePolling';
 import { confirmDialog } from '../lib/confirm';
-import { notifySuccess, notifyError } from '../lib/toast';
+import { notifySuccess, notifyError, notifyLoadError } from '../lib/toast';
 import Pagination, { paginate } from '../components/Pagination';
 import { useResetOnChange } from '../lib/useResetOnChange';
 
@@ -20,7 +20,7 @@ export default function AuditLogs({ currentUser }) {
     try {
       setLogs(await dataService.getAuditLogs());
     } catch (err) {
-      notifyError(err, 'Could not load audit logs.');
+      notifyLoadError(err, 'Could not load audit logs.');
     }
   };
 

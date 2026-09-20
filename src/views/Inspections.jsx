@@ -7,7 +7,7 @@ import { usePolling } from '../lib/usePolling';
 import { formatBudget, formatDate } from '../lib/format';
 import { SkeletonTableRows } from '../components/Skeleton';
 import { onDataChange } from '../lib/dataEvents';
-import { notifyError } from '../lib/toast';
+import { notifyError, notifyLoadError } from '../lib/toast';
 import Pagination, { paginate } from '../components/Pagination';
 import { useResetOnChange } from '../lib/useResetOnChange';
 import { useRevealCreated, hides } from '../lib/useRevealCreated';
@@ -67,12 +67,22 @@ export default function Inspections({
 
   const loadInspectionData = async () => {
     try {
-      setInspections(await dataService.getInspections());
-      setLeads(await dataService.getLeads());
-      setUsers(await dataService.getUsers());
-      setProperties(await dataService.getProperties());
+      // Loaded independently, not in sequence: one inaccessible resource
+      // used to abort the rest, so an Inspection Officer - who has no access
+      // to the full lead list - got a page where every client read "Unknown
+      // Lead" and every closer "Unassigned", because the leads request threw
+      // before users and properties were ever fetched.
+      const track = (promise, apply, label) =>
+        promise.then(apply).catch(err => notifyLoadError(err, `Could not load ${label}.`));
+
+      await Promise.all([
+        track(dataService.getInspections(), setInspections, 'inspections'),
+        track(dataService.getLeads(), setLeads, 'leads'),
+        track(dataService.getUsers(), setUsers, 'team members'),
+        track(dataService.getProperties(), setProperties, 'properties'),
+      ]);
     } catch (err) {
-      notifyError(err, 'Could not load inspections.');
+      notifyLoadError(err, 'Could not load inspections.');
     } finally {
       setIsLoading(false);
     }
@@ -120,7 +130,7 @@ export default function Inspections({
     if (!selectedLeadId) return;
     dataService.getActivities(selectedLeadId)
       .then(setLeadActivities)
-      .catch(err => notifyError(err, 'Could not load this lead\'s activity history.'));
+      .catch(err => notifyLoadError(err, 'Could not load this lead\'s activity history.'));
   }, [selectedLeadId]);
 
   const isUserRelevantForInspection = (inspection) => {

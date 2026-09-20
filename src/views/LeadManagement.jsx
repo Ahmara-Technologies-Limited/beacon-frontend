@@ -7,7 +7,7 @@ import { db } from '../data/mockData';
 import { dataService } from '../data/dataService';
 import { getPollInterval } from '../lib/demoMode';
 import { usePolling } from '../lib/usePolling';
-import { notifySuccess, notifyError } from '../lib/toast';
+import { notifySuccess, notifyError, notifyLoadError } from '../lib/toast';
 import { SkeletonTableRows } from '../components/Skeleton';
 import { onDataChange } from '../lib/dataEvents';
 import { formatDateTime } from '../lib/format';
@@ -64,7 +64,7 @@ export default function LeadManagement({
         setLeads(await dataService.getLeads());
       }
     } catch (err) {
-      notifyError(err, 'Could not load leads.');
+      notifyLoadError(err, 'Could not load leads.');
     } finally {
       setIsLoading(false);
     }
@@ -79,7 +79,7 @@ export default function LeadManagement({
   useEffect(() => {
     dataService.getUsers()
       .then(users => setClosers(users.filter(u => u.role === 'Sales Closer' && u.status === 'Active')))
-      .catch(err => notifyError(err, 'Could not load the list of sales closers.'));
+      .catch(err => notifyLoadError(err, 'Could not load the list of sales closers.'));
     if (currentUser.role === 'Inspection Officer') {
       dataService.getInspections().then(all =>
         setOfficerInspections(all.filter(i => i.inspectionOfficerId === currentUser.id))

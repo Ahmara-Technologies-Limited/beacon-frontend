@@ -5,7 +5,7 @@ import { getPollInterval } from '../lib/demoMode';
 import { usePolling } from '../lib/usePolling';
 import { onDataChange } from '../lib/dataEvents';
 import { DollarSign, FileText, CheckCircle, Clock, Plus, Upload, Trash2, X, FileMinus, ArrowUpRight, Clipboard } from 'lucide-react';
-import { notifySuccess, notifyError } from '@/lib/toast';
+import { notifySuccess, notifyError, notifyLoadError } from '@/lib/toast';
 
 export default function DocOfficerHub({ currentUser }) {
   const [activeSubTab, setActiveSubTab] = useState('accounts');
@@ -57,7 +57,7 @@ export default function DocOfficerHub({ currentUser }) {
       setCommissions(savedCommissions);
       setDiscounts(savedDiscounts);
     } catch (err) {
-      notifyError(err, 'Could not load finance data.');
+      notifyLoadError(err, 'Could not load finance data.');
     }
   };
 

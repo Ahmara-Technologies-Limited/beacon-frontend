@@ -9,7 +9,7 @@ import { dataService } from '../data/dataService';
 import { getPollInterval } from '../lib/demoMode';
 import { usePolling } from '../lib/usePolling';
 import { formatBudget } from '../lib/format';
-import { notifySuccess, notifyError } from '../lib/toast';
+import { notifySuccess, notifyError, notifyLoadError } from '../lib/toast';
 import { confirmDialog } from '../lib/confirm';
 import { SkeletonBlock, SkeletonListRows } from '../components/Skeleton';
 import { onDataChange } from '../lib/dataEvents';
@@ -147,12 +147,24 @@ export default function LeadProfile({
 
   const loadLeadData = async () => {
     try {
+      // Promise.all rejected the whole page if any one resource was denied,
+      // so an Admin/Doc Officer - who cannot read inspections, and whose main
+      // job lives on this very page - got "Lead profile fails to load" and
+      // two permission toasts instead of the Legal & Finance Desk. Each
+      // resource now stands on its own; the ones this role can't see simply
+      // come back empty.
+      const optional = (promise, label) =>
+        promise.catch(err => {
+          notifyLoadError(err, `Could not load ${label}.`);
+          return [];
+        });
+
       const [activeLeads, archivedLeads, allActivitiesRaw, allInspectionsRaw, allUsersRaw] = await Promise.all([
-        dataService.getLeads(),
-        dataService.getArchivedLeads(),
-        dataService.getActivities(),
-        dataService.getInspections(),
-        dataService.getUsers(),
+        optional(dataService.getLeads(), 'leads'),
+        optional(dataService.getArchivedLeads(), 'archived leads'),
+        optional(dataService.getActivities(), 'activity history'),
+        optional(dataService.getInspections(), 'inspections'),
+        optional(dataService.getUsers(), 'team members'),
       ]);
 
       setAllLeads(activeLeads.concat(archivedLeads));
@@ -166,7 +178,12 @@ export default function LeadProfile({
         // separately from the finance endpoint (mirrors DocOfficerHub.jsx's
         // loadHubData, which does the same thing for its lead list).
         if (foundLead.paymentPlan === undefined) {
-          foundLead.paymentPlan = await dataService.getPaymentPlan(foundLead.id);
+          foundLead.paymentPlan = await dataService
+            .getPaymentPlan(foundLead.id)
+            .catch(err => {
+              notifyLoadError(err, 'Could not load this lead\'s payment plan.');
+              return null;
+            });
         }
         setLead(foundLead);
 
@@ -187,7 +204,7 @@ export default function LeadProfile({
         setReassignCloserId(foundLead.assignedCloserId || '');
       }
     } catch (err) {
-      notifyError(err, 'Could not load lead profile.');
+      notifyLoadError(err, 'Could not load lead profile.');
     } finally {
       setIsLoading(false);
     }

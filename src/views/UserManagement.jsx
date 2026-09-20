@@ -4,7 +4,7 @@ import { db } from '../data/mockData';
 import { dataService } from '../data/dataService';
 import { isDemoMode, getPollInterval } from '../lib/demoMode';
 import { usePolling } from '../lib/usePolling';
-import { notifySuccess, notifyError } from '../lib/toast';
+import { notifySuccess, notifyError, notifyLoadError } from '../lib/toast';
 import { SkeletonTableRows } from '../components/Skeleton';
 import { onDataChange } from '../lib/dataEvents';
 import { formatDateTime } from '../lib/format';
@@ -55,10 +55,17 @@ export default function UserManagement({ currentUser }) {
 
   const loadUserData = async () => {
     try {
-      setUsers(await dataService.getUsers());
-      setLeads(await dataService.getLeads());
+      const track = (promise, apply, label) =>
+        promise.then(apply).catch(err => notifyLoadError(err, `Could not load ${label}.`));
+
+      await Promise.all([
+        track(dataService.getUsers(), setUsers, 'users'),
+        // Only used for the per-user assigned-lead count; a role that can't
+        // read leads still gets a working user table.
+        track(dataService.getLeads(), setLeads, 'assigned leads'),
+      ]);
     } catch (err) {
-      notifyError(err, 'Could not load users.');
+      notifyLoadError(err, 'Could not load users.');
     } finally {
       setIsLoading(false);
     }

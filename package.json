@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint .",
     "style:hifi": "cp src/index-hifi.css src/index.css",
-    "style:wireframe": "cp src/index-wireframe.css src/index.css"
+    "style:wireframe": "cp src/index-wireframe.css src/index.css",
+    "verify:permissions": "node scripts/verify-permissions.mjs"
   },
   "dependencies": {
     "lucide-react": "^1.17.0",

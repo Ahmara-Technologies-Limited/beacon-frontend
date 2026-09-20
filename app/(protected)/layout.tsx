@@ -19,8 +19,8 @@ export default function ProtectedLayout({
   const pathname = usePathname();
   const { currentUser, logout, loading } = useAuth();
 
-  const allowed = !currentUser || isRouteAllowed(pathname, currentUser.role);
-  const dashboardAllowed = !currentUser || isRouteAllowed('/dashboard', currentUser.role);
+  const allowed = !currentUser || isRouteAllowed(pathname, currentUser);
+  const dashboardAllowed = !currentUser || isRouteAllowed('/dashboard', currentUser);
 
   useEffect(() => {
     if (!loading && !currentUser) {

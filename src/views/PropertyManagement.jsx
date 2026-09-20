@@ -4,7 +4,7 @@ import { dataService } from '../data/dataService';
 import { getPollInterval } from '../lib/demoMode';
 import { usePolling } from '../lib/usePolling';
 import { formatBudget, formatDateTime } from '../lib/format';
-import { notifySuccess, notifyError } from '../lib/toast';
+import { notifySuccess, notifyError, notifyLoadError } from '../lib/toast';
 import { SkeletonTableRows } from '../components/Skeleton';
 import { confirmDialog } from '../lib/confirm';
 import { onDataChange } from '../lib/dataEvents';
@@ -47,7 +47,7 @@ export default function PropertyManagement({ currentUser }) {
       setProperties(props);
       setLeads(leadsList);
     } catch (err) {
-      notifyError(err, 'Could not load properties.');
+      notifyLoadError(err, 'Could not load properties.');
     } finally {
       setIsLoading(false);
     }

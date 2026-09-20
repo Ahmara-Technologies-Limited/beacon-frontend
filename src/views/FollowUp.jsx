@@ -5,7 +5,7 @@ import { dataService } from '../data/dataService';
 import { getPollInterval } from '../lib/demoMode';
 import { usePolling } from '../lib/usePolling';
 import { formatDateTime, toLocalDateTimeInput } from '../lib/format';
-import { notifySuccess, notifyError } from '../lib/toast';
+import { notifySuccess, notifyError, notifyLoadError } from '../lib/toast';
 
 export default function FollowUp({ currentUser, setViewingLeadId, setCurrentTab }) {
   const [leads, setLeads] = useState([]);
@@ -30,10 +30,19 @@ export default function FollowUp({ currentUser, setViewingLeadId, setCurrentTab 
   const [snoozeCustomDate, setSnoozeCustomDate] = useState('');
   const loadFollowUpData = async () => {
     try {
-      setLeads(await dataService.getLeads());
-      setClosers((await dataService.getUsers()).filter(u => u.role === 'Sales Closer' && u.status === 'Active'));
+      const track = (promise, apply, label) =>
+        promise.then(apply).catch(err => notifyLoadError(err, `Could not load ${label}.`));
+
+      await Promise.all([
+        track(dataService.getLeads(), setLeads, 'follow-ups'),
+        track(
+          dataService.getUsers(),
+          (users) => setClosers(users.filter(u => u.role === 'Sales Closer' && u.status === 'Active')),
+          'team members'
+        ),
+      ]);
     } catch (err) {
-      notifyError(err, 'Could not load follow-ups.');
+      notifyLoadError(err, 'Could not load follow-ups.');
     }
   };
 

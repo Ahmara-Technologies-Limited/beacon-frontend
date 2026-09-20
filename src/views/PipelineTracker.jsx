@@ -6,7 +6,7 @@ import { usePolling } from '../lib/usePolling';
 import { AlertCircle, Calendar } from 'lucide-react';
 import { SkeletonBlock } from '../components/Skeleton';
 import { onDataChange } from '../lib/dataEvents';
-import { notifyError } from '../lib/toast';
+import { notifyError, notifyLoadError } from '../lib/toast';
 
 export default function PipelineTracker({ currentUser, setViewingLeadId, setCurrentTab }) {
   const [leads, setLeads] = useState([]);
@@ -33,10 +33,19 @@ export default function PipelineTracker({ currentUser, setViewingLeadId, setCurr
 
   const loadPipelineData = async () => {
     try {
-      setLeads(await dataService.getLeads());
-      setClosers((await dataService.getUsers()).filter(u => u.role === 'Sales Closer' && u.status === 'Active'));
+      const track = (promise, apply, label) =>
+        promise.then(apply).catch(err => notifyLoadError(err, `Could not load ${label}.`));
+
+      await Promise.all([
+        track(dataService.getLeads(), setLeads, 'pipeline data'),
+        track(
+          dataService.getUsers(),
+          (users) => setClosers(users.filter(u => u.role === 'Sales Closer' && u.status === 'Active')),
+          'team members'
+        ),
+      ]);
     } catch (err) {
-      notifyError(err, 'Could not load pipeline data.');
+      notifyLoadError(err, 'Could not load pipeline data.');
     } finally {
       setIsLoading(false);
     }

@@ -7,6 +7,7 @@ import { isDemoMode } from '../lib/demoMode';
 import { apiGet, apiPost, apiPatch, apiDelete, setTokens, clearTokens, getRefreshToken } from '../lib/apiClient';
 import { emitDataChange as broadcastDataChange } from '../lib/dataEvents';
 import { dedupedFetch, invalidateAll } from '../lib/requestCache';
+import { DEMO_MODULES, DEMO_ROLE_PERMISSIONS, LOCKED_ROLES } from '../lib/permissions';
 import { toLocalDateInput, toLocalTimeInput, toLocalDateTimeInput, fromLocalDateTimeInput } from '../lib/format';
 
 // Every mutation in this file announces itself through emitDataChange so the
@@ -58,6 +59,62 @@ async function fetchAllPagesUncached(path, params = {}) {
 function fetchAllPages(path, params = {}) {
   return dedupedFetch(path, params, () => fetchAllPagesUncached(path, params));
 }
+
+
+// Mirrors core.UserPreference's defaults for demo mode, which has no server.
+const DEFAULT_PREFERENCES = {
+  notify_new_lead_unassigned: true,
+  notify_closer_no_contact: true,
+  notify_missed_follow_up: true,
+  notify_lead_dormant: true,
+};
+
+/* ---- Roles & Permissions: demo-mode stand-ins ---- */
+// Demo mode has no server, so edits live in localStorage the way the rest of
+// the demo data does. Live mode never reaches these.
+const DEMO_ROLE_PERMS_KEY = 'beacon_role_permissions';
+
+const demoStoredRolePermissions = () => {
+  try {
+    const raw = localStorage.getItem(DEMO_ROLE_PERMS_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch { return null; }
+};
+
+const demoPermissionsFor = (role) => {
+  if (role === 'Super Admin') {
+    return DEMO_MODULES.flatMap(([key]) => [`${key}.view`, `${key}.manage`]);
+  }
+  const stored = demoStoredRolePermissions();
+  return (stored && stored[role]) || DEMO_ROLE_PERMISSIONS[role] || [];
+};
+
+const demoCatalog = () => ({
+  modules: DEMO_MODULES.map(([key, label, description]) => ({
+    key,
+    label,
+    description,
+    permissions: { view: `${key}.view`, manage: `${key}.manage` },
+  })),
+  actions: { view: 'View', manage: 'Create / Edit' },
+  lockedRoles: LOCKED_ROLES,
+});
+
+const demoRolePermissions = () =>
+  Object.keys(DEMO_ROLE_PERMISSIONS).map(role => ({
+    role,
+    permissions: demoPermissionsFor(role),
+    locked: LOCKED_ROLES.includes(role),
+    updated_by_name: null,
+  }));
+
+const saveDemoRolePermissions = (role, permissions) => {
+  const stored = demoStoredRolePermissions() || {};
+  stored[role] = permissions;
+  localStorage.setItem(DEMO_ROLE_PERMS_KEY, JSON.stringify(stored));
+  emitDataChange('rolePermissions');
+  return { role, permissions, locked: LOCKED_ROLES.includes(role) };
+};
 
 /* ---- Field mapping helpers ---- */
 
@@ -492,11 +549,21 @@ export const dataService = {
       // demo "login" is the role-switcher; accepts a user object or an email
       const user = typeof email === 'object' ? email : db.getUsers().find(u => u.email === email);
       if (user) db.setCurrentUser(user);
-      return Promise.resolve(user);
+      return Promise.resolve(user ? { ...user, permissions: demoPermissionsFor(user.role) } : user);
     }
     const res = await apiPost('/auth/login/', { email, password });
     setTokens({ access: res.access, refresh: res.refresh });
-    return userFromApi(res.user);
+    const user = userFromApi(res.user);
+    // The login payload carries no permissions, and the whole UI (nav, route
+    // guard, action buttons) now gates on them - so fetch the profile before
+    // handing back a user, or the first screen after signing in has an empty
+    // sidebar until something else happens to refresh it.
+    try {
+      const profile = await apiGet('/users/me/');
+      return { ...user, permissions: profile.permissions || [] };
+    } catch {
+      return { ...user, permissions: [] };
+    }
   },
 
   logout: async () => {
@@ -514,10 +581,34 @@ export const dataService = {
 
   getCurrentUserProfile: async () => {
     if (isDemoMode()) {
-      return Promise.resolve(db.getCurrentUser());
+      const user = db.getCurrentUser();
+      // Demo mode has no server to ask, so fall back to the seeded defaults
+      // for whatever role the demo user is signed in as.
+      return Promise.resolve(user ? { ...user, permissions: demoPermissionsFor(user.role) } : user);
     }
     const res = await apiGet('/users/me/');
-    return userFromApi(res);
+    // The API reports what this role may actually do, so the UI gates on that
+    // rather than on a second copy of the matrix that can drift from it.
+    return { ...userFromApi(res), permissions: res.permissions || [] };
+  },
+
+  /* ---- Roles & Permissions ---- */
+  getPermissionCatalog: async () => {
+    if (isDemoMode()) return Promise.resolve(demoCatalog());
+    return apiGet('/role-permissions/catalog/');
+  },
+
+  getRolePermissions: async () => {
+    if (isDemoMode()) return Promise.resolve(demoRolePermissions());
+    const list = await fetchAllPages('/role-permissions/');
+    return list;
+  },
+
+  updateRolePermissions: async (role, permissions) => {
+    if (isDemoMode()) return Promise.resolve(saveDemoRolePermissions(role, permissions));
+    const res = await apiPatch(`/role-permissions/${encodeURIComponent(role)}/`, { permissions });
+    emitDataChange('rolePermissions');
+    return res;
   },
 
   /* ---- Users ---- */
@@ -883,6 +974,27 @@ export const dataService = {
     const res = await apiPatch('/settings/', payload);
     emitDataChange('settings');
     return settingsFromApi(res);
+  },
+
+  /* ---- My preferences (per user, not company settings) ---- */
+  getMyPreferences: async () => {
+    if (isDemoMode()) {
+      try {
+        const raw = localStorage.getItem('beacon_my_preferences');
+        return Promise.resolve(raw ? JSON.parse(raw) : { ...DEFAULT_PREFERENCES });
+      } catch {
+        return Promise.resolve({ ...DEFAULT_PREFERENCES });
+      }
+    }
+    return apiGet('/users/preferences/');
+  },
+
+  saveMyPreferences: async (preferences) => {
+    if (isDemoMode()) {
+      localStorage.setItem('beacon_my_preferences', JSON.stringify(preferences));
+      return Promise.resolve(preferences);
+    }
+    return apiPatch('/users/preferences/', preferences);
   },
 
   /* ---- Audit log ---- */
