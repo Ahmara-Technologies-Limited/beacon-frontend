@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { Phone, Calendar, Clock, User, X, Check, Eye, AlertTriangle, Filter } from 'lucide-react';
-import { db } from '../data/mockData';
 import { dataService } from '../data/dataService';
 import { getPollInterval } from '../lib/demoMode';
 import { usePolling } from '../lib/usePolling';
@@ -57,14 +56,14 @@ export default function FollowUp({ currentUser, setViewingLeadId, setCurrentTab 
     const closerUser = allUsers.find(u => u.id === lead.assignedCloserId);
     const closerName = closerUser?.name || "Closer";
 
-    db.addNotification({
+    dataService.addNotification({
       type: "Overdue Warning",
       recipientId: lead.assignedCloserId,
       message: `Warning: Follow-up for lead '${lead.name}' is overdue! Please contact them immediately.`,
       link: `/follow-ups`
     });
 
-    db.logAudit(`Admin sent overdue follow-up warning to closer ${closerName} for lead '${lead.name}'.`);
+    dataService.logAudit(`Admin sent overdue follow-up warning to closer ${closerName} for lead '${lead.name}'.`);
     notifySuccess(`Overdue follow-up warning sent to closer ${closerName} successfully.`);
   };
 

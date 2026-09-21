@@ -174,6 +174,7 @@ const leadFromApi = (l) => {
     propertyInterest: l.property_interest,
     nextAction: l.next_action,
     followUpDate: toLocalDateTimeInput(l.follow_up_date),
+    messagingOptOut: l.messaging_opt_out ?? false,
     lastActivityDate: l.last_activity_date,
     dateCreated: l.created_on,
     status: l.is_active === false ? 'Archived' : (l.status || 'Active'),
@@ -995,6 +996,58 @@ export const dataService = {
       return Promise.resolve(preferences);
     }
     return apiPatch('/users/preferences/', preferences);
+  },
+
+  /* ---- Web push ---- */
+  // Demo mode has no push server, so these report "unavailable" and the
+  // Settings control explains itself rather than failing on click.
+  getPushStatus: async (endpoint) => {
+    if (isDemoMode()) {
+      return Promise.resolve({ available: false, publicKey: '', subscribed: false, deviceCount: 0 });
+    }
+    const query = endpoint ? `?endpoint=${encodeURIComponent(endpoint)}` : '';
+    return apiGet(`/notifications/push/subscription/${query}`);
+  },
+
+  savePushSubscription: async (subscription) => {
+    if (isDemoMode()) return Promise.resolve({ subscribed: false });
+    return apiPost('/notifications/push/subscription/', { subscription });
+  },
+
+  deletePushSubscription: async (endpoint) => {
+    if (isDemoMode()) return Promise.resolve({ subscribed: false });
+    return apiDelete('/notifications/push/subscription/', { endpoint });
+  },
+
+  sendTestPush: async () => {
+    if (isDemoMode()) return Promise.resolve({ delivered: 0 });
+    return apiPost('/notifications/push/test/');
+  },
+
+  /* ---- Bulk messaging ---- */
+  getMessagingStatus: async () => {
+    if (isDemoMode()) return Promise.resolve({ provider: 'console', live: false, results: [] });
+    return apiGet('/messaging/campaigns/');
+  },
+
+  sendBulkMessage: async ({ channel, body, leadIds }) => {
+    if (isDemoMode()) {
+      // Demo mode has no provider; report the shape the UI expects so the
+      // whole flow can be walked through without sending anything.
+      db.logAudit(`Bulk ${channel} to ${leadIds.length} lead(s) (demo mode - not sent).`);
+      return Promise.resolve({
+        channel, body, total: leadIds.length, sent: 0, failed: 0,
+        skipped: leadIds.length, recipients: [],
+      });
+    }
+    const res = await apiPost('/messaging/campaigns/', {
+      channel, body, lead_ids: leadIds,
+    });
+    // A campaign writes an activity row per lead, so lead lists and timelines
+    // are now out of date.
+    emitDataChange('activities');
+    emitDataChange('leads');
+    return res;
   },
 
   /* ---- Audit log ---- */

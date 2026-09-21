@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
-import { db } from '../data/mockData';
 import { dataService } from '../data/dataService';
 import { notifySuccess, notifyError } from '../lib/toast';
 import { confirmDialog } from '../lib/confirm';

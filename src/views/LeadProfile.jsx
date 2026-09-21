@@ -4,7 +4,6 @@ import {
   User, Award, FileText, CheckCircle, AlertTriangle, AlertCircle,
   Trash2, Archive, RotateCcw, Clock, Plus, Edit3, Check, X, Star, Sparkles, UserPlus, Building2
 } from 'lucide-react';
-import { db } from '../data/mockData';
 import { dataService } from '../data/dataService';
 import { getPollInterval } from '../lib/demoMode';
 import { usePolling } from '../lib/usePolling';
@@ -74,6 +73,7 @@ export default function LeadProfile({
   const [assignedCloser, setAssignedCloser] = useState(null);
   const [allLeads, setAllLeads] = useState([]);
   const [allUsers, setAllUsers] = useState([]);
+  const [properties, setProperties] = useState([]);
 
   // History Tab & Status update states
   const [activeHistoryTab, setActiveHistoryTab] = useState('conversation');
@@ -159,16 +159,18 @@ export default function LeadProfile({
           return [];
         });
 
-      const [activeLeads, archivedLeads, allActivitiesRaw, allInspectionsRaw, allUsersRaw] = await Promise.all([
+      const [activeLeads, archivedLeads, allActivitiesRaw, allInspectionsRaw, allUsersRaw, allPropertiesRaw] = await Promise.all([
         optional(dataService.getLeads(), 'leads'),
         optional(dataService.getArchivedLeads(), 'archived leads'),
         optional(dataService.getActivities(), 'activity history'),
         optional(dataService.getInspections(), 'inspections'),
         optional(dataService.getUsers(), 'team members'),
+        optional(dataService.getProperties(), 'properties'),
       ]);
 
       setAllLeads(activeLeads.concat(archivedLeads));
       setAllUsers(allUsersRaw);
+      setProperties(allPropertiesRaw || []);
 
       const foundLead = activeLeads.find(l => l.id === leadId) || archivedLeads.find(l => l.id === leadId);
 
@@ -216,7 +218,7 @@ export default function LeadProfile({
   useResetOnChange(leadId, () => setIsLoading(true));
 
   useEffect(() => {
-    const unsubscribe = onDataChange(['leads', 'inspections', 'activities', 'finance'], () => loadLeadData());
+    const unsubscribe = onDataChange(['leads', 'inspections', 'activities', 'finance', 'properties'], () => loadLeadData());
     return unsubscribe;
   }, [leadId]);
 
@@ -458,7 +460,7 @@ export default function LeadProfile({
       await dataService.savePaymentPlan(lead.id, payPlan, { stage: 'Payment' });
       loadLeadData();
       setShowPayPlanForm(false);
-      db.logAudit(`Payment plan configured for lead ${lead.name} at net price of ${formatPrice(netPrice)}.`);
+      dataService.logAudit(`Payment plan configured for lead ${lead.name} at net price of ${formatPrice(netPrice)}.`);
       notifySuccess('Payment plan created successfully.');
 
       // Record discount in ledger if applicable
@@ -582,7 +584,7 @@ export default function LeadProfile({
   };
 
   const renderPropertyCard = () => {
-    const allProperties = db.getProperties();
+    const allProperties = properties;
     let matchingProperty = null;
 
     if (lead.propertyInterest) {
@@ -1594,7 +1596,7 @@ export default function LeadProfile({
                         const updated = { ...lead, relationshipStatus: e.target.value };
                         dataService.saveLead(updated);
                         loadLeadData();
-                        db.logAudit(`Client ${lead.name} relationship status updated to ${e.target.value}`);
+                        dataService.logAudit(`Client ${lead.name} relationship status updated to ${e.target.value}`);
                       }}
                     >
                       <option value="Active">Active</option>
@@ -1620,7 +1622,7 @@ export default function LeadProfile({
                             const updated = { ...lead, satisfactionScore: star };
                             dataService.saveLead(updated);
                             loadLeadData();
-                            db.logAudit(`Client ${lead.name} satisfaction score updated to ${star} stars`);
+                            dataService.logAudit(`Client ${lead.name} satisfaction score updated to ${star} stars`);
                           }}
                           title={`Rate ${star} Stars`}
                         >
@@ -1649,7 +1651,7 @@ export default function LeadProfile({
                         const updated = { ...lead, referralStatus: nextStatus };
                         dataService.saveLead(updated);
                         loadLeadData();
-                        db.logAudit(`Client ${lead.name} referral status updated to ${nextStatus}`);
+                        dataService.logAudit(`Client ${lead.name} referral status updated to ${nextStatus}`);
                         dataService.saveActivity({
                           leadId: lead.id,
                           type: "Internal Note",
@@ -1682,7 +1684,7 @@ export default function LeadProfile({
                         const updated = { ...lead, lastContactDate: e.target.value };
                         dataService.saveLead(updated);
                         loadLeadData();
-                        db.logAudit(`Client ${lead.name} last contact date updated to ${e.target.value}`);
+                        dataService.logAudit(`Client ${lead.name} last contact date updated to ${e.target.value}`);
                       }}
                     />
                   </div>

@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Search, Edit2, ToggleLeft, ToggleRight, Key, X, AlertTriangle, Filter, ShieldCheck, SlidersHorizontal } from 'lucide-react';
-import { db } from '../data/mockData';
 import { dataService } from '../data/dataService';
 import { isDemoMode, getPollInterval } from '../lib/demoMode';
 import { usePolling } from '../lib/usePolling';
@@ -240,7 +239,7 @@ export default function UserManagement({ currentUser }) {
   const handleTriggerResetPassword = async (user) => {
     if (isDemoMode()) {
       notifySuccess(`A password reset link has been successfully dispatched to ${user.email}. Link will expire in 60 minutes.`);
-      db.logAudit(`Triggered password reset link for user ${user.name} (${user.email}).`);
+      dataService.logAudit(`Triggered password reset link for user ${user.name} (${user.email}).`);
       return;
     }
     try {

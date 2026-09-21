@@ -7,7 +7,6 @@ import {
   AlertCircle, Phone, Calendar, CalendarRange, Clipboard, TrendingUp, CheckCircle, 
   Clock, DollarSign, Users, ShieldAlert, Plus, Check, AlertTriangle 
 } from 'lucide-react';
-import { db } from '../data/mockData';
 import { dataService } from '../data/dataService';
 import { getPollInterval } from '../lib/demoMode';
 import { usePolling } from '../lib/usePolling';
@@ -21,10 +20,12 @@ export default function Dashboard({ currentUser, setCurrentTab, setViewingLeadId
   const [inspections, setInspections] = useState([]);
   const [activities, setActivities] = useState([]);
   const [users, setUsers] = useState([]);
-  // Read once, lazily, at mount: db.getSettings() is a synchronous read of a
-  // local store, so pulling it in through an effect only bought an extra
-  // render where the thresholds below were undefined.
-  const [settings] = useState(() => db.getSettings());
+  const [settings, setSettings] = useState({
+    contactHoursLimit: 24,
+    dormancyDaysThreshold: 30,
+    inspectionConfirmationHours: 2,
+    remindersTiming: '2 hours before',
+  });
 
   const [dateFilter, setDateFilter] = useState('This Month');
   const [staffFilter, setStaffFilter] = useState('All');
@@ -86,11 +87,12 @@ export default function Dashboard({ currentUser, setCurrentTab, setViewingLeadId
       track(dataService.getInspections(), setInspections, 'inspections'),
       track(dataService.getActivities(), setActivities, 'activities'),
       track(dataService.getUsers(), setUsers, 'team members'),
+      track(dataService.getSettings(), (s) => s && setSettings(s), 'settings'),
     ]);
   };
 
   useEffect(() => {
-    const unsubscribe = onDataChange(['leads', 'inspections', 'activities', 'users'], () => loadDashboardData());
+    const unsubscribe = onDataChange(['leads', 'inspections', 'activities', 'users', 'settings'], () => loadDashboardData());
     return unsubscribe;
   }, [])
 
@@ -1359,11 +1361,11 @@ export default function Dashboard({ currentUser, setCurrentTab, setViewingLeadId
                   </p>
                   <div style={{ display: 'flex', gap: '12px' }}>
                     <button className="btn btn-primary" onClick={() => {
-                      db.logAudit(`Relationship Manager sent WhatsApp newsletter broadcast to all ${clients.length} clients.`);
+                      dataService.logAudit(`Relationship Manager sent WhatsApp newsletter broadcast to all ${clients.length} clients.`);
                       notifySuccess("Broadcast sent successfully to WhatsApp gateway simulation!");
                     }}>Simulate WhatsApp Newsletter Broadcast</button>
                     <button className="btn btn-secondary" onClick={() => {
-                      db.logAudit(`Relationship Manager sent email campaign broadcast to all ${clients.length} clients.`);
+                      dataService.logAudit(`Relationship Manager sent email campaign broadcast to all ${clients.length} clients.`);
                       notifySuccess("Email Campaign launched successfully in simulation!");
                     }}>Launch Email Portfolio Campaign</button>
                   </div>
@@ -1430,7 +1432,7 @@ export default function Dashboard({ currentUser, setCurrentTab, setViewingLeadId
         };
         dataService.saveLead(updated);
         notifySuccess(`Lead ${lead.name} successfully assigned to closer ${closer.name} (${closer.branch || 'No Branch'}).`);
-        db.addNotification({
+        dataService.addNotification({
           type: "Lead Assigned",
           message: `Operations assigned lead '${lead.name}' to you.`,
           recipientId: closerId,
@@ -1744,7 +1746,7 @@ export default function Dashboard({ currentUser, setCurrentTab, setViewingLeadId
     const handleCoachCloser = (closerName) => {
       const note = prompt(`Enter coaching instructions/feedback for ${closerName}:`);
       if (note && note.trim() !== '') {
-        db.logAudit(`Branch Manager coached closer ${closerName}: "${note}"`);
+        dataService.logAudit(`Branch Manager coached closer ${closerName}: "${note}"`);
         notifySuccess(`Coaching note successfully dispatched to closer performance records.`);
       }
     };

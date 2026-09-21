@@ -3,6 +3,7 @@ import { Save, Check, Lock, User as UserIcon, Building2 } from 'lucide-react';
 import { dataService } from '../data/dataService';
 import { notifySuccess, notifyError, notifyLoadError } from '../lib/toast';
 import { can } from '../lib/permissions';
+import { getPushStatus, enablePush, disablePush, pushSupported } from '../lib/push';
 
 // Settings, split by who a setting belongs to.
 //
@@ -56,6 +57,9 @@ export default function Settings({ currentUser, onUserChange }) {
   const [preferences, setPreferences] = useState(null);
   const [isSavingPreference, setIsSavingPreference] = useState(false);
 
+  const [push, setPush] = useState(null);
+  const [isTogglingPush, setIsTogglingPush] = useState(false);
+
   const [formData, setFormData] = useState({
     contactHoursLimit: 24,
     dormancyDaysThreshold: 7,
@@ -80,7 +84,70 @@ export default function Settings({ currentUser, onUserChange }) {
     dataService.getMyPreferences()
       .then(setPreferences)
       .catch(err => notifyLoadError(err, 'Could not load your notification preferences.'));
+
+    getPushStatus().then(setPush).catch(() => setPush(null));
   }, []);
+
+  // Must run from the click itself: browsers refuse a permission prompt that
+  // is not tied to a user gesture, and iOS is the strictest about it.
+  const handlePushToggle = async () => {
+    if (isTogglingPush) return;
+    setIsTogglingPush(true);
+    try {
+      if (push?.subscribed) {
+        await disablePush();
+        notifySuccess('Push notifications turned off for this device.');
+      } else {
+        await enablePush();
+        notifySuccess('Push notifications turned on for this device.');
+      }
+      setPush(await getPushStatus());
+    } catch (err) {
+      notifyError(err, 'Could not change push notifications on this device.');
+    } finally {
+      setIsTogglingPush(false);
+    }
+  };
+
+  const handleTestPush = async () => {
+    try {
+      const { delivered } = await dataService.sendTestPush();
+      if (delivered > 0) {
+        notifySuccess(`Test sent to ${delivered} device${delivered === 1 ? '' : 's'}.`);
+      } else {
+        notifyError(null, 'The test was created but no device accepted it. Try turning push off and on again.');
+      }
+    } catch (err) {
+      notifyError(err, 'Could not send a test notification.');
+    }
+  };
+
+  // Each of these fails differently, so each says something different.
+  const pushExplanation = () => {
+    if (!pushSupported()) {
+      return 'This browser cannot receive push notifications. On iPhone, add Beacon CRM to your home screen first - Safari only supports push for installed apps.';
+    }
+    if (push && !push.workerReady) {
+      return 'Push needs the installed app or a secure (https) connection - it is unavailable on this address.';
+    }
+    if (push && !push.available) {
+      return 'Push notifications are not configured on the server yet, so there is nothing to turn on.';
+    }
+    if (push?.permission === 'denied') {
+      return 'Notifications are blocked for this site. Allow them in your browser settings, then turn this on.';
+    }
+    if (push?.subscribed) {
+      return `Alerts will reach this device even when Beacon CRM is closed.${push.deviceCount > 1 ? ` You have ${push.deviceCount} devices receiving push.` : ''}`;
+    }
+    return 'Get the alerts above on this device even when Beacon CRM is closed.';
+  };
+
+  const pushDisabled =
+    isTogglingPush ||
+    !pushSupported() ||
+    !push?.workerReady ||
+    !push?.available ||
+    push?.permission === 'denied';
 
   // Saved on change rather than behind a Save button: a switch that needs
   // confirming elsewhere on the page is how the old toggles ended up silently
@@ -313,6 +380,28 @@ export default function Settings({ currentUser, onUserChange }) {
                 ))}
               </div>
             )}
+
+            <div className="push-block">
+              <div className="toggle-setting-row">
+                <div className="toggle-text-col">
+                  <strong>Push to this device</strong>
+                  <span>{pushExplanation()}</span>
+                </div>
+                <input
+                  type="checkbox"
+                  className="ios-switch"
+                  checked={!!push?.subscribed}
+                  onChange={handlePushToggle}
+                  disabled={pushDisabled}
+                  aria-label="Push notifications on this device"
+                />
+              </div>
+              {push?.subscribed && (
+                <button type="button" className="btn btn-sm push-test-btn" onClick={handleTestPush}>
+                  Send a test notification
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -489,6 +578,18 @@ export default function Settings({ currentUser, onUserChange }) {
         .ios-switch:checked::before { transform: translateX(20px); }
 
         .toggles-list { display: flex; flex-direction: column; gap: 4px; }
+
+        /* Separated from the per-alert switches above: those choose which
+           alerts exist for you, this chooses whether this particular device
+           hears them. */
+        .push-block {
+          margin-top: 16px;
+          padding-top: 4px;
+          border-top: 1px solid var(--border-color);
+        }
+
+        .push-block .ios-switch:disabled { opacity: 0.4; cursor: not-allowed; }
+        .push-test-btn { margin-top: 4px; }
 
         .toggle-setting-row {
           display: flex;

@@ -55,9 +55,15 @@ export const TAB_REQUIREMENTS = {
   inspections: 'inspections.view',
   properties: 'properties.view',
   docHub: 'finance.view',
-  reports: 'leads.view',
+  // Reporting is its own permission rather than "can read leads": an
+  // Inspection Officer can read the leads they inspect, which was enough to
+  // put a Reports tab in their sidebar.
+  reports: 'reports.view',
   users: 'users.manage',
-  roles: 'users.view',
+  // Viewing the permission matrix is an administration task. users.view is
+  // held by every role - it is what resolves staff names on a lead - so
+  // gating on it showed Roles & Permissions to everybody.
+  roles: 'users.manage',
   audit: 'audit.view',
 };
 
@@ -158,13 +164,17 @@ const p = (...pairs) => pairs.flatMap(([m, ...actions]) => actions.map(a => `${m
 export const DEMO_ROLE_PERMISSIONS = {
   [GM]: p(['leads', 'view', 'manage'], ['inspections', 'view', 'manage'], ['activities', 'view', 'manage'],
     ['properties', 'view', 'manage'], ['paymentPlans', 'view', 'manage'], ['finance', 'view', 'manage'],
+    ['messaging', 'view', 'manage'], ['reports', 'view'],
     ['users', 'view', 'manage'], ['settings', 'view', 'manage'], ['audit', 'view', 'manage']),
   [HO]: p(['leads', 'view', 'manage'], ['inspections', 'view', 'manage'], ['activities', 'view', 'manage'],
     ['properties', 'view', 'manage'], ['paymentPlans', 'view', 'manage'], ['finance', 'view', 'manage'],
+    ['messaging', 'view', 'manage'], ['reports', 'view'],
     ['users', 'view'], ['settings', 'view']),
   [BM]: p(['leads', 'view', 'manage'], ['inspections', 'view', 'manage'], ['activities', 'view', 'manage'],
+    ['messaging', 'view', 'manage'], ['reports', 'view'],
     ['paymentPlans', 'view'], ['users', 'view'], ['settings', 'view']),
   [SC]: p(['leads', 'view', 'manage'], ['inspections', 'view', 'manage'], ['activities', 'view', 'manage'],
+    ['messaging', 'view', 'manage'],
     ['properties', 'view'], ['paymentPlans', 'view'], ['users', 'view'], ['settings', 'view']),
   [IO]: p(['leads', 'view'], ['inspections', 'view', 'manage'], ['activities', 'view'],
     ['properties', 'view'], ['users', 'view'], ['settings', 'view']),
@@ -172,5 +182,6 @@ export const DEMO_ROLE_PERMISSIONS = {
     ['paymentPlans', 'view', 'manage'], ['finance', 'view', 'manage'], ['docDesk', 'view', 'manage'],
     ['users', 'view'], ['settings', 'view']),
   [RM]: p(['leads', 'view', 'manage'], ['activities', 'view', 'manage'], ['properties', 'view'],
+    ['messaging', 'view', 'manage'],
     ['paymentPlans', 'view'], ['users', 'view'], ['settings', 'view']),
 };

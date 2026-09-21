@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { ShieldCheck, Search, Trash2, X } from 'lucide-react';
-import { db } from '../data/mockData';
 import { dataService } from '../data/dataService';
 import { getPollInterval } from '../lib/demoMode';
 import { usePolling } from '../lib/usePolling';

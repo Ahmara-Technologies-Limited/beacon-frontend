@@ -43,9 +43,19 @@ const MODULE_ENDPOINTS = {
   users: '/users/',
   settings: '/settings/',
   audit: '/audit-logs/',
-  // docDesk guards two actions on a lead rather than a list endpoint, so it
-  // has no GET to probe; its enforcement is covered by the backend tests.
+  messaging: '/messaging/campaigns/',
 };
+
+// Modules with no list endpoint to probe. Named explicitly so a genuinely
+// unwired permission still fails the check below rather than hiding here.
+const UI_ONLY_MODULES = new Set([
+  // Two actions on a lead rather than a list endpoint; enforcement lives in
+  // LeadViewSet.send_application_form / send_offer_letter.
+  'docDesk',
+  // Reports are computed in the browser from leads the API already scopes,
+  // so this permission gates the page rather than an endpoint.
+  'reports',
+]);
 
 const failures = [];
 const note = (msg) => failures.push(msg);
@@ -69,7 +79,7 @@ const adminToken = await login(ACCOUNTS['Super Admin']);
 const catalog = await (await authed(adminToken, '/role-permissions/catalog/')).json();
 
 for (const module of catalog.modules) {
-  if (!(module.key in MODULE_ENDPOINTS) && module.key !== 'docDesk') {
+  if (!(module.key in MODULE_ENDPOINTS) && !UI_ONLY_MODULES.has(module.key)) {
     note(`catalogue offers module "${module.key}" that this script cannot probe - add it to MODULE_ENDPOINTS`);
   }
 }

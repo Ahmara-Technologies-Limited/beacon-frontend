@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Download, LayoutList, Calendar as CalendarIcon, X, Check, AlertCircle, Filter, ArrowLeft, Phone, Mail, MessageSquare, MapPin } from 'lucide-react';
-import { db } from '../data/mockData';
 import { dataService } from '../data/dataService';
 import { getPollInterval } from '../lib/demoMode';
 import { usePolling } from '../lib/usePolling';
@@ -229,7 +228,7 @@ export default function Inspections({
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    db.logAudit(`Exported filtered inspections log of ${filteredInspections.length} entries to CSV.`);
+    dataService.logAudit(`Exported filtered inspections log of ${filteredInspections.length} entries to CSV.`);
   };
 
   const getStatusBadgeClass = (status) => {

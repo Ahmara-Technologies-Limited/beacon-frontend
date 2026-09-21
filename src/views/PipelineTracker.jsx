@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { db } from '../data/mockData';
 import { dataService } from '../data/dataService';
 import { getPollInterval } from '../lib/demoMode';
 import { usePolling } from '../lib/usePolling';

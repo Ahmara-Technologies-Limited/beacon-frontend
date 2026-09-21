@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { db } from '../data/mockData';
 import { dataService } from '../data/dataService';
 import { getPollInterval } from '../lib/demoMode';
 import { usePolling } from '../lib/usePolling';
@@ -120,7 +119,7 @@ export default function DocOfficerHub({ currentUser }) {
       });
 
       setRefunds(prev => [newRefund, ...prev]);
-      db.logAudit(`Refund request for ${formatPrice(newRefund.amount)} logged for client ${newRefund.clientName}.`); // demo-only; live mode logs server-side via AuditLogMixin
+      dataService.logAudit(`Refund request for ${formatPrice(newRefund.amount)} logged for client ${newRefund.clientName}.`); // demo-only; live mode logs server-side via AuditLogMixin
 
       setRefundModalOpen(false);
       setRefundData({ leadId: '', amount: '', reason: '', letterText: '', fileName: '', fileSize: '' });
@@ -134,7 +133,7 @@ export default function DocOfficerHub({ currentUser }) {
     const target = refunds.find(r => r.id === id);
     try {
       await dataService.updateRefundStatus(id, newStatus);
-      if (target) db.logAudit(`Refund request status updated to ${newStatus} for ${target.clientName}.`); // demo-only; live mode logs server-side
+      if (target) dataService.logAudit(`Refund request status updated to ${newStatus} for ${target.clientName}.`); // demo-only; live mode logs server-side
       setRefunds(prev => prev.map(r => (r.id === id ? { ...r, status: newStatus } : r)));
       notifySuccess(`Refund status updated to ${newStatus}.`);
     } catch (err) {
@@ -146,7 +145,7 @@ export default function DocOfficerHub({ currentUser }) {
     const target = commissions.find(c => c.id === id);
     try {
       await dataService.updateCommissionStatus(id, newStatus);
-      if (target) db.logAudit(`Commission payout status updated to ${newStatus} for closer ${target.closerName}.`); // demo-only; live mode logs server-side
+      if (target) dataService.logAudit(`Commission payout status updated to ${newStatus} for closer ${target.closerName}.`); // demo-only; live mode logs server-side
       setCommissions(prev => prev.map(c => (c.id === id ? { ...c, status: newStatus } : c)));
       notifySuccess(`Commission status updated to ${newStatus}.`);
     } catch (err) {

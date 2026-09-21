@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Plus, Upload, Download, Search, SlidersHorizontal, CheckSquare, 
-  Square, Edit2, AlertCircle, Flag, Ban, Check, Filter, X 
+  Square, Edit2, AlertCircle, Flag, Ban, Check, Filter, X, MessageSquare 
 } from 'lucide-react';
-import { db } from '../data/mockData';
 import { dataService } from '../data/dataService';
 import { getPollInterval } from '../lib/demoMode';
 import { usePolling } from '../lib/usePolling';
@@ -14,6 +13,8 @@ import { formatDateTime } from '../lib/format';
 import Pagination, { paginate } from '../components/Pagination';
 import { useResetOnChange } from '../lib/useResetOnChange';
 import { useRevealCreated, hides } from '../lib/useRevealCreated';
+import { can } from '../lib/permissions';
+import BulkMessageModal from '../components/BulkMessageModal';
 
 const PAGE_SIZE = 25;
 
@@ -51,6 +52,7 @@ export default function LeadManagement({
   const [bulkCloserId, setBulkCloserId] = useState('');
   const [bulkStage, setBulkStage] = useState('');
   const [bulkStatusMsg, setBulkStatusMsg] = useState('');
+  const [showMessageModal, setShowMessageModal] = useState(false);
 
   const [importSummary, setImportSummary] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -245,7 +247,7 @@ export default function LeadManagement({
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    db.logAudit(`Exported filtered lead list of ${filteredLeads.length} items to CSV.`);
+    dataService.logAudit(`Exported filtered lead list of ${filteredLeads.length} items to CSV.`);
   };
 
   const handleCSVImport = (event) => {
@@ -312,7 +314,7 @@ export default function LeadManagement({
 
       setImportSummary({ imported: importedCount, skipped: skippedCount });
       loadLeads();
-      db.logAudit(`CSV file uploaded. Imported ${importedCount} leads, skipped ${skippedCount} rows.`);
+      dataService.logAudit(`CSV file uploaded. Imported ${importedCount} leads, skipped ${skippedCount} rows.`);
     };
     reader.readAsText(file);
     event.target.value = null;
@@ -571,6 +573,15 @@ export default function LeadManagement({
               </div>
             )}
 
+            {can(currentUser, 'messaging.manage') && (
+              <div className="bulk-action-control">
+                <button className="btn btn-sm btn-message" onClick={() => setShowMessageModal(true)}>
+                  <MessageSquare size={14} />
+                  <span>Send Message</span>
+                </button>
+              </div>
+            )}
+
             <div className="bulk-action-control">
               <select 
                 className="form-control select-sm" 
@@ -589,6 +600,25 @@ export default function LeadManagement({
           </div>
         </div>
       )}
+
+      <BulkMessageModal
+        isOpen={showMessageModal}
+        onClose={() => setShowMessageModal(false)}
+        leads={filteredLeads
+          .filter(l => selectedLeadIds.includes(l.id))
+          .map(l => ({
+            ...l,
+            closerName: closers.find(c => c.id === l.assignedCloserId)?.name || 'our team',
+          }))}
+        onSent={() => {
+          // Deliberately leaves the modal open: the send summary - how many
+          // reached, failed or were skipped, and why - is the most useful
+          // part, and closing on success threw it away. The selection is
+          // cleared so the same batch cannot be sent twice by habit.
+          setSelectedLeadIds([]);
+          loadLeads();
+        }}
+      />
 
       {bulkStatusMsg && (
         <div className="bulk-status-toast">

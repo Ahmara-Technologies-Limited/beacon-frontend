@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#D4262A" />
+    <title>Offline - Beacon CRM</title>
+    <!--
+      Served by the service worker when a navigation fails. Plain HTML with no
+      dependencies: it has to render from cache with no network at all, which
+      rules out the app bundle and any web font.
+    -->
+    <style>
+      :root { color-scheme: light; }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+        background: #F9FAFB;
+        color: #101828;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      }
+      .card {
+        background: #fff;
+        border: 1px solid #EAECF0;
+        border-radius: 12px;
+        box-shadow: 0 1px 3px rgba(16, 24, 40, 0.08);
+        padding: 32px;
+        max-width: 420px;
+        width: 100%;
+        text-align: center;
+      }
+      h1 { font-size: 20px; margin: 20px 0 8px; }
+      p { font-size: 14px; line-height: 1.6; color: #475467; margin: 0 0 8px; }
+      .hint { font-size: 13px; color: #667085; margin-top: 16px; }
+      button {
+        margin-top: 24px;
+        width: 100%;
+        padding: 11px 16px;
+        font: inherit;
+        font-weight: 600;
+        font-size: 14px;
+        color: #fff;
+        background: #D4262A;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+      }
+      button:hover { background: #B31E22; }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <svg width="56" height="56" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+        <circle cx="16" cy="16" r="14" fill="#D4262A" />
+        <path d="M16 8V24M8 16H24M11.5 11.5L20.5 20.5M20.5 11.5L11.5 20.5" stroke="white" stroke-width="2.5" stroke-linecap="round" />
+      </svg>
+      <h1>You're offline</h1>
+      <p>Beacon CRM needs a connection to show leads, inspections and documents.</p>
+      <p class="hint">
+        Nothing you were working on has been sent. Reconnect and try again before
+        re-entering anything.
+      </p>
+      <button type="button" onclick="location.reload()">Try again</button>
+    </div>
+  </body>
+</html>

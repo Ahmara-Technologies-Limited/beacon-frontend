@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
-import { db } from '../data/mockData';
 import { dataService } from '../data/dataService';
 import { notifySuccess, notifyError, notifyLoadError } from '../lib/toast';
 import { confirmDialog } from '../lib/confirm';
@@ -113,7 +112,13 @@ export default function LeadModal({ leadId, isOpen, onClose, onSaveComplete, onS
             category: lead.category,
             stage: lead.stage,
             temperature: lead.temperature,
-            assignedCloserId: lead.assignedCloserId || '',
+            // A locked field must not disagree with the value being saved:
+            // the disabled input shows the signed-in closer's name, so the
+            // form has to carry their id too rather than whatever the record
+            // happened to hold.
+            assignedCloserId: currentUser.role === 'Sales Closer'
+              ? currentUser.id
+              : (lead.assignedCloserId || ''),
             branch: lead.branch || '',
             budget: lead.budget || '',
             propertyInterest: lead.propertyInterest || '',

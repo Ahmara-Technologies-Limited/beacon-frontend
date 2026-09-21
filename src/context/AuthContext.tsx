@@ -100,6 +100,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       localStorage.removeItem('beacon_current_user');
       clearTokens();
       setCurrentUserState(null);
+      // Nothing user-specific is cached by the service worker today, and
+      // signing out is where that has to be made true rather than assumed -
+      // on a shared phone the next person is a different user.
+      navigator.serviceWorker?.controller?.postMessage({ type: 'CLEAR_CACHES' });
     }
   };
 

@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
-import { db } from '../data/mockData';
 import { dataService } from '../data/dataService';
 import { notifySuccess, notifyError, notifyLoadError } from '../lib/toast';
 import { confirmDialog } from '../lib/confirm';
@@ -86,8 +85,14 @@ export default function InspectionModal({ leadId, inspectionId, isOpen, onClose,
               date: inspection.date,
               time: inspection.time,
               meetingPoint: inspection.meetingPoint,
-              assignedCloserId: inspection.assignedCloserId,
-              inspectionOfficerId: inspection.inspectionOfficerId,
+              assignedCloserId:
+                currentUser.role === 'Sales Closer'
+                  ? currentUser.id
+                  : inspection.assignedCloserId,
+              inspectionOfficerId:
+                currentUser.role === 'Inspection Officer'
+                  ? currentUser.id
+                  : inspection.inspectionOfficerId,
               status: inspection.status,
               internalNotes: inspection.internalNotes || '',
               noShowNote: inspection.noShowNote || '',
@@ -120,8 +125,17 @@ export default function InspectionModal({ leadId, inspectionId, isOpen, onClose,
           date: '',
           time: '',
           meetingPoint: '',
-          assignedCloserId: defaultCloserId,
-          inspectionOfficerId: activeOfficers.length > 0 ? activeOfficers[0].id : '',
+          // Whoever is signed in owns their own slot on this form: a closer
+          // books for themselves, an officer is assigned to themselves. The
+          // officer field defaulted to whichever officer happened to be first
+          // in the list *and* was locked, so an Inspection Officer booked
+          // tours in a colleague's name with no way to correct it.
+          assignedCloserId:
+            currentUser.role === 'Sales Closer' ? currentUser.id : defaultCloserId,
+          inspectionOfficerId:
+            currentUser.role === 'Inspection Officer'
+              ? currentUser.id
+              : (activeOfficers.length > 0 ? activeOfficers[0].id : ''),
           status: 'Scheduled',
           internalNotes: '',
           noShowNote: '',

@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line } from 'recharts';
 import { Download, Mail, Calendar, BarChart3, PieChart, X } from 'lucide-react';
-import { db } from '../data/mockData';
+import { dataService } from '../data/dataService';
+import { onDataChange } from '../lib/dataEvents';
 import { getPollInterval } from '../lib/demoMode';
 import { usePolling } from '../lib/usePolling';
-import { notifySuccess, notifyError } from '../lib/toast';
+import { notifySuccess, notifyError, notifyLoadError } from '../lib/toast';
 
 export default function Reports({ currentUser }) {
   const [reportType, setReportType] = useState('Lead Summary');
@@ -20,17 +21,29 @@ export default function Reports({ currentUser }) {
   const [scheduleEmail, setScheduleEmail] = useState('');
   const [scheduleFrequency, setScheduleFrequency] = useState('Weekly');
 
-  const loadReportData = () => {
-    setLeads(db.getLeads());
-    setInspections(db.getInspections());
-    setActivities(db.getActivities());
-    setUsers(db.getUsers());
+  const loadReportData = async () => {
+    try {
+      const [leadsRes, inspectionsRes, activitiesRes, usersRes] = await Promise.all([
+        dataService.getLeads().catch(err => { notifyLoadError(err, 'Could not load leads for reports.'); return []; }),
+        dataService.getInspections().catch(err => { notifyLoadError(err, 'Could not load inspections for reports.'); return []; }),
+        dataService.getActivities().catch(err => { notifyLoadError(err, 'Could not load activities for reports.'); return []; }),
+        dataService.getUsers().catch(err => { notifyLoadError(err, 'Could not load team members for reports.'); return []; }),
+      ]);
+      setLeads(leadsRes || []);
+      setInspections(inspectionsRes || []);
+      setActivities(activitiesRes || []);
+      setUsers(usersRes || []);
+    } catch (err) {
+      notifyLoadError(err, 'Could not load report data.');
+    }
   };
 
-  // NOTE: this view still reads from db.* (the local demo/mock layer)
-  // directly rather than dataService, so it shows demo data even in Live
-  // Mode - a separate, larger fix than the polling cleanup done here.
-  usePolling(loadReportData, getPollInterval(2000));
+  useEffect(() => {
+    const unsubscribe = onDataChange(['leads', 'inspections', 'activities', 'users'], () => loadReportData());
+    return unsubscribe;
+  }, []);
+
+  usePolling(loadReportData, getPollInterval(3000));
 
   const getFilteredLeads = () => {
     let result = leads;
@@ -53,7 +66,7 @@ export default function Reports({ currentUser }) {
     }
     notifySuccess(`Successfully scheduled automated ${scheduleFrequency.toLowerCase()} delivery of the '${reportType}' to: ${scheduleEmail}`);
     setShowScheduleModal(false);
-    db.logAudit(`Scheduled auto-delivery of ${reportType} to ${scheduleEmail} (${scheduleFrequency}).`);
+    dataService.logAudit(`Scheduled auto-delivery of ${reportType} to ${scheduleEmail} (${scheduleFrequency}).`);
   };
 
   const renderLeadSummaryReport = () => {
